@@ -91,6 +91,22 @@ katmanıdır. Müşteri yöneticisi başka firmanın varlığından haberdar olm
 (`firma_modulleri`) **ve** kullanıcının yetkisi var mı
 (`modul_yetkileri`). Ayrıntı: `standartlar/02-GUVENLIK.md`.
 
+### Modül içi seviyeler
+
+Panel rolleri sistemin geneli için. Bir modülün içindeki "personel mi
+müdür mü" ayrımı `modul_yetkileri.seviye` ile kurulur — **yeni rol
+alanı açılmaz**, var olan yapı yeter:
+
+| Seviye | PTP'deki karşılığı |
+|---|---|
+| `okuma` | Görevleri görür, kapatamaz |
+| `yazma` | **Personel** — kendine atanan görevleri kapatır |
+| `yonetim` | **Müdür** — görev atar, şablon düzenler, rapor görür |
+
+`firma_yoneticisi` ve `superadmin` ayrı kayda gerek olmadan
+`yonetim` sayılır. Veri tabanı tarafında bunu
+`panel.modul_seviyesi(modul)` fonksiyonu döndürür.
+
 ---
 
 ## 4. Klasör yapısı
@@ -141,23 +157,32 @@ cevaplanır.
 uygulamasından taşınıyor (Express + `db.json`). İş mantığı korunur; veri
 katmanı, kimlik doğrulama ve zamanlanmış işler yeniden yazılır.
 
-Taşırken zorunlu olarak değişen dört şey:
+**Geçmiş veri taşınmadı.** Temiz başlangıç yapıldı; eski program bir
+süre yerelde yedek kalıyor.
 
-1. **Personel PIN'leri düz metindi** → hash'lenir
+Taşırken değişenler:
+
+1. **PIN kavramı tamamen kalktı** — aşağıya bak
 2. **`adminPassword: 'admin123'`** → Supabase Auth
 3. **Telegram anahtarı koddaydı** → ortam değişkeni
 4. **Telegram `getUpdates` ile yoklanıyordu** → webhook (sunucusuz
    ortamda sürekli çalışan süreç yok)
 
-### Personel ekranı istisnası
+### Personel = gerçek kullanıcı
 
-Mağaza personeli ekranı ortak bir cihazdan kullanır ve PIN girer.
-**PIN kimlik doğrulama değildir** — "bu görevi kim yaptı" işaretidir.
+Eski programda personel ortak bir cihazdan PIN girip kendini
+işaretliyordu. **Bu yapı bırakıldı.** Her personelin kendi hesabı ve
+şifresi var; panele kendi kimliğiyle giriyor, sistem kim olduğuna bakıp
+ekranları ona göre açıyor.
 
-Cihaz önce firma oturumuyla bağlanır, personel ekranı o oturumun içinde
-çalışır, PIN yalnızca kişiyi seçer. **PIN'le doğrudan panele girilemez.**
-Bu ayrım korunmalı; PIN'i gerçek girişe dönüştürmek en kolay güvenlik
-hatasıdır.
+Sonuç: `ptp_personeller` tablosu ve `pin_hash` kaldırıldı. Personel
+zaten `panel.kullanicilar`. Görevlerdeki `atanan_id` ve
+`tamamlayan_id` doğrudan oraya bakıyor.
+
+⚠️ **Bilinen ödün:** mağazada tek ortak tablet varsa herkesin sürekli
+girip çıkması sürtünme yaratır. Şu an kabul edildi. Sorun olursa çözüm
+PIN'e dönmek değil, cihaza uzun ömürlü bir oturum + hızlı kullanıcı
+değiştirme eklemektir.
 
 ---
 
