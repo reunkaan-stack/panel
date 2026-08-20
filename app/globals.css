@@ -20,9 +20,13 @@
 	--renk-kagit-3: #e9e6dd;
 	--renk-murekkep: #1a1a1a;
 	--renk-murekkep-2: #5c5952;
-	--renk-murekkep-3: #8a867d;
+	--renk-murekkep-3: #6e6a62;
 	--renk-turuncu: #d9541e;
 	--renk-turuncu-2: #b8420f;
+	/* Marka turuncusu küçük yazıda 3.81:1 veriyor — 4.5 sınırının altında.
+	   Kenarlık ve nişan için yeterli (bileşen sınırı 3:1), yazı için değil.
+	   Metin ve dolu düğme bu koyu tonu kullanır: 5.22:1. */
+	--renk-turuncu-metin: #b8420f;
 	--renk-turuncu-soluk: #fbe9e1;
 	--renk-izgara: #ddd9d0;
 	--renk-izgara-2: #ebe8e0;
@@ -35,7 +39,7 @@
 	--renk-gece-3: #26261f;
 	--renk-fildisi: #ebe8e0; /* saf beyaz değil */
 	--renk-fildisi-2: #a8a49a;
-	--renk-fildisi-3: #7a766d;
+	--renk-fildisi-3: #858179;
 	--renk-turuncu-gece: #e9683a; /* koyu zeminde turuncu biraz açılır */
 	--renk-izgara-gece: #33332c;
 	--renk-izgara-gece-2: #262620;
@@ -51,6 +55,7 @@
 	--color-metin-3: var(--metin-3);
 	--color-vurgu: var(--vurgu);
 	--color-vurgu-2: var(--vurgu-2);
+	--color-vurgu-metin: var(--vurgu-metin);
 	--color-vurgu-soluk: var(--vurgu-soluk);
 	--color-kenarlik: var(--kenarlik);
 	--color-kenarlik-2: var(--kenarlik-2);
@@ -72,6 +77,7 @@
 	--metin-3: var(--renk-murekkep-3);
 	--vurgu: var(--renk-turuncu);
 	--vurgu-2: var(--renk-turuncu-2);
+	--vurgu-metin: var(--renk-turuncu-metin);
 	--vurgu-soluk: var(--renk-turuncu-soluk);
 	--kenarlik: var(--renk-izgara);
 	--kenarlik-2: var(--renk-izgara-2);
@@ -93,6 +99,7 @@
 		--metin-3: var(--renk-fildisi-3);
 		--vurgu: var(--renk-turuncu-gece);
 		--vurgu-2: #f07a4d;
+		--vurgu-metin: var(--renk-turuncu-gece);
 		--vurgu-soluk: #3a201400;
 		--kenarlik: var(--renk-izgara-gece);
 		--kenarlik-2: var(--renk-izgara-gece-2);
@@ -113,6 +120,7 @@
 	--metin-3: var(--renk-fildisi-3);
 	--vurgu: var(--renk-turuncu-gece);
 	--vurgu-2: #f07a4d;
+	--vurgu-metin: var(--renk-turuncu-gece);
 	--vurgu-soluk: #3a201400;
 	--kenarlik: var(--renk-izgara-gece);
 	--kenarlik-2: var(--renk-izgara-gece-2);
@@ -291,11 +299,12 @@ body {
 	cursor: not-allowed;
 }
 .dugme-dolu {
-	background: var(--color-vurgu);
+	background: var(--color-vurgu-metin);
 	color: var(--color-zemin);
 }
 .dugme-dolu:hover:not(:disabled) {
 	background: var(--color-vurgu-2);
+	color: var(--color-zemin);
 }
 .dugme-bos {
 	border-color: var(--color-kenarlik);

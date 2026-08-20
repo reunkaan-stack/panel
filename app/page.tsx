@@ -17,7 +17,7 @@ export default function Karsilama() {
 	return (
 		<main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-20">
 			<div className="flex items-start justify-between gap-6">
-				<span className="etiket text-vurgu">Karas Teknoloji</span>
+				<span className="etiket text-vurgu-metin">Karas Teknoloji</span>
 				<TemaSecici />
 			</div>
 
@@ -40,7 +40,7 @@ export default function Karsilama() {
 							}`}
 						>
 							<span
-								className="w-10 font-mono text-[0.6875rem] font-medium tracking-[0.14em] text-vurgu"
+								className="w-10 font-mono text-[0.6875rem] font-medium tracking-[0.14em] text-vurgu-metin"
 								aria-hidden="true"
 							>
 								{String(i + 1).padStart(2, '0')}

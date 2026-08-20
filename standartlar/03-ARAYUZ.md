@@ -109,7 +109,37 @@ Seçim `localStorage`'a yazılır ve `<html>` üzerine **sayfa boyanmadan
 
 ---
 
-## 3. Durum renkleri
+## 3. Vurgu rengi iki tondur — ölçülmüş
+
+Marka turuncusu (`#d9541e`) kâğıt zeminde **3.81:1** kontrast verir.
+Bileşen sınırı için yeterlidir (WCAG kuralı 3:1) ama **küçük yazı için
+değildir** (4.5:1 gerekir).
+
+Bu yüzden iki token vardır:
+
+| Token | Nerede | Aydınlık | Karanlık |
+|---|---|---|---|
+| `vurgu` | Kenarlık, nişan, odak halkası, seçim | 3.81:1 ✓ (sınır 3:1) | — |
+| `vurgu-metin` | Küçük yazı, dolu düğme zemini | **5.22:1** ✓ | **5.72:1** ✓ |
+
+Marka görünümü korunur; okunabilirlik ödün vermez.
+
+### Ölçülmüş kontrast değerleri
+
+Aşağıdakiler hesaplanarak doğrulandı, göz kararı değil:
+
+| Token | Aydınlık | Karanlık |
+|---|---|---|
+| `metin` / zemin | 16.53:1 | 15.09:1 |
+| `metin-2` / zemin | 6.64:1 | 7.43:1 |
+| `metin-3` / zemin | 5.11:1 | 4.76:1 |
+| `vurgu-metin` / zemin | 5.22:1 | 5.72:1 |
+
+`metin-3` ilk denemede 3.45:1 çıkmıştı — kurumsal siteden devralınan
+ton, küçük etiketler için yetersizdi. Koyulaştırıldı. **Palet devralınsa
+bile yeniden ölçülür.**
+
+## 4. Durum renkleri
 
 Turuncu **vurgu** rengidir; hata veya gecikme anlamına gelmez. Bir işin
 geciktiğini turuncuyla anlatmak vurguyu tüketir.
@@ -124,7 +154,7 @@ Karanlık tarafta üçünün de açılmış karşılığı tanımlanır.
 
 ---
 
-## 4. Tipografi
+## 5. Tipografi
 
 | Kullanım | Yazı tipi |
 |---|---|
@@ -140,7 +170,7 @@ Karanlık tarafta üçünün de açılmış karşılığı tanımlanır.
 
 ---
 
-## 5. Bileşen kuralları
+## 6. Bileşen kuralları
 
 ### Ortak sınıf nerede durur
 
@@ -182,7 +212,7 @@ Bileşen içindeki `<style>` bloğu başka bileşeni etkilemez.
 
 ---
 
-## 6. Zorunlu durumlar
+## 7. Zorunlu durumlar
 
 Her liste ve her ekran **dört durumu** karşılar. Üçü unutulur ve ilk
 gerçek kullanımda ortaya çıkar.
@@ -198,13 +228,14 @@ Boş durum tasarlanmamış bir ekran yarım kalmış demektir.
 
 ---
 
-## 7. Erişilebilirlik
+## 8. Erişilebilirlik
 
 Bunlar "sonra bakarız" maddesi değildir; sonradan eklenmesi baştan
 yapmaktan pahalıdır.
 
-- Metin/zemin kontrastı en az **4.5:1** (büyük başlıkta 3:1). Her iki
-  temada da ölçülür.
+- Metin/zemin kontrastı en az **4.5:1** (büyük başlıkta 3:1, bileşen
+  sınırında 3:1). Her iki temada da **hesaplanarak** ölçülür — göz kararı
+  yanıltır, özellikle turuncu gibi doygun renklerde.
 - **Renk tek başına anlam taşımaz.** Durum, metin veya simgeyle
   desteklenir.
 - Her etkileşimli öğeye klavyeyle ulaşılır; odak halkası görünür
@@ -216,7 +247,7 @@ yapmaktan pahalıdır.
 
 ---
 
-## 8. Mobil ve duyarlılık
+## 9. Mobil ve duyarlılık
 
 - Panel **öncelikle masaüstü** için tasarlanır — günlük iş orada yapılır.
 - Ama saha ekranları (personel görev listesi gibi) **öncelikle telefon**
@@ -226,7 +257,7 @@ yapmaktan pahalıdır.
 
 ---
 
-## 9. Yapma
+## 10. Yapma
 
 - Ham renk kodu veya `rounded-*` yazma
 - Bileşende `bg-kagit` gibi palet token'ı kullanma (anlamsal token kullan)
@@ -238,4 +269,6 @@ yapmaktan pahalıdır.
 - Yıkıcı eylemi birincil düğme yapma
 - Sayfa gövdesini yatay kaydırtma
 - Durumu yalnızca renkle anlatma
+- Marka rengini kontrastını ölçmeden küçük yazıda kullanma
+- Devralınan paleti yeniden ölçmeden kullanma
 - 150 ms'den uzun geçiş animasyonu koyma
