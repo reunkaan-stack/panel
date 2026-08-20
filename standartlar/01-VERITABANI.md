@@ -230,7 +230,36 @@ değildir ve altı ay sonra kimse neden orada olduğunu bilmez.
 
 ---
 
-## 9. Sorgu yazarken
+## 9. Veri ekleyen betikler
+
+> **Veri ekleyen her betik birden çok kez çalıştırılabilir olmalıdır.**
+
+Betiği çalıştıran kişi ilk seferde işe yarayıp yaramadığını göremez ve
+tekrar dener. Bu bir ihtimal değil, olağan davranıştır.
+
+Her `insert` bir `on conflict` ile korunur:
+
+```sql
+insert into panel.ptp_sablonlar (...) values (...)
+on conflict (firma_id, grup, baslik) where silindi is null do nothing;
+```
+
+Bunun için önce **benzersizlik kısıtı** gerekir; kısıt yoksa
+`on conflict` yazılamaz. Yani soru şu: "bu tabloda neyin tekrarı hata
+sayılır?" Cevabı yazmak, hem kısıtı hem betiği doğru kurar.
+
+Yumuşak silme kullanılan tablolarda indeks **kısmi** olur
+(`where silindi is null`); yoksa silinen bir kayıt aynı adla yeniden
+açılamaz.
+
+**Yaşanmış:** kurulum betiğindeki yedi eklemenin altısında
+`on conflict` vardı, birinde unutulmuştu. Betik ikinci kez
+çalıştırılınca yalnızca o tablo ikiye katlandı ve ondan üretilen
+kayıtlar da tekrarlandı.
+
+---
+
+## 10. Sorgu yazarken
 
 - **`select *` yazma.** Sütun eklendiğinde ağa gereksiz veri çıkar ve
   hangi alanın kullanıldığı okunmaz olur.
@@ -243,7 +272,7 @@ değildir ve altı ay sonra kimse neden orada olduğunu bilmez.
 
 ---
 
-## 10. Denetim kaydı
+## 11. Denetim kaydı
 
 Aşağıdakiler `denetim_kayitlari` tablosuna yazılır:
 
@@ -272,7 +301,7 @@ tanımlanmaz — kimse için.
 
 ---
 
-## 11. Yedekleme
+## 12. Yedekleme
 
 - Günlük otomatik yedek açık olmalı (Supabase'de plana bağlı).
 - **Yedeğin geri yüklenebildiği en az bir kez denenir.** Denenmemiş yedek
@@ -281,7 +310,7 @@ tanımlanmaz — kimse için.
 
 ---
 
-## 12. Yapma
+## 13. Yapma
 
 - `firma_id` ve RLS olmadan firma verisi tablosu oluşturma
 - `security_invoker` olmadan görünüm oluşturma
@@ -292,6 +321,7 @@ tanımlanmaz — kimse için.
 - Şemayı panelden elle değiştirme
 - `select *` yazma
 - Sayfalamasız liste uç noktası yazma
+- Veri ekleyen betiği `on conflict` olmadan yazma
 - Yabancı anahtarı indekssiz bırakma
 - Kaydı gerçekten silme (KVKK talebi hariç)
 - Denetim kaydını güncellenebilir bırakma

@@ -19,7 +19,7 @@
 insert into panel.kullanicilar (auth_id, firma_id, ad, eposta, rol)
 select u.id, null, 'Kaan Karabıyık', u.email, 'superadmin'
   from auth.users u
- where u.email = 'reunkaan@gmail.com'
+ where u.email = 'kaannkarabiyik@gmail.com'
 on conflict (auth_id) do update
    set rol = 'superadmin', firma_id = null;
 
