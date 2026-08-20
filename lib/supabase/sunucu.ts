@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { SUPABASE_ANON, SUPABASE_URL } from './ayar';
+import { SEMA, SUPABASE_ANON, SUPABASE_URL } from './ayar';
 
 /* Sunucu tarafı Supabase istemcisi.
 
@@ -14,6 +14,7 @@ export async function sunucuIstemcisi() {
 	const cerezDeposu = await cookies();
 
 	return createServerClient(SUPABASE_URL, SUPABASE_ANON, {
+		db: { schema: SEMA },
 		cookies: {
 			getAll() {
 				return cerezDeposu.getAll();

@@ -173,8 +173,23 @@ kısıtlarına takılır hem tıklama hırsızlığına açar.
 **Karanlık mod zorunlu.** Panel günde saatlerce bakılan bir uygulama;
 tanıtım sitesinde gereksizdi, burada değil.
 
-**Supabase projesi siteden ayrı.** Ayrı ürün, ayrı veri, ayrı yedekleme
-döngüsü; sitenin anon anahtarı herkese açık, karışmasın.
+**Supabase projesi kurumsal siteyle ortak, şema ayrı.** Ücretsiz planın
+proje sınırı yüzünden yeni proje açılamıyor. Site tabloları `public`,
+panel tabloları `panel` şemasında.
+
+Şema ayrımı düzen için değil güvenlik için: sitenin anon anahtarı
+herkese açık bir sayfanın içinde ve `anon` rolüne `panel` şeması
+kapatıldı. O anahtar panel verisine **ulaşamaz** — RLS'e ek, ondan
+bağımsız ikinci kilit. Giriş Auth API'sine gittiği için `anon`'un bu
+şemaya ihtiyacı da yok.
+
+Bedeli kabul edildi: veri kotası, bant genişliği ve yedekler siteyle
+ortak. Yedek geri yüklenirse ikisi birden geri alınır. İleride panel
+kendi projesine taşınırsa tek bir şema taşınır — `public` içinden
+tablo ayıklamaktan çok kolay.
+
+⚠️ Şemanın API'ye açık olması gerekir: Supabase → Settings → API →
+Exposed schemas → `panel`.
 
 ---
 
