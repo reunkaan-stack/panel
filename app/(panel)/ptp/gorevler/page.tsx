@@ -16,6 +16,7 @@ export type SablonSatiri = {
 	grup: GorevGrubu;
 	sira: number;
 	zorunlu: boolean;
+	tekrarlanabilir: boolean;
 	fotograf_ister: boolean;
 	ipucu: string;
 	aktif: boolean;

@@ -23,6 +23,7 @@ const BOS: SablonGirdisi = {
 	tur: 'onay',
 	grup: 'acilis',
 	zorunlu: true,
+	tekrarlanabilir: false,
 	fotograf_ister: false,
 	ipucu: '',
 	tekrar: 'gunluk',
@@ -45,6 +46,7 @@ export function SablonYonetimi({ sablonlar }: { sablonlar: SablonSatiri[] }) {
 			tur: s.tur,
 			grup: s.grup,
 			zorunlu: s.zorunlu,
+			tekrarlanabilir: s.tekrarlanabilir,
 			fotograf_ister: s.fotograf_ister,
 			ipucu: s.ipucu,
 			tekrar: s.tekrar,
@@ -153,6 +155,7 @@ export function SablonYonetimi({ sablonlar }: { sablonlar: SablonSatiri[] }) {
 															: 'her gün'}
 												</span>
 												{s.zorunlu && <><span>·</span><span>zorunlu</span></>}
+												{s.tekrarlanabilir && <><span>·</span><span>tekrarlanabilir</span></>}
 												{s.fotograf_ister && <><span>·</span><span>fotoğraflı</span></>}
 												{s.tur === 'kontrol' && (
 													<><span>·</span><span>{s.maddeler.length} madde</span></>
@@ -384,6 +387,16 @@ function SablonFormu({
 						className="onay shrink-0"
 					/>
 					<span className="text-sm text-metin-2">Zorunlu</span>
+				</label>
+
+				<label className="flex cursor-pointer items-center gap-3">
+					<input
+						type="checkbox"
+						checked={form.tekrarlanabilir}
+						onChange={(e) => guncelle({ tekrarlanabilir: e.target.checked })}
+						className="onay shrink-0"
+					/>
+					<span className="text-sm text-metin-2">Gün içinde tekrarlanabilir</span>
 				</label>
 
 				<label className="flex cursor-pointer items-center gap-3">

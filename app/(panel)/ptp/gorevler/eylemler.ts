@@ -23,6 +23,7 @@ export type SablonGirdisi = {
 	tur: GorevTuru;
 	grup: GorevGrubu;
 	zorunlu: boolean;
+	tekrarlanabilir: boolean;
 	fotograf_ister: boolean;
 	ipucu: string;
 	tekrar: Tekrar;
@@ -90,6 +91,7 @@ export async function sablonKaydet(girdi: SablonGirdisi): Promise<Sonuc> {
 			tur: girdi.tur,
 			grup: girdi.grup,
 			zorunlu: girdi.zorunlu,
+			tekrarlanabilir: girdi.tekrarlanabilir,
 			fotograf_ister: girdi.fotograf_ister,
 			ipucu: girdi.ipucu.trim(),
 			tekrar: girdi.tekrar,

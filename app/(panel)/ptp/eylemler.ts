@@ -189,7 +189,7 @@ export async function gunuOlustur(tarih: string): Promise<Sonuc<number>> {
 
 		const { data: sablonlar, error: sablonHatasi } = await supabase
 			.from('ptp_sablonlar')
-			.select('id, baslik, tur, grup, zorunlu, fotograf_ister, ipucu, tekrar, tekrar_gunleri, tek_tarih')
+			.select('id, baslik, tur, grup, zorunlu, tekrarlanabilir, fotograf_ister, ipucu, tekrar, tekrar_gunleri, tek_tarih')
 			.eq('firma_id', firmaId)
 			.eq('aktif', true)
 			.is('silindi', null);
@@ -231,6 +231,7 @@ export async function gunuOlustur(tarih: string): Promise<Sonuc<number>> {
 					baslik: s.baslik,
 					tur: s.tur,
 					zorunlu: s.zorunlu,
+					tekrarlanabilir: s.tekrarlanabilir,
 					fotograf_ister: s.fotograf_ister,
 					ipucu: s.ipucu,
 					kaynak: 'sablon' as const,

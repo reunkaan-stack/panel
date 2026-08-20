@@ -68,6 +68,7 @@ export type Gorev = {
 	baslik: string;
 	tur: GorevTuru;
 	zorunlu: boolean;
+	tekrarlanabilir: boolean;
 	fotograf_ister: boolean;
 	ipucu: string;
 	slot: string | null;
