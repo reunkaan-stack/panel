@@ -83,12 +83,13 @@ Panel bir uygulamadır; günde sekiz saat bakılır.
 **Kural:** bir bileşen `bg-kagit` yazmaz, `bg-zemin` yazar. Böylece
 karanlık mod tek dosyadan gelir; bileşenlerde tema koşulu bulunmaz.
 
-### ⚠️ Tarama yolu tuzağı
+### Tarama yolları
 
-Tailwind, sınıfları **kaynak dosyaları tarayarak** üretir. Taramadığı bir
-klasördeki sınıf CSS'e hiç girmez — **hata vermez, sadece görünmez.**
+Tailwind, sınıfları kaynak dosyaları tarayarak üretir. Taramadığı bir
+klasördeki sınıf CSS'e hiç girmez — hata vermez, sadece görünmez.
 
-CSS giriş dosyasında taranacak klasörler açıkça yazılır:
+Tailwind 4 proje kökünden itibaren kendiliğinden tarar ve normal bir
+klasör düzeninde ek ayar gerekmez. Yine de yollar açıkça yazılır:
 
 ```css
 @import 'tailwindcss';
@@ -96,11 +97,10 @@ CSS giriş dosyasında taranacak klasörler açıkça yazılır:
 @source "../bilesenler";
 ```
 
-Bir kez yaşandı: `bilesenler/` yazılmadığı için tema seçicinin arka planı
-ve yazı rengi hiç üretilmedi; düğme şeffaf kaldı. `app/` altındaki aynı
-sınıflar çalıştığı için sorun uzun süre fark edilmeyebilirdi.
-
-**Yeni bir üst klasör açıldığında buraya eklenir.**
+Sebep otomatik taramaya güvensizlik değil, **niyeti belgelemek**: kaynak
+klasörlerin hangileri olduğu tek bakışta görünür ve tarama kökü dışında
+kalan bir klasör (paylaşılan bir paket gibi) eklendiğinde nereye
+yazılacağı bellidir.
 
 ### Üç durum
 
@@ -290,5 +290,5 @@ yapmaktan pahalıdır.
 - Durumu yalnızca renkle anlatma
 - Marka rengini kontrastını ölçmeden küçük yazıda kullanma
 - Devralınan paleti yeniden ölçmeden kullanma
-- Yeni bir kaynak klasörü açıp `@source` satırını eklemeyi unutma
+- Tarama kökü dışında kaynak klasörü açıp `@source` satırını eklemeyi unutma
 - 150 ms'den uzun geçiş animasyonu koyma

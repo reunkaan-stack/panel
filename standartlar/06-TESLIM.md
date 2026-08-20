@@ -90,7 +90,30 @@ sonra "bu veri nereden geldi" sorusunun tek cevabı odur.
 
 ---
 
-## 5. İzleme
+## 5. Doğrulama yöntemi — neye güvenilir
+
+Bir şeyin çalıştığını söylemeden önce **nasıl ölçüldüğü** önemlidir.
+Yanlış araçla yapılan ölçüm, ölçüm yapmamaktan kötüdür: olmayan bir
+hatayı kovalatır.
+
+| Soru | Güvenilir kaynak | Güvenilmez |
+|---|---|---|
+| Bu CSS kuralı üretildi mi? | Derlenmiş CSS dosyasında aramak | Tarayıcıda `document.styleSheets` gezmek — katman içindeki kuralları atlar |
+| Bu stil uygulanıyor mu? | Ekran görüntüsü ya da gerçek tarayıcı | Ekranı boyamayan bir ortamda `getComputedStyle` — bayat değer döndürebilir |
+| Sayfa yayınlandı mı? | Tarayıcıda açmak, önbelleği kırmak | `curl` — bot koruması doğrulama sayfası döndürebilir |
+| Veri doğru mu? | Kaynakta ve hedefte saymak | Örneğe bakıp genellemek |
+
+**Yaşanmış:** tema düğmesinin arka planı ölçümde şeffaf göründü. Kural
+CSS'te vardı, değişken tanımlıydı, aynı sınıfla oluşturulan yeni bir
+düğme doğru rengi alıyordu. Sorun sayfada değil, ölçümdeydi — ekranı
+boyamayan bir tarayıcı bayat değer döndürüyordu. Bu yanlış teşhis
+üzerine gereksiz bir düzeltme yapıldı ve olmayan bir tuzak belgeye
+yazıldı; ikisi de sonradan geri alındı.
+
+**Ders:** bir bulgu tuhafsa önce ölçüm aracından şüphelen. İki bağımsız
+yöntem aynı sonucu vermeden "hata buldum" denmez.
+
+## 6. İzleme
 
 - **Hata takibi kurulur** (Sentry vb.). Kullanıcının bildirmediği hatalar
   en tehlikelileridir.
@@ -101,7 +124,7 @@ sonra "bu veri nereden geldi" sorusunun tek cevabı odur.
 
 ---
 
-## 6. Geri alma
+## 7. Geri alma
 
 Her yayının geri alınabilir olması şarttır.
 
@@ -113,7 +136,7 @@ Her yayının geri alınabilir olması şarttır.
 
 ---
 
-## 7. Teslim ve devir
+## 8. Teslim ve devir
 
 Müşteriye teslim edilen bir sistemde bulunur:
 
@@ -127,7 +150,7 @@ kilitlenmiş müşteridir; bu, uzun vadede güveni bitirir.
 
 ---
 
-## 8. Yapma
+## 9. Yapma
 
 - Önizleme ortamını canlı veri tabanına bağlama
 - Doğrudan `main`'e yazma
@@ -137,4 +160,5 @@ kilitlenmiş müşteridir; bu, uzun vadede güveni bitirir.
 - Taşıma betiğini depoya koymadan atma
 - Yıkıcı migration'ı tek adımda yapma
 - Hata takibi kurmadan yayına çıkma
+- Tek bir ölçüme dayanarak "hata buldum" deme
 - Müşteriyi verisini dışa aktaramaz durumda bırakma
