@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
@@ -67,6 +68,15 @@ export default async function PtpSayfasi({
 	const { data, error } = await sorgu;
 	const gorevler = (data ?? []) as unknown as GorevSatiri[];
 
+	/* Bekleyen eksik sayısı: başlıktaki rozet için. Yalnızca sayım
+	   isteniyor, satırlar değil — head: true ile veri taşınmıyor. */
+	const { count: eksikSayisi } = await supabase
+		.from('ptp_eksikler')
+		.select('id', { count: 'exact', head: true })
+		.eq('firma_id', firmaId)
+		.eq('durum', 'bekliyor')
+		.is('silindi', null);
+
 	/* Atama listesi yalnızca müdüre gerekiyor. */
 	const { data: kisiler } = yonetici
 		? await supabase
@@ -81,9 +91,23 @@ export default async function PtpSayfasi({
 	return (
 		<div className="mx-auto max-w-4xl px-6 py-10">
 			<span className="etiket text-vurgu-metin">Personel Takip</span>
-			<h1 className="mt-3 text-2xl font-semibold tracking-[-0.015em]">
-				{tarihiBicimle(tarih)}
-			</h1>
+			<div className="mt-3 flex flex-wrap items-baseline justify-between gap-4">
+				<h1 className="text-2xl font-semibold tracking-[-0.015em]">
+					{tarihiBicimle(tarih)}
+				</h1>
+
+				<Link
+					href="/ptp/eksikler"
+					className="dugme dugme-bos !px-3 !py-2"
+				>
+					Eksikler
+					{!!eksikSayisi && eksikSayisi > 0 && (
+						<span className="ml-1 bg-vurgu-metin px-1.5 py-0.5 text-zemin">
+							{eksikSayisi}
+						</span>
+					)}
+				</Link>
+			</div>
 
 			{yonetici && (
 				<MudurBasligi
