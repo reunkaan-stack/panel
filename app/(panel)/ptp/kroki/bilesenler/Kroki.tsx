@@ -35,6 +35,14 @@ type Surukleme =
 
 const otur = (n: number) => Math.round(n / IZGARA) * IZGARA;
 
+/* SVG metni sarmaz ve taşar. Kutu genişliğine sığmayan ad kısaltılır;
+   yoksa yan yana iki kutunun yazısı üst üste biniyor. */
+function kisalt(metin: string, kutuEni: number, harfGenisligi: number): string {
+	const sigan = Math.floor((kutuEni - 20) / harfGenisligi);
+	if (metin.length <= sigan) return metin;
+	return metin.slice(0, Math.max(1, sigan - 1)) + '…';
+}
+
 export function Kroki({
 	bolgeler,
 	yogunluk,
@@ -152,6 +160,48 @@ export function Kroki({
 		setSurukleme({ tur: 'yok' });
 	}
 
+	/** Çakışmayan ilk boş yeri bulur. */
+	function bosYer(): { x: number; y: number } {
+		const en = 180;
+		const boy = 130;
+		for (let y = 0; y + boy <= BOY; y += IZGARA * 2) {
+			for (let x = 0; x + en <= EN; x += IZGARA * 2) {
+				const cakisma = kutular.some(
+					(k) =>
+						x < k.x + k.en && x + en > k.x && y < k.y + k.boy && y + boy > k.y
+				);
+				if (!cakisma) return { x, y };
+			}
+		}
+		return { x: 0, y: 0 };
+	}
+
+	function bolumEkleDugmesi() {
+		const ad = prompt('Bölüm adı:')?.trim();
+		if (!ad) return;
+		const yer = bosYer();
+		setHata(null);
+		basla(async () => {
+			const sonuc = await bolgeEkle(ad, {
+				kroki_x: yer.x,
+				kroki_y: yer.y,
+				kroki_en: 180,
+				kroki_boy: 130,
+			});
+			if (!sonuc.tamam) return setHata(sonuc.mesaj);
+			setKutular((e) => [
+				...e,
+				{
+					id: sonuc.veri,
+					ad,
+					kroki_x: yer.x, kroki_y: yer.y, kroki_en: 180, kroki_boy: 130,
+					x: yer.x, y: yer.y, en: 180, boy: 130,
+				},
+			]);
+			setSecili(sonuc.veri);
+		});
+	}
+
 	function kaydet() {
 		setHata(null);
 		basla(async () => {
@@ -196,18 +246,28 @@ export function Kroki({
 	return (
 		<>
 			<div className="flex flex-wrap items-center justify-between gap-4">
-				<p className="font-mono text-[0.6875rem] tracking-[0.04em] text-metin-3">
-					Boş alana sürükleyerek yeni bölüm çizin · kutuyu sürükleyerek taşıyın ·
-					sağ alt köşeden boyutlandırın
+				<p className="max-w-md font-mono text-[0.6875rem] leading-relaxed tracking-[0.04em] text-metin-3">
+					Boş alana sürükleyerek yeni bölüm çizin · kutuyu sürükleyerek
+					taşıyın · sağ alt köşeden boyutlandırın
 				</p>
-				<button
-					type="button"
-					onClick={kaydet}
-					disabled={!degisti || bekliyor}
-					className="dugme dugme-dolu"
-				>
-					{bekliyor ? 'Kaydediliyor…' : degisti ? 'Yerleşimi kaydet' : 'Kaydedildi'}
-				</button>
+				<div className="flex flex-wrap gap-3">
+					<button
+						type="button"
+						onClick={bolumEkleDugmesi}
+						disabled={bekliyor}
+						className="dugme dugme-bos"
+					>
+						Bölüm ekle
+					</button>
+					<button
+						type="button"
+						onClick={kaydet}
+						disabled={!degisti || bekliyor}
+						className="dugme dugme-dolu"
+					>
+						{bekliyor ? 'Kaydediliyor…' : degisti ? 'Yerleşimi kaydet' : 'Kaydedildi'}
+					</button>
+				</div>
 			</div>
 
 			{hata && (
@@ -237,7 +297,15 @@ export function Kroki({
 						/>
 					</pattern>
 				</defs>
-				<rect width={EN} height={BOY} fill="url(#izgara)" />
+				{/* pointerEvents=none ŞART: yoksa bu dikdörtgen tıklamayı
+				    yakalar, olay svg'ye ulaşmaz ve "boş alana çizim"
+				    hiç çalışmaz. */}
+				<rect
+					width={EN}
+					height={BOY}
+					fill="url(#izgara)"
+					pointerEvents="none"
+				/>
 
 				{kutular.map((kutu) => {
 					const sayi = yogunluk[kutu.id] ?? 0;
@@ -278,7 +346,8 @@ export function Kroki({
 								fontSize="20"
 								fontWeight="600"
 							>
-								{kutu.ad}
+								{kisalt(kutu.ad, kutu.en, 10.5)}
+								<title>{kutu.ad}</title>
 							</text>
 
 							{/* Renk tek başına anlam taşımaz: sayı da yazılır */}
