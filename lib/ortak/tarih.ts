@@ -40,3 +40,36 @@ export function tarihiBicimle(gun: string): string {
 		weekday: 'long',
 	});
 }
+
+
+/* ============================================================
+   RAPOR ARALIKLARI
+
+   Tek yerde tanımlı: rapor ve kroki aynı seçenekleri göstersin,
+   biri değişince diğeri geride kalmasın.
+
+   90 gün bilinçli olarak YOK. Günde ~23 görev üretiliyor; üç aylık
+   veri hem sorguyu ağırlaştırıyor hem de mağaza işletmecisinin
+   bakacağı bir pencere değil. Eğilim 30 günde zaten görünüyor.
+   ============================================================ */
+
+export const ARALIKLAR = [
+	{ deger: '1', ad: 'Bugün', gun: 1 },
+	{ deger: '7', ad: '7 gün', gun: 7 },
+	{ deger: '15', ad: '15 gün', gun: 15 },
+	{ deger: '30', ad: '30 gün', gun: 30 },
+] as const;
+
+export const VARSAYILAN_ARALIK = 7;
+
+/** Adres çubuğundan gelen değeri güvenli bir gün sayısına çevirir. */
+export function araligiCoz(deger: string | undefined): number {
+	return ARALIKLAR.find((a) => a.deger === deger)?.gun ?? VARSAYILAN_ARALIK;
+}
+
+/** Aralığın başlangıç günü. 1 gün = yalnızca bugün. */
+export function araliginBasi(gun: number): string {
+	const d = new Date(bugun() + 'T12:00:00');
+	d.setDate(d.getDate() - (gun - 1));
+	return d.toLocaleDateString('en-CA');
+}

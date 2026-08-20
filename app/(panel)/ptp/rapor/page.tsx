@@ -2,7 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
-import { bugun, tarihiBicimle } from '@/lib/ortak/tarih';
+import {
+	ARALIKLAR,
+	araligiCoz,
+	araliginBasi,
+	bugun,
+	tarihiBicimle,
+} from '@/lib/ortak/tarih';
 import { GRUP_ADLARI, type GorevGrubu } from '@/lib/tipler';
 
 export const metadata: Metadata = { title: 'Performans — Karas Panel' };
@@ -46,12 +52,6 @@ type AtlananSatiri = {
 	zaman: string | null;
 };
 
-function gunOnce(sayi: number): string {
-	const d = new Date(bugun() + 'T12:00:00');
-	d.setDate(d.getDate() - sayi);
-	return d.toLocaleDateString('en-CA');
-}
-
 /** 14.5 → "14:30" */
 function saatBicimi(ondalik: number | null): string {
 	if (ondalik === null) return '—';
@@ -69,8 +69,8 @@ export default async function RaporSayfasi({
 	await yetkiDenetle('ptp', 'yonetim');
 
 	const { aralik } = await searchParams;
-	const gun = aralik === '7' ? 7 : aralik === '90' ? 90 : 30;
-	const baslangic = gunOnce(gun);
+	const gun = araligiCoz(aralik);
+	const baslangic = araliginBasi(gun);
 	const bitis = bugun();
 
 	const supabase = await sunucuIstemcisi();
@@ -100,21 +100,21 @@ export default async function RaporSayfasi({
 
 			<span className="etiket mt-6 block text-vurgu-metin">Performans</span>
 			<h1 className="mt-3 text-2xl font-semibold tracking-[-0.015em]">
-				Son {gun} gün
+				{gun === 1 ? tarihiBicimle(bitis) : `Son ${gun} gün`}
 			</h1>
 
 			<div className="mt-6 flex gap-2">
-				{['7', '30', '90'].map((s) => (
+				{ARALIKLAR.map((a) => (
 					<Link
-						key={s}
-						href={`/ptp/rapor?aralik=${s}`}
+						key={a.deger}
+						href={`/ptp/rapor?aralik=${a.deger}`}
 						className={`border px-3 py-2 font-mono text-[0.6875rem] uppercase tracking-[0.06em] transition-colors ${
-							String(gun) === s
+							gun === a.gun
 								? 'border-vurgu-metin bg-vurgu-metin text-zemin'
 								: 'border-kenarlik text-metin-3 hover:border-metin hover:text-metin'
 						}`}
 					>
-						{s} gün
+						{a.ad}
 					</Link>
 				))}
 			</div>

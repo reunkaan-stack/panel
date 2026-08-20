@@ -419,7 +419,8 @@ export function Kroki({
 			)}
 
 			<p className="mt-4 font-mono text-[0.6875rem] tracking-[0.04em] text-metin-3">
-				Son {gunSayisi} günde en çok seçilen bölüm en koyu görünür.
+				{gunSayisi === 1 ? 'Bugün' : `Son ${gunSayisi} günde`} en çok seçilen
+				bölüm en koyu görünür.
 				{kutular.length === 0 && ' Henüz bölüm çizilmedi.'}
 			</p>
 		</>
