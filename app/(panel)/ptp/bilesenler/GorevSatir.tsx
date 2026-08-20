@@ -37,7 +37,7 @@ export function GorevSatir({
 }) {
 	const [acik, setAcik] = useState(false);
 	const [deger, setDeger] = useState('');
-	const [bolgeId, setBolgeId] = useState('');
+	const [seciliBolgeler, setSeciliBolgeler] = useState<Set<string>>(new Set());
 	const [sebep, setSebep] = useState('');
 	const [hata, setHata] = useState<string | null>(null);
 	const [bekliyor, basla] = useTransition();
@@ -46,8 +46,11 @@ export function GorevSatir({
 	const tekrar = gorev.tekrarlanabilir;
 
 	/* Tekrarlanabilir görev kapansa da yeniden yapılabilir. */
+	/* Bölge görevinde iş bitmez: sonradan başka bir bölüm de yapılabilir.
+	   Bu yüzden tekrarlanabilir işaretli olmasa da açık kalır. */
 	const kapatabilir =
-		(tekrar || !yapildi) && (yonetici || benim || !gorev.atanan_id);
+		(tekrar || gorev.tur === 'bolge' || !yapildi) &&
+		(yonetici || benim || !gorev.atanan_id);
 
 	const maddeler = [...(gorev.maddeler ?? [])].sort((a, b) => a.sira - b.sira);
 	const kayitlar = [...(gorev.kayitlar ?? [])].sort((a, b) =>
@@ -67,8 +70,10 @@ export function GorevSatir({
 			if (!Number.isFinite(s)) return setHata('Geçerli bir sayı girin');
 			d.sayi = s;
 		} else if (gorev.tur === 'bolge') {
-			if (!bolgeId) return setHata('Hangi bölümde yaptığınızı seçin');
-			d.bolgeId = bolgeId;
+			if (seciliBolgeler.size === 0) {
+				return setHata('Hangi bölümlerde yaptığınızı seçin');
+			}
+			d.bolgeIdler = [...seciliBolgeler];
 		} else if (gorev.tur === 'kontrol') {
 			if (isaretliSayisi === 0) return setHata('En az bir madde işaretleyin');
 			d.onay = true;
@@ -81,7 +86,7 @@ export function GorevSatir({
 			if (!sonuc.tamam) return setHata(sonuc.mesaj);
 			setAcik(false);
 			setDeger('');
-			setBolgeId('');
+			setSeciliBolgeler(new Set());
 		});
 	}
 
@@ -111,7 +116,7 @@ export function GorevSatir({
 
 	/* Tekrarlanabilir görevde üstü çizilmez: iş bitmiş sayılmaz,
 	   yalnızca "şu ana kadar şu kadar kez yapıldı" bilgisi var. */
-	const ustuCizili = yapildi && !tekrar;
+	const ustuCizili = yapildi && !tekrar && gorev.tur !== 'bolge';
 
 	return (
 		<li className="border-b border-kenarlik-2 py-4">
@@ -139,9 +144,11 @@ export function GorevSatir({
 					<div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[0.6875rem] tracking-[0.04em] text-metin-3">
 						<span>{gorev.atanan ? gorev.atanan.ad : 'atanmadı'}</span>
 
-						{tekrar && (
-							<span className={kayitlar.length > 0 ? 'text-basarili' : ''}>
-								{kayitlar.length} kez yapıldı
+						{(tekrar || gorev.tur === 'bolge') && kayitlar.length > 0 && (
+							<span className="text-basarili">
+								{gorev.tur === 'bolge'
+									? `${kayitlar.length} bölüm`
+									: `${kayitlar.length} kez yapıldı`}
 								{kayitlar[0] && ` · son ${saatiBicimle(kayitlar[0].zaman)}`}
 							</span>
 						)}
@@ -185,8 +192,10 @@ export function GorevSatir({
 						</ul>
 					)}
 
-					{/* Tekrarlanabilir görevin geçmişi: nerede, ne zaman, kim */}
-					{tekrar && kayitlar.length > 0 && (
+					{/* Yapılış geçmişi: nerede, ne zaman, kim.
+					    Bölge görevlerinde tekrarlanabilir olmasa da kayıt tutulur —
+					    aynı anda birkaç bölüm seçilmiş olabilir. */}
+					{kayitlar.length > 0 && (
 						<ul className="mt-2 space-y-1">
 							{kayitlar.slice(0, 6).map((kayit) => (
 								<li
@@ -232,7 +241,7 @@ export function GorevSatir({
 						onClick={() => setAcik(true)}
 						className="dugme dugme-bos shrink-0 !px-3 !py-1.5"
 					>
-						{tekrar && kayitlar.length > 0 ? 'Tekrar yap' : 'Kapat'}
+						{kayitlar.length > 0 ? 'Tekrar yap' : 'Kapat'}
 					</button>
 				)}
 			</div>
@@ -244,22 +253,57 @@ export function GorevSatir({
 					)}
 
 					{gorev.tur === 'bolge' && (
-						<label className="block">
-							<span className="etiket">Hangi bölüm</span>
-							<select
-								value={bolgeId}
-								onChange={(e) => setBolgeId(e.target.value)}
-								className="alan mt-2"
-								autoFocus
-							>
-								<option value="">Seçin…</option>
+						<fieldset>
+							<legend className="etiket">
+								Hangi bölümler
+								{seciliBolgeler.size > 0 && ` · ${seciliBolgeler.size} seçili`}
+							</legend>
+
+							{/* Açılır liste değil işaret kutusu: birden çok bölüm
+							    aynı anda yapılmış olabilir ve çoklu seçimli select
+							    telefonda kullanılamaz. */}
+							<div className="mt-2 grid gap-x-4 gap-y-2 sm:grid-cols-2">
 								{bolgeler.map((b) => (
-									<option key={b.id} value={b.id}>
-										{b.ad}
-									</option>
+									<label
+										key={b.id}
+										className="flex cursor-pointer items-center gap-3"
+									>
+										<input
+											type="checkbox"
+											checked={seciliBolgeler.has(b.id)}
+											onChange={() =>
+												setSeciliBolgeler((eski) => {
+													const yeni = new Set(eski);
+													if (yeni.has(b.id)) yeni.delete(b.id);
+													else yeni.add(b.id);
+													return yeni;
+												})
+											}
+											className="onay shrink-0"
+										/>
+										<span className="text-sm text-metin-2">{b.ad}</span>
+									</label>
 								))}
-							</select>
-						</label>
+							</div>
+
+							{bolgeler.length > 1 && (
+								<button
+									type="button"
+									onClick={() =>
+										setSeciliBolgeler((eski) =>
+											eski.size === bolgeler.length
+												? new Set()
+												: new Set(bolgeler.map((b) => b.id))
+										)
+									}
+									className="mt-3 font-mono text-[0.625rem] uppercase tracking-[0.08em] text-vurgu-metin underline underline-offset-4"
+								>
+									{seciliBolgeler.size === bolgeler.length
+										? 'Seçimi kaldır'
+										: 'Hepsini seç'}
+								</button>
+							)}
+						</fieldset>
 					)}
 
 					{(gorev.tur === 'metin' || gorev.tur === 'sayi') && (

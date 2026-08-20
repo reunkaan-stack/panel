@@ -28,9 +28,21 @@ function hataya(e: unknown, varsayilan: string): Sonuc<never> {
 	return { tamam: false, mesaj: varsayilan };
 }
 
+type GorevKaydiGirdisi = {
+	firma_id: string;
+	gorev_id: string;
+	yapan_id: string;
+	zaman: string;
+	deger_bolge_id: string | null;
+	deger_metin: string | null;
+	deger_sayi: number | null;
+};
+
 export type GorevDegeri = {
 	onay?: boolean;
-	bolgeId?: string;
+	/* Çoğul: aynı anda birden çok bölüm yapılmış olabilir —
+	   "masayı ve beyaz rafları birlikte sildim". */
+	bolgeIdler?: string[];
 	metin?: string;
 	sayi?: number;
 };
@@ -44,8 +56,11 @@ function degerSutunlari(tur: GorevTuru, deger: GorevDegeri) {
 		deger_sayi: null as number | null,
 	};
 	switch (tur) {
+		/* Bölge seçimi görevin kendisine YAZILMAZ; her bölüm için ayrı
+		   kayıt açılır (bkz. gorevTamamla). Tek sütun çoklu seçimi
+		   taşıyamaz ve ısı haritası zaten kayıtlardan okuyor. */
 		case 'bolge':
-			return { ...bos, deger_bolge_id: deger.bolgeId ?? null };
+			return bos;
 		case 'metin':
 			return { ...bos, deger_metin: (deger.metin ?? '').trim() || null };
 		case 'sayi':
@@ -88,22 +103,47 @@ export async function gorevTamamla(
 
 		const simdi = new Date().toISOString();
 		const sutunlar = degerSutunlari(tur, deger);
+		const bolgeIdler = deger.bolgeIdler ?? [];
 
-		/* Tekrarlanabilir görevde her yapılış AYRI KAYIT.
-		   "Sabah ön masayı sildim, akşam arka masayı" — ikisi de
-		   görünmeli. Tek bir tamamlanma alanı ikincisini ezerdi. */
-		if (gorev.tekrarlanabilir) {
+		if (tur === 'bolge' && bolgeIdler.length === 0) {
+			return { tamam: false, mesaj: 'En az bir bölüm seçin.' };
+		}
+
+		/* Ayrı kayıt açılan iki durum:
+		   1. Bölge seçmeli görev — seçilen HER bölüm için bir satır.
+		      "Masayı ve beyaz rafları birlikte sildim" iki kayıttır;
+		      ısı haritasında ikisi de sayılmalı.
+		   2. Tekrarlanabilir görev — her yapılış ayrı satır.
+		      "Sabah ön masa, akşam arka masa" ikisi de görünmeli. */
+		const kayitlar: GorevKaydiGirdisi[] =
+			tur === 'bolge'
+				? bolgeIdler.map((bolgeId) => ({
+						firma_id: gorev.firma_id,
+						gorev_id: gorevId,
+						yapan_id: kullanici.id,
+						zaman: simdi,
+						deger_bolge_id: bolgeId,
+						deger_metin: null,
+						deger_sayi: null,
+					}))
+				: gorev.tekrarlanabilir
+					? [
+							{
+								firma_id: gorev.firma_id,
+								gorev_id: gorevId,
+								yapan_id: kullanici.id,
+								zaman: simdi,
+								deger_bolge_id: null,
+								deger_metin: sutunlar.deger_metin,
+								deger_sayi: sutunlar.deger_sayi,
+							},
+						]
+					: [];
+
+		if (kayitlar.length > 0) {
 			const { error: kayitHatasi } = await supabase
 				.from('ptp_gorev_kayitlari')
-				.insert({
-					firma_id: gorev.firma_id,
-					gorev_id: gorevId,
-					yapan_id: kullanici.id,
-					zaman: simdi,
-					deger_bolge_id: sutunlar.deger_bolge_id,
-					deger_metin: sutunlar.deger_metin,
-					deger_sayi: sutunlar.deger_sayi,
-				});
+				.insert(kayitlar);
 			if (kayitHatasi) throw kayitHatasi;
 		}
 
