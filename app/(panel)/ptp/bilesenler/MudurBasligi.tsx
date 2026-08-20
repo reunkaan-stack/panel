@@ -27,16 +27,16 @@ export function MudurBasligi({
 		setMesaj(null);
 		setHata(null);
 		basla(async () => {
-			try {
-				const adet = await gunuOlustur(tarih);
-				setMesaj(
-					adet === 0
-						? 'Eklenecek yeni görev yok — bu günün görevleri zaten oluşturulmuş.'
-						: `${adet} görev oluşturuldu.`
-				);
-			} catch (e) {
-				setHata(e instanceof Error ? e.message : 'Oluşturulamadı');
+			const sonuc = await gunuOlustur(tarih);
+			if (!sonuc.tamam) {
+				setHata(sonuc.mesaj);
+				return;
 			}
+			setMesaj(
+				sonuc.veri === 0
+					? 'Eklenecek yeni görev yok — bu günün görevleri zaten oluşturulmuş.'
+					: `${sonuc.veri} görev oluşturuldu.`
+			);
 		});
 	}
 

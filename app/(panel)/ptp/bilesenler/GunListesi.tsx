@@ -55,13 +55,13 @@ export function GunListesi({
 	function ata() {
 		setHata(null);
 		basla(async () => {
-			try {
-				await gorevleriAta([...secili], atanacak || null);
-				setSecili(new Set());
-				setAtanacak('');
-			} catch (e) {
-				setHata(e instanceof Error ? e.message : 'Atama yapılamadı');
+			const sonuc = await gorevleriAta([...secili], atanacak || null);
+			if (!sonuc.tamam) {
+				setHata(sonuc.mesaj);
+				return;
 			}
+			setSecili(new Set());
+			setAtanacak('');
 		});
 	}
 

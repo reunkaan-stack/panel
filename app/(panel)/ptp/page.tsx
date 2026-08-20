@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
-import { yetkiDenetle } from '@/lib/yetki';
+import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
+import { islemFirmasi } from '@/lib/yetki/firma';
 import { bugun, tarihiBicimle } from '@/lib/ortak/tarih';
 import type { GorevSatiri } from '@/lib/tipler';
 import { GunListesi } from './bilesenler/GunListesi';
@@ -24,15 +25,36 @@ export default async function PtpSayfasi({
 		? istenenTarih!
 		: bugun();
 
+	/* Süperadmin RLS gereği BÜTÜN firmaların görevlerini görebilir.
+	   Hangi firmaya baktığı belirlenmeden liste gösterilmez; yoksa iki
+	   firmanın görevleri aynı ekranda karışır. */
+	let firmaId: string;
+	try {
+		firmaId = await islemFirmasi();
+	} catch (e) {
+		return (
+			<div className="mx-auto max-w-3xl px-6 py-12">
+				<span className="etiket text-uyari">Firma seçilmedi</span>
+				<h1 className="mt-3 text-2xl font-semibold tracking-[-0.015em]">
+					Hangi firma?
+				</h1>
+				<p className="mt-4 max-w-lg text-sm leading-relaxed text-metin-2">
+					{e instanceof YetkisizHata
+						? e.message
+						: 'Firma bilgisi çözülemedi.'}
+				</p>
+			</div>
+		);
+	}
+
 	const supabase = await sunucuIstemcisi();
 
-	/* Müdür günün tamamını görür; personel yalnızca kendine ataneni ve
+	/* Müdür günün tamamını görür; personel yalnızca kendine atananı ve
 	   henüz kimseye atanmamış olanları. */
 	let sorgu = supabase
 		.from('ptp_gorevler')
-		.select(
-			'*, atanan:atanan_id(ad), tamamlayan:tamamlayan_id(ad)'
-		)
+		.select('*, atanan:atanan_id(ad), tamamlayan:tamamlayan_id(ad)')
+		.eq('firma_id', firmaId)
 		.eq('tarih', tarih)
 		.is('silindi', null)
 		.order('grup')
@@ -45,12 +67,12 @@ export default async function PtpSayfasi({
 	const { data, error } = await sorgu;
 	const gorevler = (data ?? []) as unknown as GorevSatiri[];
 
-	/* Atama listesi yalnızca müdüre gerekiyor; personel için sorgu bile
-	   atılmıyor — RLS reddederdi ama gereksiz gidiş dönüş de olmasın. */
+	/* Atama listesi yalnızca müdüre gerekiyor. */
 	const { data: kisiler } = yonetici
 		? await supabase
 				.from('kullanicilar')
 				.select('id, ad')
+				.eq('firma_id', firmaId)
 				.eq('aktif', true)
 				.is('silindi', null)
 				.order('ad')

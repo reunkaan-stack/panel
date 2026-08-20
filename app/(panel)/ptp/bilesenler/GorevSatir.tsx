@@ -51,12 +51,12 @@ export function GorevSatir({
 		}
 
 		basla(async () => {
-			try {
-				await gorevTamamla(gorev.id, gorev.tur, d);
-				setAcik(false);
-			} catch (e) {
-				setHata(e instanceof Error ? e.message : 'Kaydedilemedi');
+			const sonuc = await gorevTamamla(gorev.id, gorev.tur, d);
+			if (!sonuc.tamam) {
+				setHata(sonuc.mesaj);
+				return;
 			}
+			setAcik(false);
 		});
 	}
 
@@ -64,12 +64,12 @@ export function GorevSatir({
 		setHata(null);
 		if (!sebep.trim()) return setHata('Neden yapılamadığını yazın');
 		basla(async () => {
-			try {
-				await gorevAtla(gorev.id, sebep);
-				setAcik(false);
-			} catch (e) {
-				setHata(e instanceof Error ? e.message : 'Kaydedilemedi');
+			const sonuc = await gorevAtla(gorev.id, sebep);
+			if (!sonuc.tamam) {
+				setHata(sonuc.mesaj);
+				return;
 			}
+			setAcik(false);
 		});
 	}
 

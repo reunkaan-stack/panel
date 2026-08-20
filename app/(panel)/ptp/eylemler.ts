@@ -3,13 +3,30 @@
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
+import { islemFirmasi } from '@/lib/yetki/firma';
 import type { GorevTuru } from '@/lib/tipler';
 
 /* PTP sunucu eylemleri.
 
    Kural: her eylemin ilk satırı yetkiDenetle(). İstisna yok.
-   firma_id istemciden ALINMAZ — oturumdaki kullanıcıdan türetilir.
+   firma_id istemciden ALINMAZ — oturumdan türetilir.
+
+   ⚠️ Sunucu eyleminden FIRLATILAN hata üretimde gizlenir; kullanıcı
+   "Minified React error #441" görür ve hiçbir şey öğrenemez. Bu yüzden
+   eylemler hata fırlatmaz, SONUÇ DÖNDÜRÜR. Teknik ayrıntı sunucuda
+   loglanır, kullanıcıya ne yapacağını söyleyen bir cümle gider.
    Bkz. standartlar/02-GUVENLIK.md */
+
+export type Sonuc<T = void> =
+	| { tamam: true; veri: T }
+	| { tamam: false; mesaj: string };
+
+/** Hatayı loglar, kullanıcıya güvenli bir mesaj döndürür. */
+function hataya(e: unknown, varsayilan: string): Sonuc<never> {
+	if (e instanceof YetkisizHata) return { tamam: false, mesaj: e.message };
+	console.error('[ptp]', e);
+	return { tamam: false, mesaj: varsayilan };
+}
 
 export type GorevDegeri = {
 	onay?: boolean;
@@ -46,154 +63,181 @@ export async function gorevTamamla(
 	gorevId: string,
 	tur: GorevTuru,
 	deger: GorevDegeri
-): Promise<void> {
-	const { kullanici, yonetici } = await yetkiDenetle('ptp', 'yazma');
-	const supabase = await sunucuIstemcisi();
+): Promise<Sonuc> {
+	try {
+		const { kullanici, yonetici } = await yetkiDenetle('ptp', 'yazma');
+		const supabase = await sunucuIstemcisi();
 
-	/* Görevi önce okuyup atamasını denetliyoruz. RLS firma ayrımını
-	   zaten yapıyor; buradaki denetim "başkasının görevini kapatma"
-	   kuralı için — o kural RLS'te değil, iş mantığında. */
-	const { data: gorev, error: okumaHatasi } = await supabase
-		.from('ptp_gorevler')
-		.select('id, atanan_id, durum')
-		.eq('id', gorevId)
-		.is('silindi', null)
-		.single();
+		/* Atama denetimi RLS'te değil burada: RLS firma ayrımı için,
+		   "başkasının görevini kapatma" ondan farklı bir soru. */
+		const { data: gorev } = await supabase
+			.from('ptp_gorevler')
+			.select('id, atanan_id')
+			.eq('id', gorevId)
+			.is('silindi', null)
+			.maybeSingle();
 
-	if (okumaHatasi || !gorev) throw new Error('Görev bulunamadı');
+		if (!gorev) return { tamam: false, mesaj: 'Görev bulunamadı.' };
+		if (!yonetici && gorev.atanan_id && gorev.atanan_id !== kullanici.id) {
+			return { tamam: false, mesaj: 'Bu görev başka bir kişiye atanmış.' };
+		}
 
-	if (!yonetici && gorev.atanan_id && gorev.atanan_id !== kullanici.id) {
-		throw new YetkisizHata('Bu görev başka bir kişiye atanmış.');
+		const { error } = await supabase
+			.from('ptp_gorevler')
+			.update({
+				durum: 'tamamlandi',
+				tamamlayan_id: kullanici.id,
+				tamamlanma_zamani: new Date().toISOString(),
+				atlama_sebebi: null,
+				...degerSutunlari(tur, deger),
+			})
+			.eq('id', gorevId);
+
+		if (error) throw error;
+		revalidatePath('/ptp');
+		return { tamam: true, veri: undefined };
+	} catch (e) {
+		return hataya(e, 'Görev kaydedilemedi. Tekrar deneyin.');
 	}
-
-	const { error } = await supabase
-		.from('ptp_gorevler')
-		.update({
-			durum: 'tamamlandi',
-			tamamlayan_id: kullanici.id,
-			tamamlanma_zamani: new Date().toISOString(),
-			atlama_sebebi: null,
-			...degerSutunlari(tur, deger),
-		})
-		.eq('id', gorevId);
-
-	if (error) throw new Error('Görev kaydedilemedi: ' + error.message);
-	revalidatePath('/ptp');
 }
 
 /** Görevi atlar. Sebep zorunlu — veri tabanı da bunu kısıtla zorluyor. */
-export async function gorevAtla(gorevId: string, sebep: string): Promise<void> {
-	const { kullanici, yonetici } = await yetkiDenetle('ptp', 'yazma');
+export async function gorevAtla(
+	gorevId: string,
+	sebep: string
+): Promise<Sonuc> {
+	try {
+		const { kullanici, yonetici } = await yetkiDenetle('ptp', 'yazma');
+		const temiz = sebep.trim();
+		if (!temiz) return { tamam: false, mesaj: 'Atlama sebebi yazılmalı.' };
 
-	const temiz = sebep.trim();
-	if (!temiz) throw new Error('Atlama sebebi yazılmalı');
+		const supabase = await sunucuIstemcisi();
+		const { data: gorev } = await supabase
+			.from('ptp_gorevler')
+			.select('id, atanan_id')
+			.eq('id', gorevId)
+			.is('silindi', null)
+			.maybeSingle();
 
-	const supabase = await sunucuIstemcisi();
+		if (!gorev) return { tamam: false, mesaj: 'Görev bulunamadı.' };
+		if (!yonetici && gorev.atanan_id && gorev.atanan_id !== kullanici.id) {
+			return { tamam: false, mesaj: 'Bu görev başka bir kişiye atanmış.' };
+		}
 
-	const { data: gorev } = await supabase
-		.from('ptp_gorevler')
-		.select('id, atanan_id')
-		.eq('id', gorevId)
-		.is('silindi', null)
-		.single();
+		const { error } = await supabase
+			.from('ptp_gorevler')
+			.update({
+				durum: 'atlandi',
+				atlama_sebebi: temiz,
+				tamamlayan_id: kullanici.id,
+				tamamlanma_zamani: new Date().toISOString(),
+			})
+			.eq('id', gorevId);
 
-	if (!gorev) throw new Error('Görev bulunamadı');
-	if (!yonetici && gorev.atanan_id && gorev.atanan_id !== kullanici.id) {
-		throw new YetkisizHata('Bu görev başka bir kişiye atanmış.');
+		if (error) throw error;
+		revalidatePath('/ptp');
+		return { tamam: true, veri: undefined };
+	} catch (e) {
+		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.');
 	}
-
-	const { error } = await supabase
-		.from('ptp_gorevler')
-		.update({
-			durum: 'atlandi',
-			atlama_sebebi: temiz,
-			tamamlayan_id: kullanici.id,
-			tamamlanma_zamani: new Date().toISOString(),
-		})
-		.eq('id', gorevId);
-
-	if (error) throw new Error('Kaydedilemedi: ' + error.message);
-	revalidatePath('/ptp');
 }
 
-/**
- * Görevleri bir kişiye atar. Yalnızca müdür.
- * Toplu çalışır: "şu beş görev Ayşe'ye" tek işlemde.
- */
+/** Görevleri bir kişiye atar. Yalnızca müdür. Toplu çalışır. */
 export async function gorevleriAta(
 	gorevIdleri: string[],
 	kullaniciId: string | null
-): Promise<void> {
-	await yetkiDenetle('ptp', 'yonetim');
-	if (gorevIdleri.length === 0) return;
+): Promise<Sonuc> {
+	try {
+		await yetkiDenetle('ptp', 'yonetim');
+		if (gorevIdleri.length === 0) return { tamam: true, veri: undefined };
 
-	const supabase = await sunucuIstemcisi();
-	const { error } = await supabase
-		.from('ptp_gorevler')
-		.update({ atanan_id: kullaniciId })
-		.in('id', gorevIdleri)
-		.is('silindi', null);
+		const supabase = await sunucuIstemcisi();
+		const { error } = await supabase
+			.from('ptp_gorevler')
+			.update({ atanan_id: kullaniciId })
+			.in('id', gorevIdleri)
+			.is('silindi', null);
 
-	if (error) throw new Error('Atama yapılamadı: ' + error.message);
-	revalidatePath('/ptp');
+		if (error) throw error;
+		revalidatePath('/ptp');
+		return { tamam: true, veri: undefined };
+	} catch (e) {
+		return hataya(e, 'Atama yapılamadı. Tekrar deneyin.');
+	}
 }
 
 /**
  * Bugünün görevlerini şablonlardan üretir. Yalnızca müdür.
  *
- * Aynı gün iki kez çalıştırılırsa görev ikiye katlanmaz: zaten üretilmiş
- * şablonlar atlanır. Bu işlem ileride pg_cron ile her sabah otomatik
- * çalışacak; elle düğme, ilk kurulum ve şablon değişikliği için duruyor.
+ * Aynı gün iki kez çalıştırılırsa görev ikiye katlanmaz; zaten
+ * üretilmiş şablonlar atlanır. İleride pg_cron her sabah bu fonksiyonu
+ * çağıracak — düğme, ilk kurulum ve şablon değişikliği için duruyor.
  */
-export async function gunuOlustur(tarih: string): Promise<number> {
-	const { kullanici } = await yetkiDenetle('ptp', 'yonetim');
-	const supabase = await sunucuIstemcisi();
+export async function gunuOlustur(tarih: string): Promise<Sonuc<number>> {
+	try {
+		await yetkiDenetle('ptp', 'yonetim');
 
-	const gun = new Date(tarih + 'T00:00:00');
-	/* Postgres'te 1=Pazartesi; JS'te 0=Pazar. Dönüşüm burada yapılır. */
-	const haftaninGunu = gun.getDay() === 0 ? 7 : gun.getDay();
+		/* Süperadminin firması yoktur; hangi firma adına çalıştığı
+		   burada çözülür. Önceden kullanici.firma_id yazılıyordu ve
+		   süperadminde null olduğu için kayıt reddediliyordu. */
+		const firmaId = await islemFirmasi();
+		const supabase = await sunucuIstemcisi();
 
-	const { data: sablonlar, error: sablonHatasi } = await supabase
-		.from('ptp_sablonlar')
-		.select('id, baslik, tur, grup, sira, zorunlu, fotograf_ister, ipucu, tekrar, tekrar_gunleri')
-		.eq('aktif', true)
-		.is('silindi', null);
+		const gun = new Date(tarih + 'T00:00:00');
+		/* Postgres'te 1=Pazartesi, JS'te 0=Pazar. Dönüşüm burada. */
+		const haftaninGunu = gun.getDay() === 0 ? 7 : gun.getDay();
 
-	if (sablonHatasi) throw new Error('Şablonlar okunamadı: ' + sablonHatasi.message);
-	if (!sablonlar?.length) return 0;
+		const { data: sablonlar, error: sablonHatasi } = await supabase
+			.from('ptp_sablonlar')
+			.select('id, baslik, tur, grup, zorunlu, fotograf_ister, ipucu, tekrar, tekrar_gunleri')
+			.eq('firma_id', firmaId)
+			.eq('aktif', true)
+			.is('silindi', null);
 
-	const { data: mevcut } = await supabase
-		.from('ptp_gorevler')
-		.select('sablon_id')
-		.eq('tarih', tarih)
-		.is('silindi', null);
+		if (sablonHatasi) throw sablonHatasi;
+		if (!sablonlar?.length) {
+			return {
+				tamam: false,
+				mesaj: 'Tanımlı görev şablonu yok. Önce şablon oluşturulmalı.',
+			};
+		}
 
-	const uretilmis = new Set((mevcut ?? []).map((g) => g.sablon_id));
+		const { data: mevcut } = await supabase
+			.from('ptp_gorevler')
+			.select('sablon_id')
+			.eq('firma_id', firmaId)
+			.eq('tarih', tarih)
+			.is('silindi', null);
 
-	const bugunkuler = sablonlar.filter((s) => {
-		if (uretilmis.has(s.id)) return false;
-		if (s.tekrar === 'gunluk') return true;
-		return (s.tekrar_gunleri as number[]).includes(haftaninGunu);
-	});
+		const uretilmis = new Set((mevcut ?? []).map((g) => g.sablon_id));
 
-	if (bugunkuler.length === 0) return 0;
+		const bugunkuler = sablonlar.filter((s) => {
+			if (uretilmis.has(s.id)) return false;
+			if (s.tekrar === 'gunluk') return true;
+			return (s.tekrar_gunleri as number[]).includes(haftaninGunu);
+		});
 
-	const { error } = await supabase.from('ptp_gorevler').insert(
-		bugunkuler.map((s) => ({
-			firma_id: kullanici.firma_id,
-			sablon_id: s.id,
-			tarih,
-			grup: s.grup,
-			baslik: s.baslik,
-			tur: s.tur,
-			zorunlu: s.zorunlu,
-			fotograf_ister: s.fotograf_ister,
-			ipucu: s.ipucu,
-			kaynak: 'sablon' as const,
-		}))
-	);
+		if (bugunkuler.length === 0) return { tamam: true, veri: 0 };
 
-	if (error) throw new Error('Görevler oluşturulamadı: ' + error.message);
-	revalidatePath('/ptp');
-	return bugunkuler.length;
+		const { error } = await supabase.from('ptp_gorevler').insert(
+			bugunkuler.map((s) => ({
+				firma_id: firmaId,
+				sablon_id: s.id,
+				tarih,
+				grup: s.grup,
+				baslik: s.baslik,
+				tur: s.tur,
+				zorunlu: s.zorunlu,
+				fotograf_ister: s.fotograf_ister,
+				ipucu: s.ipucu,
+				kaynak: 'sablon' as const,
+			}))
+		);
+
+		if (error) throw error;
+		revalidatePath('/ptp');
+		return { tamam: true, veri: bugunkuler.length };
+	} catch (e) {
+		return hataya(e, 'Görevler oluşturulamadı. Tekrar deneyin.');
+	}
 }
