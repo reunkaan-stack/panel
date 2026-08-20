@@ -4,6 +4,9 @@
 -- Bu bir migration DEĞİLDİR: şema değiştirmez, ilk kayıtları açar.
 -- Migration'lar her ortamda çalışır; bu dosya yalnızca gerçek kurulumda.
 --
+-- Dosya birden çok kez çalıştırılabilir: her ekleme "on conflict" ile
+-- korunuyor, tekrar çalıştırmak veriyi ikiye katlamaz.
+--
 -- ⚠️ Çalıştırmadan ÖNCE: Supabase → Authentication → Users → Add user
 -- ile aşağıdaki e-postalar için hesap açılmış olmalı ("Auto confirm
 -- user" işaretli). Bu betik o hesapları panel kullanıcısına bağlar.
@@ -113,7 +116,8 @@ select f.id, s.baslik, s.tur, s.grup, s.sira, s.zorunlu, s.ipucu
    ('Gün sonu kasa sayımı',                     'sayi',  'kapanis', 1, true,  'Gün sonu kasadaki tutar'),
    ('Kapanış temizliği yapıldı mı?',            'onay',  'kapanis', 2, true,  '')
  ) as s(baslik, tur, grup, sira, zorunlu, ipucu)
- where f.kisa_ad = 'squala';
+ where f.kisa_ad = 'squala'
+on conflict (firma_id, grup, baslik) where silindi is null do nothing;
 
 
 -- ============================================================
