@@ -8,6 +8,7 @@ import {
 	maddeIsaretle,
 	type GorevDegeri,
 } from '../eylemler';
+import { KrokiSecici } from './KrokiSecici';
 
 /* Tek görev satırı.
 
@@ -71,7 +72,7 @@ export function GorevSatir({
 			d.sayi = s;
 		} else if (gorev.tur === 'bolge') {
 			if (seciliBolgeler.size === 0) {
-				return setHata('Hangi bölümlerde yaptığınızı seçin');
+				return setHata('Krokiden en az bir bölüm seçin');
 			}
 			d.bolgeIdler = [...seciliBolgeler];
 		} else if (gorev.tur === 'kontrol') {
@@ -255,36 +256,27 @@ export function GorevSatir({
 					{gorev.tur === 'bolge' && (
 						<fieldset>
 							<legend className="etiket">
-								Hangi bölümler
+								Nereleri yaptınız
 								{seciliBolgeler.size > 0 && ` · ${seciliBolgeler.size} seçili`}
 							</legend>
 
-							{/* Açılır liste değil işaret kutusu: birden çok bölüm
-							    aynı anda yapılmış olabilir ve çoklu seçimli select
-							    telefonda kullanılamaz. */}
-							<div className="mt-2 grid gap-x-4 gap-y-2 sm:grid-cols-2">
-								{bolgeler.map((b) => (
-									<label
-										key={b.id}
-										className="flex cursor-pointer items-center gap-3"
-									>
-										<input
-											type="checkbox"
-											checked={seciliBolgeler.has(b.id)}
-											onChange={() =>
-												setSeciliBolgeler((eski) => {
-													const yeni = new Set(eski);
-													if (yeni.has(b.id)) yeni.delete(b.id);
-													else yeni.add(b.id);
-													return yeni;
-												})
-											}
-											className="onay shrink-0"
-										/>
-										<span className="text-sm text-metin-2">{b.ad}</span>
-									</label>
-								))}
-							</div>
+							<p className="mt-1 mb-3 text-sm text-metin-2">
+								Krokiden yaptığınız bölümlere dokunun. Birden çok seçebilirsiniz.
+							</p>
+
+							<KrokiSecici
+								bolgeler={bolgeler}
+								secili={seciliBolgeler}
+								kapali={bekliyor}
+								degistir={(bolgeId) =>
+									setSeciliBolgeler((eski) => {
+										const yeni = new Set(eski);
+										if (yeni.has(bolgeId)) yeni.delete(bolgeId);
+										else yeni.add(bolgeId);
+										return yeni;
+									})
+								}
+							/>
 
 							{bolgeler.length > 1 && (
 								<button

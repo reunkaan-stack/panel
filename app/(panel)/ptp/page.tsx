@@ -99,7 +99,7 @@ export default async function PtpSayfasi({
 		/* Bölge seçmeli görevlerde listeden seçilecek bölümler */
 		supabase
 			.from('ptp_bolumler')
-			.select('id, ad')
+			.select('id, ad, kroki_x, kroki_y, kroki_en, kroki_boy')
 			.eq('firma_id', firmaId)
 			.eq('aktif', true)
 			.is('silindi', null)

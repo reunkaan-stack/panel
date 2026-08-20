@@ -85,7 +85,16 @@ export type Gorev = {
 	kaynak: 'sablon' | 'elle' | 'telegram';
 };
 
-export type Bolge = { id: string; ad: string };
+export type Bolge = {
+	id: string;
+	ad: string;
+	/* Krokideki yeri. NULL ise bölge haritaya yerleştirilmemiştir ve
+	   seçim ekranında liste olarak gösterilir. */
+	kroki_x: number | null;
+	kroki_y: number | null;
+	kroki_en: number | null;
+	kroki_boy: number | null;
+};
 
 /** Tekrarlanabilir görevin her yapılışı ayrı kayıt. */
 export type GorevKaydi = {
