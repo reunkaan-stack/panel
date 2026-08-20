@@ -57,6 +57,9 @@ export function MudurBasligi({
 				<Link href="/ptp/kroki" className="dugme dugme-bos">
 					Kroki
 				</Link>
+				<Link href="/ptp/rapor" className="dugme dugme-bos">
+					Performans
+				</Link>
 				<button
 					type="button"
 					onClick={olustur}
