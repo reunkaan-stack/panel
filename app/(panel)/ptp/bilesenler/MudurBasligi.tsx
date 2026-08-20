@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { gunuOlustur } from '../eylemler';
 
 /* Müdür başlığı: gün oluşturma ve ekip özeti.
@@ -49,7 +50,10 @@ export function MudurBasligi({
 				</p>
 			</div>
 
-			<div className="shrink-0">
+			<div className="flex shrink-0 flex-wrap gap-3">
+				<Link href="/ptp/gorevler" className="dugme dugme-bos">
+					Görev tanımları
+				</Link>
 				<button
 					type="button"
 					onClick={olustur}
