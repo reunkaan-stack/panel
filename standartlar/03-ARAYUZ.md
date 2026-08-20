@@ -83,6 +83,25 @@ Panel bir uygulamadır; günde sekiz saat bakılır.
 **Kural:** bir bileşen `bg-kagit` yazmaz, `bg-zemin` yazar. Böylece
 karanlık mod tek dosyadan gelir; bileşenlerde tema koşulu bulunmaz.
 
+### ⚠️ Tarama yolu tuzağı
+
+Tailwind, sınıfları **kaynak dosyaları tarayarak** üretir. Taramadığı bir
+klasördeki sınıf CSS'e hiç girmez — **hata vermez, sadece görünmez.**
+
+CSS giriş dosyasında taranacak klasörler açıkça yazılır:
+
+```css
+@import 'tailwindcss';
+@source "../app";
+@source "../bilesenler";
+```
+
+Bir kez yaşandı: `bilesenler/` yazılmadığı için tema seçicinin arka planı
+ve yazı rengi hiç üretilmedi; düğme şeffaf kaldı. `app/` altındaki aynı
+sınıflar çalıştığı için sorun uzun süre fark edilmeyebilirdi.
+
+**Yeni bir üst klasör açıldığında buraya eklenir.**
+
 ### Üç durum
 
 Tema **üç** durumludur, iki değil:
@@ -271,4 +290,5 @@ yapmaktan pahalıdır.
 - Durumu yalnızca renkle anlatma
 - Marka rengini kontrastını ölçmeden küçük yazıda kullanma
 - Devralınan paleti yeniden ölçmeden kullanma
+- Yeni bir kaynak klasörü açıp `@source` satırını eklemeyi unutma
 - 150 ms'den uzun geçiş animasyonu koyma

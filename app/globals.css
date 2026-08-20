@@ -1,5 +1,15 @@
 @import 'tailwindcss';
 
+/* Tailwind'in sınıf tarayacağı klasörler.
+
+   ⚠️ Bunu yazmazsan `bilesenler/` altındaki sınıflar ÜRETİLMEZ ve
+   bileşenler sessizce stilsiz kalır — hata vermez, sadece görünmez.
+   Bir kez yaşandı: tema seçicinin arka planı şeffaf kaldı.
+
+   Yeni bir üst klasör açılırsa (ör. `ozellikler/`) buraya eklenir. */
+@source "../app";
+@source "../bilesenler";
+
 /* ============================================================
    TOKEN MİMARİSİ — iki katman
 
