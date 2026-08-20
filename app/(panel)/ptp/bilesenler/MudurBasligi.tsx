@@ -54,6 +54,9 @@ export function MudurBasligi({
 				<Link href="/ptp/gorevler" className="dugme dugme-bos">
 					Görev tanımları
 				</Link>
+				<Link href="/ptp/kroki" className="dugme dugme-bos">
+					Kroki
+				</Link>
 				<button
 					type="button"
 					onClick={olustur}
