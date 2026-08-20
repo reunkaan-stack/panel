@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { GRUP_ADLARI, type GorevGrubu, type GorevSatiri } from '@/lib/tipler';
+import {
+	GRUP_ADLARI,
+	type Bolge,
+	type GorevGrubu,
+	type GorevSatiri,
+} from '@/lib/tipler';
 import { saatiBicimle } from '@/lib/ortak/tarih';
 import { gorevleriAta } from '../eylemler';
 import { GorevSatir } from './GorevSatir';
@@ -19,11 +24,13 @@ export function GunListesi({
 	yonetici,
 	kullaniciId,
 	kisiler,
+	bolgeler,
 }: {
 	gorevler: GorevSatiri[];
 	yonetici: boolean;
 	kullaniciId: string;
 	kisiler: Kisi[];
+	bolgeler: Bolge[];
 }) {
 	const [secili, setSecili] = useState<Set<string>>(new Set());
 	const [atanacak, setAtanacak] = useState('');
@@ -136,6 +143,7 @@ export function GunListesi({
 								secili={secili.has(gorev.id)}
 								isaretle={() => isaretle(gorev.id)}
 								saatiBicimle={saatiBicimle}
+								bolgeler={bolgeler}
 							/>
 						))}
 					</ul>

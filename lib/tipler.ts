@@ -85,6 +85,20 @@ export type Gorev = {
 	kaynak: 'sablon' | 'elle' | 'telegram';
 };
 
+export type Bolge = { id: string; ad: string };
+
+/** Tekrarlanabilir görevin her yapılışı ayrı kayıt. */
+export type GorevKaydi = {
+	id: string;
+	gorev_id: string;
+	zaman: string;
+	deger_bolge_id: string | null;
+	deger_metin: string | null;
+	deger_sayi: number | null;
+	yapan: { ad: string } | null;
+	bolge: { ad: string } | null;
+};
+
 export type GorevMaddesi = {
 	id: string;
 	gorev_id: string;
@@ -99,5 +113,7 @@ export type GorevMaddesi = {
 export type GorevSatiri = Gorev & {
 	atanan: { ad: string } | null;
 	tamamlayan: { ad: string } | null;
+	bolge: { ad: string } | null;
 	maddeler: GorevMaddesi[];
+	kayitlar: GorevKaydi[];
 };

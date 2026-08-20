@@ -4,7 +4,7 @@ import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
 import { bugun, tarihiBicimle } from '@/lib/ortak/tarih';
-import type { GorevSatiri } from '@/lib/tipler';
+import type { Bolge, GorevSatiri } from '@/lib/tipler';
 import { GunListesi } from './bilesenler/GunListesi';
 import { MudurBasligi } from './bilesenler/MudurBasligi';
 
@@ -54,7 +54,11 @@ export default async function PtpSayfasi({
 	   henüz kimseye atanmamış olanları. */
 	let sorgu = supabase
 		.from('ptp_gorevler')
-		.select('*, atanan:atanan_id(ad), tamamlayan:tamamlayan_id(ad)')
+		.select(
+			'*, atanan:atanan_id(ad), tamamlayan:tamamlayan_id(ad), bolge:deger_bolge_id(ad), ' +
+				'maddeler:ptp_gorev_maddeleri(id, gorev_id, metin, sira, isaretli, isaretleyen_id, isaretlenme_zamani), ' +
+				'kayitlar:ptp_gorev_kayitlari(id, gorev_id, zaman, deger_bolge_id, deger_metin, deger_sayi, yapan:yapan_id(ad), bolge:deger_bolge_id(ad))'
+		)
 		.eq('firma_id', firmaId)
 		.eq('tarih', tarih)
 		.is('silindi', null)
@@ -69,7 +73,7 @@ export default async function PtpSayfasi({
 	   Ardışık yazıldığında her biri ayrı bir Atlantik gidiş-dönüşü
 	   ekliyordu; veri tabanı Frankfurt'ta, fonksiyon orada çalışsa bile
 	   sıraya dizmenin bir faydası yok. */
-	const [gorevSonucu, eksikSonucu, kisiSonucu] = await Promise.all([
+	const [gorevSonucu, eksikSonucu, kisiSonucu, bolgeSonucu] = await Promise.all([
 		sorgu,
 
 		/* Yalnızca sayım isteniyor, satırlar değil — head: true ile
@@ -91,12 +95,22 @@ export default async function PtpSayfasi({
 					.is('silindi', null)
 					.order('ad')
 			: Promise.resolve({ data: null }),
+
+		/* Bölge seçmeli görevlerde listeden seçilecek bölümler */
+		supabase
+			.from('ptp_bolumler')
+			.select('id, ad')
+			.eq('firma_id', firmaId)
+			.eq('aktif', true)
+			.is('silindi', null)
+			.order('ad'),
 	]);
 
 	const { data, error } = gorevSonucu;
 	const gorevler = (data ?? []) as unknown as GorevSatiri[];
 	const eksikSayisi = eksikSonucu.count;
 	const kisiler = kisiSonucu.data;
+	const bolgeler = (bolgeSonucu.data ?? []) as Bolge[];
 
 	return (
 		<div className="mx-auto max-w-4xl px-6 py-10">
@@ -139,6 +153,7 @@ export default async function PtpSayfasi({
 						yonetici={yonetici}
 						kullaniciId={kullanici.id}
 						kisiler={kisiler ?? []}
+						bolgeler={bolgeler}
 					/>
 				</div>
 			)}

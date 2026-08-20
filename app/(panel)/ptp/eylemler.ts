@@ -44,14 +44,18 @@ function degerSutunlari(tur: GorevTuru, deger: GorevDegeri) {
 		deger_sayi: null as number | null,
 	};
 	switch (tur) {
-		case 'onay':
-			return { ...bos, deger_onay: deger.onay ?? true };
 		case 'bolge':
 			return { ...bos, deger_bolge_id: deger.bolgeId ?? null };
 		case 'metin':
 			return { ...bos, deger_metin: (deger.metin ?? '').trim() || null };
 		case 'sayi':
 			return { ...bos, deger_sayi: deger.sayi ?? null };
+		/* Kontrol listesinde değer maddelerde tutulur; görevin kendisi
+		   yalnızca "yapıldı" işareti taşır. */
+		case 'kontrol':
+		case 'onay':
+		default:
+			return { ...bos, deger_onay: deger.onay ?? true };
 	}
 }
 
@@ -72,7 +76,7 @@ export async function gorevTamamla(
 		   "başkasının görevini kapatma" ondan farklı bir soru. */
 		const { data: gorev } = await supabase
 			.from('ptp_gorevler')
-			.select('id, atanan_id')
+			.select('id, firma_id, atanan_id, tekrarlanabilir')
 			.eq('id', gorevId)
 			.is('silindi', null)
 			.maybeSingle();
@@ -82,14 +86,37 @@ export async function gorevTamamla(
 			return { tamam: false, mesaj: 'Bu görev başka bir kişiye atanmış.' };
 		}
 
+		const simdi = new Date().toISOString();
+		const sutunlar = degerSutunlari(tur, deger);
+
+		/* Tekrarlanabilir görevde her yapılış AYRI KAYIT.
+		   "Sabah ön masayı sildim, akşam arka masayı" — ikisi de
+		   görünmeli. Tek bir tamamlanma alanı ikincisini ezerdi. */
+		if (gorev.tekrarlanabilir) {
+			const { error: kayitHatasi } = await supabase
+				.from('ptp_gorev_kayitlari')
+				.insert({
+					firma_id: gorev.firma_id,
+					gorev_id: gorevId,
+					yapan_id: kullanici.id,
+					zaman: simdi,
+					deger_bolge_id: sutunlar.deger_bolge_id,
+					deger_metin: sutunlar.deger_metin,
+					deger_sayi: sutunlar.deger_sayi,
+				});
+			if (kayitHatasi) throw kayitHatasi;
+		}
+
+		/* Görevin kendisi son yapılışı taşır: gün özetinde "yapıldı mı"
+		   sorusu buna bakıyor, tekrarlanabilirde de en son duruma. */
 		const { error } = await supabase
 			.from('ptp_gorevler')
 			.update({
 				durum: 'tamamlandi',
 				tamamlayan_id: kullanici.id,
-				tamamlanma_zamani: new Date().toISOString(),
+				tamamlanma_zamani: simdi,
 				atlama_sebebi: null,
-				...degerSutunlari(tur, deger),
+				...sutunlar,
 			})
 			.eq('id', gorevId);
 
@@ -98,6 +125,32 @@ export async function gorevTamamla(
 		return { tamam: true, veri: undefined };
 	} catch (e) {
 		return hataya(e, 'Görev kaydedilemedi. Tekrar deneyin.');
+	}
+}
+
+/** Kontrol listesi maddesini işaretler ya da işareti kaldırır. */
+export async function maddeIsaretle(
+	maddeId: string,
+	isaretli: boolean
+): Promise<Sonuc> {
+	try {
+		const { kullanici } = await yetkiDenetle('ptp', 'yazma');
+		const supabase = await sunucuIstemcisi();
+
+		const { error } = await supabase
+			.from('ptp_gorev_maddeleri')
+			.update({
+				isaretli,
+				isaretleyen_id: isaretli ? kullanici.id : null,
+				isaretlenme_zamani: isaretli ? new Date().toISOString() : null,
+			})
+			.eq('id', maddeId);
+
+		if (error) throw error;
+		revalidatePath('/ptp');
+		return { tamam: true, veri: undefined };
+	} catch (e) {
+		return hataya(e, 'İşaretlenemedi. Tekrar deneyin.');
 	}
 }
 
