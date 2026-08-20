@@ -1,0 +1,185 @@
+@import 'tailwindcss';
+
+/* ============================================================
+   TASARIM TOKEN'LARI
+
+   Kurumsal siteyle aynı palet — aynı firma, aynı görsel kimlik.
+   Panelde ek olarak durum renkleri var; site tanıtım yaptığı için
+   onlara ihtiyacı yoktu, panelde iş durumu göstermek gerekiyor.
+
+   ⚠️ Sayfa dosyasına ham renk kodu yazma. Yeni bir renk gerekiyorsa
+   önce burada token tanımlanır.
+   ============================================================ */
+
+@theme {
+	/* — Renk paleti (siteyle ortak) —————————————— */
+	--color-kagit: #faf9f6; /* ana zemin */
+	--color-kagit-2: #f2f0e9; /* alternatif bölüm zemini */
+	--color-kagit-3: #e9e6dd; /* vurgulu kutu zemini */
+	--color-murekkep: #1a1a1a; /* ana metin, koyu zemin */
+	--color-murekkep-2: #5c5952; /* ikincil metin */
+	--color-murekkep-3: #8a867d; /* teknik etiket, dipnot */
+	--color-turuncu: #d9541e; /* tek vurgu rengi — cimri kullan */
+	--color-turuncu-2: #b8420f; /* hover */
+	--color-turuncu-soluk: #fbe9e1; /* turuncu zemin */
+	--color-izgara: #ddd9d0; /* çizgi ve kenarlık */
+	--color-izgara-2: #ebe8e0; /* ince ızgara */
+
+	/* — Durum renkleri (yalnızca panelde) ——————————
+	   Turuncu vurgu rengidir, "hata" demek değildir. Bir işin
+	   geciktiğini turuncuyla anlatmak vurguyu tüketir. */
+	--color-basarili: #2f6f4e;
+	--color-uyari: #9a6b12;
+	--color-hata: #a32b1c;
+
+	/* — Tipografi ——————————————————————————————— */
+	--font-sans: var(--font-plex-sans), system-ui, sans-serif;
+	--font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+	/* — Ölçü ————————————————————————————————————— */
+	--radius-yok: 0px; /* blueprint'te köşe yuvarlaması yok */
+}
+
+/* Blueprint kuralı: yuvarlak köşe yok. Global olarak sıfırlanır ki
+   bir bileşende unutulsa bile tutarlılık bozulmasın. */
+*,
+*::before,
+*::after {
+	border-radius: 0 !important;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	background: var(--color-kagit);
+	color: var(--color-murekkep);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+}
+
+::selection {
+	background: var(--color-turuncu);
+	color: var(--color-kagit);
+}
+
+/* ============================================================
+   ORTAK SINIFLAR
+
+   Birden çok bileşenin kullandığı her sınıf burada tanımlanır.
+   Kardeş projede form alanı sınıfları bileşenlerde kullanılıp
+   hiçbir yerde tanımlanmamıştı; alanlar aylarca görünmez kaldı.
+   ============================================================ */
+
+/* Teknik etiket: BÖLÜM ADI */
+.etiket {
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--color-murekkep-3);
+}
+
+/* Kutu köşelerine nişan işareti */
+.kose-nisan {
+	position: relative;
+}
+.kose-nisan::before,
+.kose-nisan::after {
+	content: '';
+	position: absolute;
+	width: 6px;
+	height: 6px;
+	border: 1px solid var(--color-turuncu);
+}
+.kose-nisan::before {
+	top: -1px;
+	left: -1px;
+	border-right: none;
+	border-bottom: none;
+}
+.kose-nisan::after {
+	bottom: -1px;
+	right: -1px;
+	border-left: none;
+	border-top: none;
+}
+
+/* — Form alanları ————————————————————————————
+   ⚠️ font-size 1rem'in (16px) altına düşürülmemeli: iOS Safari
+   daha küçük yazılı bir alana odaklanınca sayfayı büyütür. */
+.alan {
+	display: block;
+	width: 100%;
+	border: 1px solid var(--color-izgara);
+	background: var(--color-kagit);
+	padding: 0.75rem 0.875rem;
+	font-family: inherit;
+	font-size: 1rem;
+	line-height: 1.4;
+	color: var(--color-murekkep);
+	transition:
+		border-color 0.12s ease,
+		box-shadow 0.12s ease;
+}
+.alan::placeholder {
+	color: var(--color-murekkep-3);
+}
+.alan:hover {
+	border-color: var(--color-murekkep-3);
+}
+.alan:focus {
+	outline: none;
+	border-color: var(--color-turuncu);
+	/* Kenarlık kalınlaşmıyor, ikinci çizgi ekleniyor — yoksa alan oynar */
+	box-shadow: 0 0 0 1px var(--color-turuncu);
+}
+.alan:user-invalid {
+	border-color: var(--color-hata);
+	background: var(--color-turuncu-soluk);
+}
+
+/* — Düğmeler ——————————————————————————————————
+   Her ekranda tek birincil eylem bulunur (.dugme-dolu). */
+.dugme {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.625rem;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	padding: 0.875rem 1.5rem;
+	border: 1px solid transparent;
+	cursor: pointer;
+	transition:
+		background-color 0.12s ease,
+		border-color 0.12s ease,
+		color 0.12s ease;
+}
+.dugme:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+.dugme-dolu {
+	background: var(--color-turuncu);
+	color: var(--color-kagit);
+}
+.dugme-dolu:hover:not(:disabled) {
+	background: var(--color-turuncu-2);
+}
+.dugme-bos {
+	border-color: var(--color-izgara);
+	color: var(--color-murekkep);
+}
+.dugme-bos:hover:not(:disabled) {
+	border-color: var(--color-murekkep);
+}
+.dugme:focus-visible {
+	outline: 2px solid var(--color-turuncu);
+	outline-offset: 2px;
+}

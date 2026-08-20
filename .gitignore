@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+build/
+
+# Ortam değişkenleri — ASLA git'e gönderilmez.
+# Örnek şablon için .env.example dosyasına bak.
+.env
+.env.local
+.env*.local
+
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+.DS_Store
+Thumbs.db
