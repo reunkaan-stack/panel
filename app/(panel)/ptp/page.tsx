@@ -65,28 +65,38 @@ export default async function PtpSayfasi({
 		sorgu = sorgu.or(`atanan_id.eq.${kullanici.id},atanan_id.is.null`);
 	}
 
-	const { data, error } = await sorgu;
+	/* Üç sorgu birbirini beklemez — PARALEL çalışır.
+	   Ardışık yazıldığında her biri ayrı bir Atlantik gidiş-dönüşü
+	   ekliyordu; veri tabanı Frankfurt'ta, fonksiyon orada çalışsa bile
+	   sıraya dizmenin bir faydası yok. */
+	const [gorevSonucu, eksikSonucu, kisiSonucu] = await Promise.all([
+		sorgu,
+
+		/* Yalnızca sayım isteniyor, satırlar değil — head: true ile
+		   veri taşınmıyor. */
+		supabase
+			.from('ptp_eksikler')
+			.select('id', { count: 'exact', head: true })
+			.eq('firma_id', firmaId)
+			.eq('durum', 'bekliyor')
+			.is('silindi', null),
+
+		/* Atama listesi yalnızca müdüre gerekiyor. */
+		yonetici
+			? supabase
+					.from('kullanicilar')
+					.select('id, ad')
+					.eq('firma_id', firmaId)
+					.eq('aktif', true)
+					.is('silindi', null)
+					.order('ad')
+			: Promise.resolve({ data: null }),
+	]);
+
+	const { data, error } = gorevSonucu;
 	const gorevler = (data ?? []) as unknown as GorevSatiri[];
-
-	/* Bekleyen eksik sayısı: başlıktaki rozet için. Yalnızca sayım
-	   isteniyor, satırlar değil — head: true ile veri taşınmıyor. */
-	const { count: eksikSayisi } = await supabase
-		.from('ptp_eksikler')
-		.select('id', { count: 'exact', head: true })
-		.eq('firma_id', firmaId)
-		.eq('durum', 'bekliyor')
-		.is('silindi', null);
-
-	/* Atama listesi yalnızca müdüre gerekiyor. */
-	const { data: kisiler } = yonetici
-		? await supabase
-				.from('kullanicilar')
-				.select('id, ad')
-				.eq('firma_id', firmaId)
-				.eq('aktif', true)
-				.is('silindi', null)
-				.order('ad')
-		: { data: null };
+	const eksikSayisi = eksikSonucu.count;
+	const kisiler = kisiSonucu.data;
 
 	return (
 		<div className="mx-auto max-w-4xl px-6 py-10">

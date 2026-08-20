@@ -174,7 +174,50 @@ Arayüz testleri en son gelir ve en kırılgandır.
 
 ## 8. Performans
 
-Erken en iyileştirme yapılmaz, ama şunlar baştan doğru yapılır:
+Erken en iyileştirme yapılmaz, ama şunlar baştan doğru yapılır.
+
+### Bölge — en büyük tek etken
+
+> **Sunucu fonksiyonları veri tabanıyla AYNI bölgede çalışmalı.**
+
+Yaşanmış: fonksiyonlar Washington'da (`iad1`), Supabase Frankfurt'ta.
+Her sorgu Atlantik'i iki kez geçiyordu, sorgu başına ~120 ms. Tek bir
+"yapıldı" işaretlemesi 13 ardışık gidiş-dönüş ediyor ve **2 saniye**
+sürüyordu. Kodda hiçbir yavaşlık yoktu; yalnızca coğrafya.
+
+Vercel'de `vercel.json` içinden ayarlanır:
+
+```json
+{ "regions": ["fra1"] }
+```
+
+Yeni projede **ilk gün** yapılır; sonradan fark edilince bütün ölçümler
+yanlış yorumlanmış olur.
+
+### İstek başına tekilleştirme
+
+Aynı veriyi bir istekte birden çok yerden okumak yaygındır: yetki
+denetimi, sayfa gövdesi, alt bileşen. React'in `cache()` sarmalayıcısı
+bunu tek sorguya indirir:
+
+```ts
+export const aktifKullanici = cache(async () => { /* ... */ });
+```
+
+Yaşanmış: `aktifKullanici()` bir işlemde dört kez çağrılıyordu; her
+çağrı bir kimlik doğrulama isteği artı bir sorgu demekti.
+
+### Paralellik
+
+Birbirine bağlı olmayan sorgular `Promise.all` ile birlikte çalışır.
+Ardışık `await` yazmak, gecikmeleri toplar.
+
+```ts
+const [gorevler, sayim, kisiler] = await Promise.all([...]);
+```
+
+### Diğerleri
+
 
 - **Sayfalama** — sınırsız liste dönen uç nokta yazılmaz
 - **N+1 sorgu yok** — listede satır başına sorgu atılmaz
@@ -198,3 +241,6 @@ Erken en iyileştirme yapılmaz, ama şunlar baştan doğru yapılır:
 - Kodun ne yaptığını anlatan yorum yazma
 - Yüz satırla yazılacak iş için paket ekleme
 - Ölçmeden en iyileştirme yapma
+- Fonksiyonları veri tabanından farklı bölgede çalıştırma
+- Aynı veriyi bir istekte tekrar tekrar sorgulama
+- Bağımsız sorguları ardışık `await` ile sıraya dizme

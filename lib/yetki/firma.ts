@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { aktifKullanici, YetkisizHata } from './index';
@@ -22,7 +23,7 @@ const CEREZ = 'karas-firma';
  * İşlemin yapılacağı firma kimliği.
  * Normal kullanıcıda kendi firması; süperadminde seçili firma.
  */
-export async function islemFirmasi(): Promise<string> {
+export const islemFirmasi = cache(async function islemFirmasi(): Promise<string> {
 	const kullanici = await aktifKullanici();
 
 	if (kullanici.rol !== 'superadmin') {
@@ -67,7 +68,7 @@ export async function islemFirmasi(): Promise<string> {
 		);
 	}
 	return firmalar[0].id;
-}
+});
 
 /** Süperadminin firma seçimini kaydeder. */
 export async function firmaSec(firmaId: string): Promise<void> {

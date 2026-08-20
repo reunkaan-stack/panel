@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import type { Kullanici, Modul, Seviye } from '@/lib/tipler';
 
@@ -29,8 +30,14 @@ export class OturumYokHata extends Error {
 	}
 }
 
+/* React cache(): aynı istek içinde kaç kez çağrılırsa çağrılsın
+   sorgu BİR KEZ çalışır. Öncesinde yetkiDenetle, islemFirmasi ve
+   sayfa gövdesi ayrı ayrı çağırıyordu; her biri auth.getUser() (ağ
+   çağrısı) + kullanıcı sorgusu demekti. Veri tabanı Frankfurt'ta
+   olduğu için her tekrar bir Atlantik gidiş-dönüşüydü. */
+
 /** Oturumdaki kullanıcının panel kaydı. Yoksa hata fırlatır. */
-export async function aktifKullanici(): Promise<Kullanici> {
+export const aktifKullanici = cache(async function aktifKullanici(): Promise<Kullanici> {
 	const supabase = await sunucuIstemcisi();
 	const {
 		data: { user },
@@ -54,7 +61,7 @@ export async function aktifKullanici(): Promise<Kullanici> {
 	if (!data.aktif) throw new YetkisizHata('Hesabınız pasife alınmış.');
 
 	return data as Kullanici;
-}
+});
 
 const SIRA: Record<Seviye, number> = { okuma: 1, yazma: 2, yonetim: 3 };
 
@@ -71,14 +78,16 @@ export type YetkiSonucu = {
  * Karar veri tabanındaki `panel.modul_seviyesi()` fonksiyonundan gelir;
  * mantık tek yerde dursun diye burada tekrarlanmaz.
  */
-export async function modulSeviyesi(modul: Modul): Promise<Seviye | null> {
+export const modulSeviyesi = cache(async function modulSeviyesi(
+	modul: Modul
+): Promise<Seviye | null> {
 	const supabase = await sunucuIstemcisi();
 	const { data, error } = await supabase.rpc('modul_seviyesi', {
 		p_modul: modul,
 	});
 	if (error) return null;
 	return (data as Seviye | null) ?? null;
-}
+});
 
 /**
  * Yetki denetler; yetersizse hata fırlatır.
