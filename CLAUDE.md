@@ -186,6 +186,52 @@ değiştirme eklemektir.
 
 ---
 
+### PTP nasıl çalışır
+
+Sistem iki ay gerçek kullanımda kaldı; aşağısı o kullanımdan çıkan
+tanım, tahmin değil.
+
+**Görev türleri** — `tur` alanı:
+
+| Tür | Ne yapar |
+|---|---|
+| `onay` | Tek işaret: yapıldı |
+| `kontrol` | İçinde 4–5 madde, hepsi ayrı işaretlenir |
+| `bolge` | Hangi bölümde yapıldığı seçilir |
+| `metin` | Serbest yazı (müşteri talebi gibi) |
+| `sayi` | Sayı girilir (kasa sayımı gibi) |
+
+**Fotoğraf ayrı bir tür DEĞİL**, her türle birlikte istenebilen bir
+bayraktır (`fotograf_ister`). "Onay + fotoğraf" geçerli bir görevdir.
+
+**Tekrar** — `tekrar` alanı:
+
+| Değer | Ne demek |
+|---|---|
+| `gunluk` | Her gün üretilir |
+| `haftalik` | `tekrar_gunleri` dizisindeki günlerde. `{2}` salı, `{2,5}` salı ve cuma |
+| `tek_seferlik` | Yalnızca `tek_tarih` gününde |
+
+**Kontrol listesi maddeleri kopyalanır.** Görev üretilirken şablonun
+maddeleri `ptp_gorev_maddeleri` içine kopyalanır. Şablon sonradan
+değişse bile o günkü liste olduğu gibi kalır — geçmişe bakan müdür, o
+gün gerçekte ne işaretlendiğini görür. Referans tutulsaydı geçmiş
+kayıtlar bugünkü şablona göre görünürdü ve yanlış olurdu.
+
+**Telegram bu modülün en değerli parçası.** İki aylık kullanımda en çok
+işe yarayan özellik bu oldu; sadeleştirilmez, korunur:
+
+- Görev kapatıldığında anlık bildirim
+- Her akşam belirlenen saatte günlük özet (yüzde, atlananlar, sebepler)
+- Bota yazılan mesaj personelin ekranına yeni görev olarak düşer
+- `/durum` ve `/ozet` komutları anlık özet verir
+
+⚠️ Eski program Telegram'ı `getUpdates` ile yokluyordu; sunucusuz
+ortamda sürekli çalışan süreç olmadığı için **webhook** kullanılacak.
+Bot anahtarı platform düzeyinde tek, `chat_id` firma başına.
+
+---
+
 ## 7. Bu projeye özel kararlar
 
 **Panel arama motorlarına kapalı** (`noindex`). Müşteri verisi barındıran
