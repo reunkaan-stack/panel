@@ -30,13 +30,38 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
 	width: 'device-width',
 	initialScale: 1,
-	themeColor: '#faf9f6',
+	themeColor: [
+		{ media: '(prefers-color-scheme: light)', color: '#faf9f6' },
+		{ media: '(prefers-color-scheme: dark)', color: '#14140f' },
+	],
 };
+
+/* Tema, sayfa boyanmadan ÖNCE uygulanmalı; yoksa karanlık modda bir
+   kare beyaz parlar. React yüklenmeden çalışması gerektiği için satır
+   içi betik zorunlu.
+
+   Üç durum: kayıt yoksa sistem tercihine uyulur (kökte data-tema
+   bulunmaz), varsa kullanıcının açık seçimi uygulanır. */
+const temaBetigi = `
+try {
+  var t = localStorage.getItem('karas-tema');
+  if (t === 'acik' || t === 'karanlik') {
+    document.documentElement.setAttribute('data-tema', t);
+  }
+} catch (e) {}
+`;
 
 export default function KokDuzen({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="tr" className={`${plexSans.variable} ${plexMono.variable}`}>
-			<body className="min-h-screen">{children}</body>
+		<html
+			lang="tr"
+			className={`${plexSans.variable} ${plexMono.variable}`}
+			suppressHydrationWarning
+		>
+			<head>
+				<script dangerouslySetInnerHTML={{ __html: temaBetigi }} />
+			</head>
+			<body className="min-h-screen bg-zemin text-metin">{children}</body>
 		</html>
 	);
 }

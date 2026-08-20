@@ -1,44 +1,130 @@
 @import 'tailwindcss';
 
 /* ============================================================
-   TASARIM TOKEN'LARI
+   TOKEN MİMARİSİ — iki katman
 
-   Kurumsal siteyle aynı palet — aynı firma, aynı görsel kimlik.
-   Panelde ek olarak durum renkleri var; site tanıtım yaptığı için
-   onlara ihtiyacı yoktu, panelde iş durumu göstermek gerekiyor.
+   Katman 1: palet. Ham renkler, doğrudan KULLANILMAZ.
+   Katman 2: anlamsal token. Bileşenler YALNIZCA bunları kullanır.
 
-   ⚠️ Sayfa dosyasına ham renk kodu yazma. Yeni bir renk gerekiyorsa
-   önce burada token tanımlanır.
+   Bu ayrım karanlık modun temelidir: bileşende `bg-kagit` yazılırsa
+   karanlık tarafta düzeltmek için her bileşene dokunmak gerekir.
+   `bg-zemin` yazılırsa tema tek dosyadan gelir.
+
+   Ayrıntı: standartlar/03-ARAYUZ.md
    ============================================================ */
 
-@theme {
-	/* — Renk paleti (siteyle ortak) —————————————— */
-	--color-kagit: #faf9f6; /* ana zemin */
-	--color-kagit-2: #f2f0e9; /* alternatif bölüm zemini */
-	--color-kagit-3: #e9e6dd; /* vurgulu kutu zemini */
-	--color-murekkep: #1a1a1a; /* ana metin, koyu zemin */
-	--color-murekkep-2: #5c5952; /* ikincil metin */
-	--color-murekkep-3: #8a867d; /* teknik etiket, dipnot */
-	--color-turuncu: #d9541e; /* tek vurgu rengi — cimri kullan */
-	--color-turuncu-2: #b8420f; /* hover */
-	--color-turuncu-soluk: #fbe9e1; /* turuncu zemin */
-	--color-izgara: #ddd9d0; /* çizgi ve kenarlık */
-	--color-izgara-2: #ebe8e0; /* ince ızgara */
+:root {
+	/* — Katman 1: aydınlık palet (kurumsal siteyle ortak) — */
+	--renk-kagit: #faf9f6;
+	--renk-kagit-2: #f2f0e9;
+	--renk-kagit-3: #e9e6dd;
+	--renk-murekkep: #1a1a1a;
+	--renk-murekkep-2: #5c5952;
+	--renk-murekkep-3: #8a867d;
+	--renk-turuncu: #d9541e;
+	--renk-turuncu-2: #b8420f;
+	--renk-turuncu-soluk: #fbe9e1;
+	--renk-izgara: #ddd9d0;
+	--renk-izgara-2: #ebe8e0;
 
-	/* — Durum renkleri (yalnızca panelde) ——————————
-	   Turuncu vurgu rengidir, "hata" demek değildir. Bir işin
-	   geciktiğini turuncuyla anlatmak vurguyu tüketir. */
-	--color-basarili: #2f6f4e;
-	--color-uyari: #9a6b12;
-	--color-hata: #a32b1c;
+	/* — Katman 1: karanlık palet —
+	   Saf siyah kullanılmıyor: kontrast fazla sert, uzun bakışta yorucu.
+	   Kâğıt tonunun koyu karşılığı olarak hafif sıcak bir nötr seçildi. */
+	--renk-gece: #14140f;
+	--renk-gece-2: #1c1c17;
+	--renk-gece-3: #26261f;
+	--renk-fildisi: #ebe8e0; /* saf beyaz değil */
+	--renk-fildisi-2: #a8a49a;
+	--renk-fildisi-3: #7a766d;
+	--renk-turuncu-gece: #e9683a; /* koyu zeminde turuncu biraz açılır */
+	--renk-izgara-gece: #33332c;
+	--renk-izgara-gece-2: #262620;
+}
 
-	/* — Tipografi ——————————————————————————————— */
+@theme inline {
+	/* — Katman 2: anlamsal token — */
+	--color-zemin: var(--zemin);
+	--color-zemin-2: var(--zemin-2);
+	--color-zemin-3: var(--zemin-3);
+	--color-metin: var(--metin);
+	--color-metin-2: var(--metin-2);
+	--color-metin-3: var(--metin-3);
+	--color-vurgu: var(--vurgu);
+	--color-vurgu-2: var(--vurgu-2);
+	--color-vurgu-soluk: var(--vurgu-soluk);
+	--color-kenarlik: var(--kenarlik);
+	--color-kenarlik-2: var(--kenarlik-2);
+	--color-basarili: var(--basarili);
+	--color-uyari: var(--uyari);
+	--color-hata: var(--hata);
+
 	--font-sans: var(--font-plex-sans), system-ui, sans-serif;
 	--font-mono: var(--font-plex-mono), ui-monospace, monospace;
-
-	/* — Ölçü ————————————————————————————————————— */
-	--radius-yok: 0px; /* blueprint'te köşe yuvarlaması yok */
 }
+
+/* Aydınlık eşleme — bare :root, varsayılan budur */
+:root {
+	--zemin: var(--renk-kagit);
+	--zemin-2: var(--renk-kagit-2);
+	--zemin-3: var(--renk-kagit-3);
+	--metin: var(--renk-murekkep);
+	--metin-2: var(--renk-murekkep-2);
+	--metin-3: var(--renk-murekkep-3);
+	--vurgu: var(--renk-turuncu);
+	--vurgu-2: var(--renk-turuncu-2);
+	--vurgu-soluk: var(--renk-turuncu-soluk);
+	--kenarlik: var(--renk-izgara);
+	--kenarlik-2: var(--renk-izgara-2);
+	--basarili: #2f6f4e;
+	--uyari: #9a6b12;
+	--hata: #a32b1c;
+	color-scheme: light;
+}
+
+/* Tema ÜÇ durumludur: sistem (varsayılan), açık, karanlık.
+   Sistem tercihine uyan durumda kökte `data-tema` bulunmaz. */
+@media (prefers-color-scheme: dark) {
+	:root:not([data-tema='acik']) {
+		--zemin: var(--renk-gece);
+		--zemin-2: var(--renk-gece-2);
+		--zemin-3: var(--renk-gece-3);
+		--metin: var(--renk-fildisi);
+		--metin-2: var(--renk-fildisi-2);
+		--metin-3: var(--renk-fildisi-3);
+		--vurgu: var(--renk-turuncu-gece);
+		--vurgu-2: #f07a4d;
+		--vurgu-soluk: #3a201400;
+		--kenarlik: var(--renk-izgara-gece);
+		--kenarlik-2: var(--renk-izgara-gece-2);
+		--basarili: #5aa87d;
+		--uyari: #d3a445;
+		--hata: #e0705f;
+		color-scheme: dark;
+	}
+}
+
+/* Kullanıcı açıkça karanlık seçtiyse sistem tercihi ne olursa olsun geçerli */
+:root[data-tema='karanlik'] {
+	--zemin: var(--renk-gece);
+	--zemin-2: var(--renk-gece-2);
+	--zemin-3: var(--renk-gece-3);
+	--metin: var(--renk-fildisi);
+	--metin-2: var(--renk-fildisi-2);
+	--metin-3: var(--renk-fildisi-3);
+	--vurgu: var(--renk-turuncu-gece);
+	--vurgu-2: #f07a4d;
+	--vurgu-soluk: #3a201400;
+	--kenarlik: var(--renk-izgara-gece);
+	--kenarlik-2: var(--renk-izgara-gece-2);
+	--basarili: #5aa87d;
+	--uyari: #d3a445;
+	--hata: #e0705f;
+	color-scheme: dark;
+}
+
+/* ============================================================
+   TEMEL
+   ============================================================ */
 
 /* Blueprint kuralı: yuvarlak köşe yok. Global olarak sıfırlanır ki
    bir bileşende unutulsa bile tutarlılık bozulmasın. */
@@ -53,36 +139,44 @@ html {
 }
 
 body {
-	background: var(--color-kagit);
-	color: var(--color-murekkep);
+	background: var(--color-zemin);
+	color: var(--color-metin);
 	font-family: var(--font-sans);
 	-webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-	background: var(--color-turuncu);
-	color: var(--color-kagit);
+	background: var(--color-vurgu);
+	color: var(--color-zemin);
+}
+
+/* Panelde her gün görülen geçişler kısa tutulur; 150 ms üstü yorucu. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+	}
 }
 
 /* ============================================================
    ORTAK SINIFLAR
 
-   Birden çok bileşenin kullandığı her sınıf burada tanımlanır.
-   Kardeş projede form alanı sınıfları bileşenlerde kullanılıp
-   hiçbir yerde tanımlanmamıştı; alanlar aylarca görünmez kaldı.
+   Bir sınıfı iki bileşen kullanıyorsa burada tanımlanır.
+   Kardeş projede form alanı sınıfları bileşenlerde kullanılıp hiçbir
+   yerde tanımlanmamıştı; alanlar aylarca görünmez kaldı.
    ============================================================ */
 
-/* Teknik etiket: BÖLÜM ADI */
 .etiket {
 	font-family: var(--font-mono);
 	font-size: 0.6875rem;
 	font-weight: 500;
 	letter-spacing: 0.14em;
 	text-transform: uppercase;
-	color: var(--color-murekkep-3);
+	color: var(--color-metin-3);
 }
 
-/* Kutu köşelerine nişan işareti */
 .kose-nisan {
 	position: relative;
 }
@@ -92,7 +186,7 @@ body {
 	position: absolute;
 	width: 6px;
 	height: 6px;
-	border: 1px solid var(--color-turuncu);
+	border: 1px solid var(--color-vurgu);
 }
 .kose-nisan::before {
 	top: -1px;
@@ -108,37 +202,68 @@ body {
 }
 
 /* — Form alanları ————————————————————————————
-   ⚠️ font-size 1rem'in (16px) altına düşürülmemeli: iOS Safari
-   daha küçük yazılı bir alana odaklanınca sayfayı büyütür. */
+   ⚠️ font-size 1rem'in (16px) altına düşürülmemeli: iOS Safari daha
+   küçük yazılı bir alana odaklanınca sayfayı büyütür. */
 .alan {
 	display: block;
 	width: 100%;
-	border: 1px solid var(--color-izgara);
-	background: var(--color-kagit);
+	border: 1px solid var(--color-kenarlik);
+	background: var(--color-zemin);
 	padding: 0.75rem 0.875rem;
 	font-family: inherit;
 	font-size: 1rem;
 	line-height: 1.4;
-	color: var(--color-murekkep);
+	color: var(--color-metin);
 	transition:
 		border-color 0.12s ease,
 		box-shadow 0.12s ease;
 }
 .alan::placeholder {
-	color: var(--color-murekkep-3);
+	color: var(--color-metin-3);
 }
 .alan:hover {
-	border-color: var(--color-murekkep-3);
+	border-color: var(--color-metin-3);
 }
 .alan:focus {
 	outline: none;
-	border-color: var(--color-turuncu);
+	border-color: var(--color-vurgu);
 	/* Kenarlık kalınlaşmıyor, ikinci çizgi ekleniyor — yoksa alan oynar */
-	box-shadow: 0 0 0 1px var(--color-turuncu);
+	box-shadow: 0 0 0 1px var(--color-vurgu);
 }
 .alan:user-invalid {
 	border-color: var(--color-hata);
-	background: var(--color-turuncu-soluk);
+}
+
+.onay {
+	appearance: none;
+	position: relative;
+	width: 1.125rem;
+	height: 1.125rem;
+	border: 1px solid var(--color-metin-3);
+	background: var(--color-zemin);
+	cursor: pointer;
+	transition:
+		background-color 0.12s ease,
+		border-color 0.12s ease;
+}
+.onay:checked {
+	background: var(--color-vurgu);
+	border-color: var(--color-vurgu);
+}
+.onay:checked::after {
+	content: '';
+	position: absolute;
+	left: 5px;
+	top: 1px;
+	width: 5px;
+	height: 10px;
+	border: solid var(--color-zemin);
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+}
+.onay:focus-visible {
+	outline: 2px solid var(--color-vurgu);
+	outline-offset: 2px;
 }
 
 /* — Düğmeler ——————————————————————————————————
@@ -166,20 +291,20 @@ body {
 	cursor: not-allowed;
 }
 .dugme-dolu {
-	background: var(--color-turuncu);
-	color: var(--color-kagit);
+	background: var(--color-vurgu);
+	color: var(--color-zemin);
 }
 .dugme-dolu:hover:not(:disabled) {
-	background: var(--color-turuncu-2);
+	background: var(--color-vurgu-2);
 }
 .dugme-bos {
-	border-color: var(--color-izgara);
-	color: var(--color-murekkep);
+	border-color: var(--color-kenarlik);
+	color: var(--color-metin);
 }
 .dugme-bos:hover:not(:disabled) {
-	border-color: var(--color-murekkep);
+	border-color: var(--color-metin);
 }
 .dugme:focus-visible {
-	outline: 2px solid var(--color-turuncu);
+	outline: 2px solid var(--color-vurgu);
 	outline-offset: 2px;
 }

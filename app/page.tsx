@@ -1,3 +1,5 @@
+import { TemaSecici } from '@/bilesenler/arayuz/TemaSecici';
+
 /* Geçici karşılama sayfası.
 
    Görevi, alt alan adının ve yayın hattının çalıştığını doğrulamak.
@@ -14,27 +16,33 @@ const moduller = [
 export default function Karsilama() {
 	return (
 		<main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-20">
-			<span className="etiket text-turuncu">Karas Teknoloji</span>
+			<div className="flex items-start justify-between gap-6">
+				<span className="etiket text-vurgu">Karas Teknoloji</span>
+				<TemaSecici />
+			</div>
 
 			<h1 className="mt-4 text-4xl font-semibold leading-[1.1] tracking-[-0.02em] sm:text-5xl">
 				Takip Paneli
 			</h1>
 
-			<p className="mt-5 max-w-xl leading-relaxed text-murekkep-2">
+			<p className="mt-5 max-w-xl leading-relaxed text-metin-2">
 				İşletme yazılımlarınız tek girişte, tek ekranda. Panel şu anda
 				kuruluyor; hazır olduğunda buradan giriş yapacaksınız.
 			</p>
 
-			<div className="kose-nisan mt-12 border border-izgara">
+			<div className="kose-nisan mt-12 border border-kenarlik">
 				<ul>
 					{moduller.map((modul, i) => (
 						<li
 							key={modul.kod}
 							className={`flex items-center gap-4 px-5 py-4 ${
-								i > 0 ? 'border-t border-izgara-2' : ''
+								i > 0 ? 'border-t border-kenarlik-2' : ''
 							}`}
 						>
-							<span className="w-10 font-mono text-[0.6875rem] font-medium tracking-[0.14em] text-turuncu">
+							<span
+								className="w-10 font-mono text-[0.6875rem] font-medium tracking-[0.14em] text-vurgu"
+								aria-hidden="true"
+							>
 								{String(i + 1).padStart(2, '0')}
 							</span>
 							<span className="flex-1 font-medium">{modul.ad}</span>
@@ -44,7 +52,7 @@ export default function Karsilama() {
 				</ul>
 			</div>
 
-			<p className="mt-10 font-mono text-[0.75rem] tracking-[0.04em] text-murekkep-3">
+			<p className="mt-10 font-mono text-[0.75rem] tracking-[0.04em] text-metin-3">
 				karasteknoloji.com
 			</p>
 		</main>
