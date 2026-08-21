@@ -20,6 +20,30 @@ export function gunuBicimle(an: Date): string {
 	return an.toLocaleDateString('en-CA', { timeZone: BOLGE });
 }
 
+/** Kısa tarih: '22 Ağu' — liste satırlarında yer kaplamasın diye.
+    Bugün ve dün ayrıca yazılır; "dün istenmiş" bilgisi tarihten daha
+    hızlı okunuyor. */
+export function kisaTarih(an: string): string {
+	const gun = gunuBicimle(new Date(an));
+	if (gun === bugun()) return 'bugün';
+
+	const dun = new Date();
+	dun.setDate(dun.getDate() - 1);
+	if (gun === gunuBicimle(dun)) return 'dün';
+
+	/* Yıl yalnızca farklıysa yazılıyor: liste çoğunlukla bu yılın
+	   kayıtlarıyla dolu, her satıra yıl koymak gürültü olurdu. */
+	const buYil = new Date().getFullYear();
+	const kayitYili = Number(gun.slice(0, 4));
+
+	return new Date(an).toLocaleDateString('tr-TR', {
+		timeZone: BOLGE,
+		day: 'numeric',
+		month: 'short',
+		...(kayitYili === buYil ? {} : { year: 'numeric' }),
+	});
+}
+
 /** Saati okunur biçimde: '14:32' */
 export function saatiBicimle(an: string | Date): string {
 	const d = typeof an === 'string' ? new Date(an) : an;

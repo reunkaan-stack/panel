@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { saatiBicimle } from '@/lib/ortak/tarih';
+import { kisaTarih, saatiBicimle, tarihiBicimle } from '@/lib/ortak/tarih';
 import type { EksikSatiri } from '../page';
 import { eksikGeriAl, eksikKapat } from '../eylemler';
 
@@ -113,6 +113,11 @@ function EksikSatir({
 					)}
 
 					<div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[0.6875rem] tracking-[0.04em] text-metin-3">
+						{/* Tarih önce: aynı ürün birden çok kez istenebilir ve
+						    hangisinin ne zaman geldiği karışmamalı. */}
+						<span title={tarihiBicimle(eksik.olusturuldu.slice(0, 10))}>
+							{kisaTarih(eksik.olusturuldu)} istendi
+						</span>
 						<span>{eksik.bildiren?.ad ?? 'bilinmiyor'}</span>
 						{kapali && eksik.kapanma_zamani && (
 							<span
