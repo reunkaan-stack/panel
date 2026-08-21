@@ -4,15 +4,14 @@ import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
 import { bugun, tarihiBicimle } from '@/lib/ortak/tarih';
-import type { Bolge, GorevSatiri } from '@/lib/tipler';
+import type { Bolge, GunlukGorev, Kayit } from '@/lib/tipler';
 import { GunListesi } from './bilesenler/GunListesi';
 import { MudurBasligi } from './bilesenler/MudurBasligi';
 
 export const metadata: Metadata = { title: 'Personel Takip — Karas Panel' };
 
-/* Kullanıcıya özel veri; önbelleğe alınmaz.
-   Çok firmalı sistemde yanlış önbellek, bir firmanın verisini diğerine
-   göstermek demektir. Bkz. standartlar/04-KOD.md */
+/* Kullanıcıya özel veri; önbelleğe alınmaz. Çok firmalı sistemde
+   yanlış önbellek, bir firmanın verisini diğerine göstermek demektir. */
 export const dynamic = 'force-dynamic';
 
 export default async function PtpSayfasi({
@@ -26,9 +25,6 @@ export default async function PtpSayfasi({
 		? istenenTarih!
 		: bugun();
 
-	/* Süperadmin RLS gereği BÜTÜN firmaların görevlerini görebilir.
-	   Hangi firmaya baktığı belirlenmeden liste gösterilmez; yoksa iki
-	   firmanın görevleri aynı ekranda karışır. */
 	let firmaId: string;
 	try {
 		firmaId = await islemFirmasi();
@@ -40,9 +36,7 @@ export default async function PtpSayfasi({
 					Hangi firma?
 				</h1>
 				<p className="mt-4 max-w-lg text-sm leading-relaxed text-metin-2">
-					{e instanceof YetkisizHata
-						? e.message
-						: 'Firma bilgisi çözülemedi.'}
+					{e instanceof YetkisizHata ? e.message : 'Firma bilgisi çözülemedi.'}
 				</p>
 			</div>
 		);
@@ -50,67 +44,78 @@ export default async function PtpSayfasi({
 
 	const supabase = await sunucuIstemcisi();
 
-	/* Müdür günün tamamını görür; personel yalnızca kendine atananı ve
-	   henüz kimseye atanmamış olanları. */
-	let sorgu = supabase
-		.from('ptp_gorevler')
-		.select(
-			'*, atanan:atanan_id(ad), tamamlayan:tamamlayan_id(ad), bolge:deger_bolge_id(ad), ' +
-				'maddeler:ptp_gorev_maddeleri(id, gorev_id, metin, sira, isaretli, isaretleyen_id, isaretlenme_zamani), ' +
-				'kayitlar:ptp_gorev_kayitlari(id, gorev_id, zaman, deger_bolge_id, deger_metin, deger_sayi, yapan:yapan_id(ad), bolge:deger_bolge_id(ad))'
+	/* Görev üretmiyoruz: "bugün hangi görevler geçerli" tanımdan
+	   hesaplanıyor. Karar veri tabanındaki ptp_gunun_gorevleri()
+	   fonksiyonunda — raporlar da aynı fonksiyonu kullanıyor, iki
+	   ayrı yerde hesaplansaydı biri diğerinden sapardı. */
+	const [gorevSonuc, kayitSonuc, kisiSonuc, bolgeSonuc, maddeSonuc, eksikSonuc] =
+		await Promise.all([
+			supabase.rpc('ptp_gunun_gorevleri', {
+				p_firma_id: firmaId,
+				p_tarih: tarih,
+			}),
+
+			supabase
+				.from('ptp_kayitlar')
+				.select('*, yapan:yapan_id(ad)')
+				.eq('firma_id', firmaId)
+				.eq('tarih', tarih)
+				.order('zaman', { ascending: false }),
+
+			supabase
+				.from('kullanicilar')
+				.select('id, ad')
+				.eq('firma_id', firmaId)
+				.eq('aktif', true)
+				.is('silindi', null)
+				.order('ad'),
+
+			supabase
+				.from('ptp_bolumler')
+				.select('id, ad, kroki_x, kroki_y, kroki_en, kroki_boy')
+				.eq('firma_id', firmaId)
+				.eq('aktif', true)
+				.is('silindi', null)
+				.order('ad'),
+
+			supabase
+				.from('ptp_gorev_maddeleri')
+				.select('id, gorev_id, metin, sira')
+				.eq('firma_id', firmaId)
+				.is('silindi', null)
+				.order('sira'),
+
+			supabase
+				.from('ptp_eksikler')
+				.select('id', { count: 'exact', head: true })
+				.eq('firma_id', firmaId)
+				.eq('durum', 'bekliyor')
+				.is('silindi', null),
+		]);
+
+	const kisiler = (kisiSonuc.data ?? []) as { id: string; ad: string }[];
+	const kisiAdi = new Map(kisiler.map((k) => [k.id, k.ad]));
+	const kayitlar = (kayitSonuc.data ?? []) as unknown as Kayit[];
+	const maddeler = (maddeSonuc.data ?? []) as {
+		id: string;
+		gorev_id: string;
+		metin: string;
+		sira: number;
+	}[];
+
+	/* Tanım + o güne ait kayıtlar tek yapıda birleştiriliyor. */
+	const gorevler: GunlukGorev[] = ((gorevSonuc.data ?? []) as GunlukGorev[])
+		.map((g) => ({
+			...g,
+			atanan: g.atanan_id ? { ad: kisiAdi.get(g.atanan_id) ?? '—' } : null,
+			maddeler: maddeler.filter((m) => m.gorev_id === g.id),
+			kayitlar: kayitlar.filter((k) => k.gorev_id === g.id),
+		}))
+		.filter(
+			/* Personel yalnızca kendine atanan ve atanmamış görevleri görür. */
+			(g) => yonetici || !g.atanan_id || g.atanan_id === kullanici.id
 		)
-		.eq('firma_id', firmaId)
-		.eq('tarih', tarih)
-		.is('silindi', null)
-		.order('grup')
-		.order('baslik');
-
-	if (!yonetici) {
-		sorgu = sorgu.or(`atanan_id.eq.${kullanici.id},atanan_id.is.null`);
-	}
-
-	/* Üç sorgu birbirini beklemez — PARALEL çalışır.
-	   Ardışık yazıldığında her biri ayrı bir Atlantik gidiş-dönüşü
-	   ekliyordu; veri tabanı Frankfurt'ta, fonksiyon orada çalışsa bile
-	   sıraya dizmenin bir faydası yok. */
-	const [gorevSonucu, eksikSonucu, kisiSonucu, bolgeSonucu] = await Promise.all([
-		sorgu,
-
-		/* Yalnızca sayım isteniyor, satırlar değil — head: true ile
-		   veri taşınmıyor. */
-		supabase
-			.from('ptp_eksikler')
-			.select('id', { count: 'exact', head: true })
-			.eq('firma_id', firmaId)
-			.eq('durum', 'bekliyor')
-			.is('silindi', null),
-
-		/* Atama listesi yalnızca müdüre gerekiyor. */
-		yonetici
-			? supabase
-					.from('kullanicilar')
-					.select('id, ad')
-					.eq('firma_id', firmaId)
-					.eq('aktif', true)
-					.is('silindi', null)
-					.order('ad')
-			: Promise.resolve({ data: null }),
-
-		/* Bölge seçmeli görevlerde listeden seçilecek bölümler */
-		supabase
-			.from('ptp_bolumler')
-			.select('id, ad, kroki_x, kroki_y, kroki_en, kroki_boy')
-			.eq('firma_id', firmaId)
-			.eq('aktif', true)
-			.is('silindi', null)
-			.order('ad'),
-	]);
-
-	const { data, error } = gorevSonucu;
-	const gorevler = (data ?? []) as unknown as GorevSatiri[];
-	const eksikSayisi = eksikSonucu.count;
-	const kisiler = kisiSonucu.data;
-	const bolgeler = (bolgeSonucu.data ?? []) as Bolge[];
+		.sort((a, b) => a.grup.localeCompare(b.grup) || a.sira - b.sira);
 
 	return (
 		<div className="mx-auto max-w-4xl px-6 py-10">
@@ -120,14 +125,11 @@ export default async function PtpSayfasi({
 					{tarihiBicimle(tarih)}
 				</h1>
 
-				<Link
-					href="/ptp/eksikler"
-					className="dugme dugme-bos !px-3 !py-2"
-				>
+				<Link href="/ptp/eksikler" className="dugme dugme-bos !px-3 !py-2">
 					Eksikler
-					{!!eksikSayisi && eksikSayisi > 0 && (
+					{!!eksikSonuc.count && eksikSonuc.count > 0 && (
 						<span className="ml-1 bg-vurgu-metin px-1.5 py-0.5 text-zemin">
-							{eksikSayisi}
+							{eksikSonuc.count}
 						</span>
 					)}
 				</Link>
@@ -135,13 +137,13 @@ export default async function PtpSayfasi({
 
 			{yonetici && (
 				<MudurBasligi
-					tarih={tarih}
 					gorevSayisi={gorevler.length}
-					kisiler={kisiler ?? []}
+					kisiSayisi={kisiler.length}
+					tarih={tarih}
 				/>
 			)}
 
-			{error ? (
+			{gorevSonuc.error ? (
 				<p className="mt-8 border border-hata px-4 py-3 text-sm text-hata">
 					Görevler okunamadı. Sayfayı yenileyin; sorun sürerse yöneticinize
 					bildirin.
@@ -152,8 +154,9 @@ export default async function PtpSayfasi({
 						gorevler={gorevler}
 						yonetici={yonetici}
 						kullaniciId={kullanici.id}
-						kisiler={kisiler ?? []}
-						bolgeler={bolgeler}
+						kisiler={kisiler}
+						bolgeler={(bolgeSonuc.data ?? []) as Bolge[]}
+						tarih={tarih}
 					/>
 				</div>
 			)}

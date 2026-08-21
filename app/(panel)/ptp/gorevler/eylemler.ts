@@ -17,7 +17,7 @@ function hataya(e: unknown, varsayilan: string): Sonuc<never> {
 	return { tamam: false, mesaj: varsayilan };
 }
 
-export type SablonGirdisi = {
+export type GorevGirdisi = {
 	id?: string;
 	baslik: string;
 	tur: GorevTuru;
@@ -30,11 +30,12 @@ export type SablonGirdisi = {
 	tekrar_gunleri: number[];
 	tek_tarih: string | null;
 	sira: number;
+	atanan_id: string | null;
 	/** Yalnızca tur = 'kontrol' iken kullanılır */
 	maddeler: string[];
 };
 
-function dogrula(g: SablonGirdisi): string | null {
+function dogrula(g: GorevGirdisi): string | null {
 	if (!g.baslik.trim()) return 'Görev başlığı yazılmalı.';
 	if (g.baslik.length > 200) return 'Başlık çok uzun.';
 	if (g.tekrar === 'haftalik' && g.tekrar_gunleri.length === 0) {
@@ -55,20 +56,20 @@ function dogrula(g: SablonGirdisi): string | null {
 
 /** Şablonun kontrol maddelerini kaydeder: eskiler silinir, yeniler yazılır. */
 async function maddeleriYaz(
-	sablonId: string,
+	gorevId: string,
 	firmaId: string,
 	maddeler: string[]
 ) {
 	const supabase = await sunucuIstemcisi();
-	await supabase.from('ptp_sablon_maddeleri').delete().eq('sablon_id', sablonId);
+	await supabase.from('ptp_gorev_maddeleri').delete().eq('gorev_id', gorevId);
 
 	const temiz = maddeler.map((m) => m.trim()).filter(Boolean);
 	if (temiz.length === 0) return;
 
-	const { error } = await supabase.from('ptp_sablon_maddeleri').insert(
+	const { error } = await supabase.from('ptp_gorev_maddeleri').insert(
 		temiz.map((metin, i) => ({
 			firma_id: firmaId,
-			sablon_id: sablonId,
+			gorev_id: gorevId,
 			metin,
 			sira: i,
 		}))
@@ -76,7 +77,7 @@ async function maddeleriYaz(
 	if (error) throw error;
 }
 
-export async function sablonKaydet(girdi: SablonGirdisi): Promise<Sonuc> {
+export async function gorevKaydet(girdi: GorevGirdisi): Promise<Sonuc> {
 	try {
 		await yetkiDenetle('ptp', 'yonetim');
 		const hata = dogrula(girdi);
@@ -98,19 +99,20 @@ export async function sablonKaydet(girdi: SablonGirdisi): Promise<Sonuc> {
 			tekrar_gunleri: girdi.tekrar === 'haftalik' ? girdi.tekrar_gunleri : [],
 			tek_tarih: girdi.tekrar === 'tek_seferlik' ? girdi.tek_tarih : null,
 			sira: girdi.sira,
+			atanan_id: girdi.atanan_id,
 		};
 
-		let sablonId = girdi.id;
+		let gorevId = girdi.id;
 
-		if (sablonId) {
+		if (gorevId) {
 			const { error } = await supabase
-				.from('ptp_sablonlar')
+				.from('ptp_gorevler')
 				.update(alanlar)
-				.eq('id', sablonId);
+				.eq('id', gorevId);
 			if (error) throw error;
 		} else {
 			const { data, error } = await supabase
-				.from('ptp_sablonlar')
+				.from('ptp_gorevler')
 				.insert(alanlar)
 				.select('id')
 				.single();
@@ -122,10 +124,10 @@ export async function sablonKaydet(girdi: SablonGirdisi): Promise<Sonuc> {
 				};
 			}
 			if (error) throw error;
-			sablonId = data.id;
+			gorevId = data.id;
 		}
 
-		await maddeleriYaz(sablonId!, firmaId, girdi.tur === 'kontrol' ? girdi.maddeler : []);
+		await maddeleriYaz(gorevId!, firmaId, girdi.tur === 'kontrol' ? girdi.maddeler : []);
 
 		revalidatePath('/ptp/gorevler');
 		revalidatePath('/ptp');
@@ -140,17 +142,17 @@ export async function sablonKaydet(girdi: SablonGirdisi): Promise<Sonuc> {
  * Silmiyoruz: geçmiş görevler bu şablona bağlı ve "hangi görevdi"
  * bilgisi kaybolmamalı.
  */
-export async function sablonAktiflik(
-	sablonId: string,
+export async function gorevAktiflik(
+	gorevId: string,
 	aktif: boolean
 ): Promise<Sonuc> {
 	try {
 		await yetkiDenetle('ptp', 'yonetim');
 		const supabase = await sunucuIstemcisi();
 		const { error } = await supabase
-			.from('ptp_sablonlar')
+			.from('ptp_gorevler')
 			.update({ aktif })
-			.eq('id', sablonId);
+			.eq('id', gorevId);
 		if (error) throw error;
 		revalidatePath('/ptp/gorevler');
 		return { tamam: true, veri: undefined };
@@ -160,58 +162,18 @@ export async function sablonAktiflik(
 }
 
 /** Şablonu yumuşak siler. Geçmiş görevler etkilenmez. */
-export async function sablonSil(sablonId: string): Promise<Sonuc> {
+export async function gorevSil(gorevId: string): Promise<Sonuc> {
 	try {
 		await yetkiDenetle('ptp', 'yonetim');
 		const supabase = await sunucuIstemcisi();
 		const { error } = await supabase
-			.from('ptp_sablonlar')
+			.from('ptp_gorevler')
 			.update({ silindi: new Date().toISOString(), aktif: false })
-			.eq('id', sablonId);
+			.eq('id', gorevId);
 		if (error) throw error;
 		revalidatePath('/ptp/gorevler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
 		return hataya(e, 'Silinemedi. Tekrar deneyin.');
-	}
-}
-
-/**
- * Şablona bağlı olmayan, yalnızca o güne ait görev ekler.
- * Yönetici "bugün şunu da yap" dediğinde kullanılır.
- */
-export async function gunlukGorevEkle(
-	tarih: string,
-	baslik: string,
-	grup: GorevGrubu,
-	atananId: string | null
-): Promise<Sonuc> {
-	try {
-		await yetkiDenetle('ptp', 'yonetim');
-		const temiz = baslik.trim();
-		if (!temiz) return { tamam: false, mesaj: 'Görev başlığı yazılmalı.' };
-
-		const firmaId = await islemFirmasi();
-		const supabase = await sunucuIstemcisi();
-
-		const { error } = await supabase.from('ptp_gorevler').insert({
-			firma_id: firmaId,
-			sablon_id: null,
-			tarih,
-			grup,
-			baslik: temiz,
-			tur: 'onay',
-			zorunlu: false,
-			fotograf_ister: false,
-			ipucu: '',
-			atanan_id: atananId,
-			kaynak: 'elle',
-		});
-
-		if (error) throw error;
-		revalidatePath('/ptp');
-		return { tamam: true, veri: undefined };
-	} catch (e) {
-		return hataya(e, 'Görev eklenemedi. Tekrar deneyin.');
 	}
 }

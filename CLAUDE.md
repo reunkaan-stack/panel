@@ -188,47 +188,57 @@ değiştirme eklemektir.
 
 ### PTP nasıl çalışır
 
-Sistem iki ay gerçek kullanımda kaldı; aşağısı o kullanımdan çıkan
-tanım, tahmin değil.
+**İki tablo, üretim yok.**
+
+| Tablo | Ne tutar |
+|---|---|
+| `ptp_gorevler` | Tanım: başlık, tür, tekrar, kime atandı |
+| `ptp_kayitlar` | Ne yapıldı: zaman, kim, bölgeler, değer, not |
+
+"Bugün hangi görevler var" **okuma anında** hesaplanır: bugün haftanın
+kaçıncı günü, hangi tanımlar ona düşüyor. Karar tek yerde —
+`panel.ptp_gunun_gorevleri()`; ekran da raporlar da onu kullanır.
+
+⚠️ **Görev satırı ÜRETİLMEZ.** Önceki tasarımda her sabah 23 satır
+üretiliyordu ve çoğu "hiçbir şey olmadı" diyen yer tutucuydu — yılda
+~8400 satır. Kaldırıldı; "günü oluştur" düğmesi ve cron da gitti.
+Yapılmamış görevin kaydı yoktur; bu bilgi kaydın yokluğundan okunur.
+
+**Atama görevin kendisinde ve kalıcı.** Küçük bir mağazada aynı işi
+genelde aynı kişi yapar; her gün yeniden atamak gereksiz iş olurdu.
+Boşsa görev herkese görünür ve herkes kapatabilir.
+
+**Başlık kayda kopyalanır** (`baslik_kopya`). Tanım sonradan
+değişirse geçmiş bozulmasın diye; türetme yapılsaydı haziran kayıtları
+bugünkü başlıkla görünürdü.
 
 **Görev türleri** — `tur` alanı:
 
 | Tür | Ne yapar |
 |---|---|
 | `onay` | Tek işaret: yapıldı |
-| `kontrol` | İçinde 4–5 madde, hepsi ayrı işaretlenir |
-| `bolge` | Hangi bölümde yapıldığı seçilir |
-| `metin` | Serbest yazı (müşteri talebi gibi) |
-| `sayi` | Sayı girilir (kasa sayımı gibi) |
+| `kontrol` | İçinde maddeler, işaretlenenler kayda yazılır |
+| `bolge` | Krokiden bir veya birkaç bölüm seçilir |
+| `metin` | Serbest yazı |
+| `sayi` | Sayı girilir |
 
-**Fotoğraf ayrı bir tür DEĞİL**, her türle birlikte istenebilen bir
-bayraktır (`fotograf_ister`). "Onay + fotoğraf" geçerli bir görevdir.
+Fotoğraf ayrı tür DEĞİL, her türle birlikte istenebilen bayrak.
 
-**Tekrar** — `tekrar` alanı:
+**Tekrar** — `gunluk` / `haftalik` (`tekrar_gunleri` dizisi,
+`{2,5}` = salı ve cuma) / `tek_seferlik` (`tek_tarih`).
 
-| Değer | Ne demek |
-|---|---|
-| `gunluk` | Her gün üretilir |
-| `haftalik` | `tekrar_gunleri` dizisindeki günlerde. `{2}` salı, `{2,5}` salı ve cuma |
-| `tek_seferlik` | Yalnızca `tek_tarih` gününde |
+**Tekrarlanabilir görev** gün içinde birden çok kez yapılır; her yapılış
+ayrı kayıttır. Bölge görevleri de gün boyu açık kalır — sonradan başka
+bir bölüm de temizlenmiş olabilir.
 
-**Kontrol listesi maddeleri kopyalanır.** Görev üretilirken şablonun
-maddeleri `ptp_gorev_maddeleri` içine kopyalanır. Şablon sonradan
-değişse bile o günkü liste olduğu gibi kalır — geçmişe bakan müdür, o
-gün gerçekte ne işaretlendiğini görür. Referans tutulsaydı geçmiş
-kayıtlar bugünkü şablona göre görünürdü ve yanlış olurdu.
+**Çoklu değerler dizi olarak** (`bolge_idler`, `madde_idler`).
+Ara tablo açmak bir günlük kaydı okumak için üç join demek olurdu; bu
+bir kayıt defteri, ilişkisel çözümleme değil. Raporda `unnest` ile açılır.
 
-**Telegram bu modülün en değerli parçası.** İki aylık kullanımda en çok
-işe yarayan özellik bu oldu; sadeleştirilmez, korunur:
-
-- Görev kapatıldığında anlık bildirim
-- Her akşam belirlenen saatte günlük özet (yüzde, atlananlar, sebepler)
-- Bota yazılan mesaj personelin ekranına yeni görev olarak düşer
-- `/durum` ve `/ozet` komutları anlık özet verir
-
-⚠️ Eski program Telegram'ı `getUpdates` ile yokluyordu; sunucusuz
-ortamda sürekli çalışan süreç olmadığı için **webhook** kullanılacak.
-Bot anahtarı platform düzeyinde tek, `chat_id` firma başına.
+**Telegram bu modülün en değerli parçası** ve korunacak: anlık bildirim,
+akşam özeti, bota yazınca görev düşmesi, `/durum` ve `/ozet`.
+Sunucusuz ortamda sürekli çalışan süreç olmadığı için `getUpdates`
+değil **webhook** kullanılacak.
 
 ---
 

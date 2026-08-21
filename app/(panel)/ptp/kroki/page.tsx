@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
-import { ARALIKLAR, araligiCoz, araliginBasi } from '@/lib/ortak/tarih';
+import { ARALIKLAR, araligiCoz, araliginBasi, bugun } from '@/lib/ortak/tarih';
 import { Kroki } from './bilesenler/Kroki';
 
 export const metadata: Metadata = { title: 'Mağaza krokisi — Karas Panel' };
@@ -40,22 +40,20 @@ export default async function KrokiSayfasi({
 			.is('silindi', null)
 			.order('ad'),
 
-		supabase
-			.from('ptp_bolge_yogunlugu')
-			.select('bolge_id, adet')
-			.eq('firma_id', firmaId)
-			.gte('tarih', baslangic),
+		supabase.rpc('ptp_bolge_yogunlugu', {
+			p_firma_id: firmaId,
+			p_baslangic: baslangic,
+			p_bitis: bugun(),
+		}),
 	]);
 
 	const bolgeler = (bolgeSonucu.data ?? []) as BolgeSatiri[];
 
-	/* Aynı bölge birden çok güne yayılmış satırlarla geliyor; toplama
-	   burada yapılıyor. Veri tabanında gün kırılımı korunuyor çünkü
-	   ileride "hangi gün" sorusu da sorulacak. */
+	/* Fonksiyon bölge başına tek satır döndürüyor. */
 	const yogunluk = new Map<string, number>();
 	for (const satir of yogunlukSonucu.data ?? []) {
 		const s = satir as { bolge_id: string; adet: number };
-		yogunluk.set(s.bolge_id, (yogunluk.get(s.bolge_id) ?? 0) + Number(s.adet));
+		yogunluk.set(s.bolge_id, Number(s.adet));
 	}
 
 	return (

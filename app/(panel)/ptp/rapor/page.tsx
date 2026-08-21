@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
+import { islemFirmasi } from '@/lib/yetki/firma';
 import {
 	ARALIKLAR,
 	araligiCoz,
@@ -18,28 +19,26 @@ type KisiSatiri = {
 	kullanici_id: string;
 	ad: string;
 	atanan: number;
-	tamamlanan: number;
+	yapilan: number;
 	atlanan: number;
-	bekleyen: number;
-	tekrar_sayisi: number;
 	ort_saat: number | null;
 };
 
 type GorevSatiri = {
+	gorev_id: string;
 	baslik: string;
 	grup: GorevGrubu;
 	zorunlu: boolean;
-	toplam: number;
-	tamamlanan: number;
+	gecerli_gun: number;
+	yapilan: number;
 	atlanan: number;
-	bekleyen: number;
 	oran: number | null;
 };
 
 type GunSatiri = {
 	tarih: string;
 	toplam: number;
-	tamamlanan: number;
+	yapilan: number;
 	atlanan: number;
 	oran: number | null;
 };
@@ -74,7 +73,8 @@ export default async function RaporSayfasi({
 	const bitis = bugun();
 
 	const supabase = await sunucuIstemcisi();
-	const p = { p_baslangic: baslangic, p_bitis: bitis };
+	const firmaId = await islemFirmasi();
+	const p = { p_firma_id: firmaId, p_baslangic: baslangic, p_bitis: bitis };
 
 	const [kisiSonuc, gorevSonuc, gunSonuc, atlananSonuc] = await Promise.all([
 		supabase.rpc('ptp_kisi_performansi', p),
@@ -89,7 +89,7 @@ export default async function RaporSayfasi({
 	const atlananlar = (atlananSonuc.data ?? []) as AtlananSatiri[];
 
 	const toplamGorev = gunler.reduce((t, g) => t + Number(g.toplam), 0);
-	const toplamTamam = gunler.reduce((t, g) => t + Number(g.tamamlanan), 0);
+	const toplamTamam = gunler.reduce((t, g) => t + Number(g.yapilan), 0);
 	const genelOran = toplamGorev ? Math.round((toplamTamam / toplamGorev) * 100) : 0;
 
 	return (
@@ -164,12 +164,10 @@ export default async function RaporSayfasi({
 										<tr key={k.kullanici_id} className="border-b border-kenarlik-2">
 											<td className="py-3 pr-4 font-medium">{k.ad}</td>
 											<Td>{k.atanan}</Td>
-											<Td renk="text-basarili">{k.tamamlanan}</Td>
+											<Td renk="text-basarili">{k.yapilan}</Td>
 											<Td renk={Number(k.atlanan) > 0 ? 'text-uyari' : undefined}>
 												{k.atlanan}
 											</Td>
-											<Td>{k.bekleyen}</Td>
-											<Td>{k.tekrar_sayisi}</Td>
 											<Td>{saatBicimi(k.ort_saat)}</Td>
 										</tr>
 									))}
@@ -195,7 +193,7 @@ export default async function RaporSayfasi({
 								<thead>
 									<tr className="border-b border-kenarlik">
 										<Th>Görev</Th>
-										<Th sag>Toplam</Th>
+										<Th sag>Geçerli gün</Th>
 										<Th sag>Yapıldı</Th>
 										<Th sag>Atlandı</Th>
 										<Th sag>Oran</Th>
@@ -203,7 +201,7 @@ export default async function RaporSayfasi({
 								</thead>
 								<tbody>
 									{gorevler.map((g) => (
-										<tr key={g.baslik} className="border-b border-kenarlik-2">
+										<tr key={g.gorev_id} className="border-b border-kenarlik-2">
 											<td className="py-3 pr-4">
 												<span className={g.zorunlu ? 'font-medium' : ''}>
 													{g.baslik}
@@ -212,8 +210,8 @@ export default async function RaporSayfasi({
 													{GRUP_ADLARI[g.grup] ?? g.grup}
 												</span>
 											</td>
-											<Td>{g.toplam}</Td>
-											<Td>{g.tamamlanan}</Td>
+											<Td>{g.gecerli_gun}</Td>
+											<Td>{g.yapilan}</Td>
 											<Td renk={Number(g.atlanan) > 0 ? 'text-uyari' : undefined}>
 												{g.atlanan}
 											</Td>
@@ -294,7 +292,7 @@ export default async function RaporSayfasi({
 									<span className="w-24 shrink-0 text-right font-mono text-[0.75rem] text-metin-2">
 										%{g.oran ?? 0}
 										<span className="ml-2 text-metin-3">
-											{g.tamamlanan}/{g.toplam}
+											{g.yapilan}/{g.toplam}
 										</span>
 									</span>
 								</li>

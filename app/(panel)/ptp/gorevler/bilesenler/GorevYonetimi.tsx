@@ -10,15 +10,15 @@ import {
 	type GorevTuru,
 	type Tekrar,
 } from '@/lib/tipler';
-import type { SablonSatiri } from '../page';
-import { sablonAktiflik, sablonKaydet, sablonSil, type SablonGirdisi } from '../eylemler';
+import type { GorevTanimi } from '../page';
+import { gorevAktiflik, gorevKaydet, gorevSil, type GorevGirdisi } from '../eylemler';
 
 /* Görev şablonu yönetimi.
 
    Liste ve form aynı ekranda: yönetici genelde arka arkaya birkaç
    tanım düzenliyor, her seferinde sayfa değiştirmek yorucu olurdu. */
 
-const BOS: SablonGirdisi = {
+const BOS: GorevGirdisi = {
 	baslik: '',
 	tur: 'onay',
 	grup: 'acilis',
@@ -30,15 +30,22 @@ const BOS: SablonGirdisi = {
 	tekrar_gunleri: [],
 	tek_tarih: null,
 	sira: 0,
+	atanan_id: null,
 	maddeler: [''],
 };
 
-export function SablonYonetimi({ sablonlar }: { sablonlar: SablonSatiri[] }) {
-	const [form, setForm] = useState<SablonGirdisi | null>(null);
+export function GorevYonetimi({
+	tanimlar,
+	kisiler,
+}: {
+	tanimlar: GorevTanimi[];
+	kisiler: { id: string; ad: string }[];
+}) {
+	const [form, setForm] = useState<GorevGirdisi | null>(null);
 	const [hata, setHata] = useState<string | null>(null);
 	const [bekliyor, basla] = useTransition();
 
-	function duzenle(s: SablonSatiri) {
+	function duzenle(s: GorevTanimi) {
 		setHata(null);
 		setForm({
 			id: s.id,
@@ -53,6 +60,7 @@ export function SablonYonetimi({ sablonlar }: { sablonlar: SablonSatiri[] }) {
 			tekrar_gunleri: s.tekrar_gunleri ?? [],
 			tek_tarih: s.tek_tarih,
 			sira: s.sira,
+			atanan_id: s.atanan_id,
 			maddeler: s.maddeler.length
 				? [...s.maddeler].sort((a, b) => a.sira - b.sira).map((m) => m.metin)
 				: [''],
@@ -63,28 +71,28 @@ export function SablonYonetimi({ sablonlar }: { sablonlar: SablonSatiri[] }) {
 		if (!form) return;
 		setHata(null);
 		basla(async () => {
-			const sonuc = await sablonKaydet(form);
+			const sonuc = await gorevKaydet(form);
 			if (!sonuc.tamam) return setHata(sonuc.mesaj);
 			setForm(null);
 		});
 	}
 
-	function aktiflikDegistir(s: SablonSatiri) {
+	function aktiflikDegistir(s: GorevTanimi) {
 		basla(async () => {
-			const sonuc = await sablonAktiflik(s.id, !s.aktif);
+			const sonuc = await gorevAktiflik(s.id, !s.aktif);
 			if (!sonuc.tamam) setHata(sonuc.mesaj);
 		});
 	}
 
-	function sil(s: SablonSatiri) {
+	function sil(s: GorevTanimi) {
 		if (!confirm(`"${s.baslik}" tanımını sil — geçmiş kayıtlar kalır, yeni gün üretilmez.`)) return;
 		basla(async () => {
-			const sonuc = await sablonSil(s.id);
+			const sonuc = await gorevSil(s.id);
 			if (!sonuc.tamam) setHata(sonuc.mesaj);
 		});
 	}
 
-	const gruplar = sablonlar.reduce<Record<string, SablonSatiri[]>>((t, s) => {
+	const gruplar = tanimlar.reduce<Record<string, GorevTanimi[]>>((t, s) => {
 		(t[s.grup] ??= []).push(s);
 		return t;
 	}, {});
@@ -111,9 +119,10 @@ export function SablonYonetimi({ sablonlar }: { sablonlar: SablonSatiri[] }) {
 			)}
 
 			{form && (
-				<SablonFormu
+				<TanimFormu
 					form={form}
 					setForm={setForm}
+					kisiler={kisiler}
 					kaydet={kaydet}
 					vazgec={() => {
 						setForm(null);
@@ -123,7 +132,7 @@ export function SablonYonetimi({ sablonlar }: { sablonlar: SablonSatiri[] }) {
 				/>
 			)}
 
-			{sablonlar.length === 0 && !form ? (
+			{tanimlar.length === 0 && !form ? (
 				<div className="kose-nisan mt-8 border border-kenarlik p-8 text-center">
 					<span className="etiket">Tanım yok</span>
 					<p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-metin-2">
@@ -154,6 +163,9 @@ export function SablonYonetimi({ sablonlar }: { sablonlar: SablonSatiri[] }) {
 															? s.tek_tarih
 															: 'her gün'}
 												</span>
+												{s.atanan_id && (
+													<><span>·</span><span>{kisiler.find((k) => k.id === s.atanan_id)?.ad ?? 'atanmış'}</span></>
+												)}
 												{s.zorunlu && <><span>·</span><span>zorunlu</span></>}
 												{s.tekrarlanabilir && <><span>·</span><span>tekrarlanabilir</span></>}
 												{s.fotograf_ister && <><span>·</span><span>fotoğraflı</span></>}
@@ -199,20 +211,22 @@ export function SablonYonetimi({ sablonlar }: { sablonlar: SablonSatiri[] }) {
 	);
 }
 
-function SablonFormu({
+function TanimFormu({
 	form,
 	setForm,
 	kaydet,
 	vazgec,
 	bekliyor,
+	kisiler,
 }: {
-	form: SablonGirdisi;
-	setForm: (f: SablonGirdisi) => void;
+	form: GorevGirdisi;
+	setForm: (f: GorevGirdisi) => void;
 	kaydet: () => void;
 	vazgec: () => void;
 	bekliyor: boolean;
+	kisiler: { id: string; ad: string }[];
 }) {
-	const guncelle = (parca: Partial<SablonGirdisi>) =>
+	const guncelle = (parca: Partial<GorevGirdisi>) =>
 		setForm({ ...form, ...parca });
 
 	function gunDegistir(gun: number) {
@@ -366,6 +380,20 @@ function SablonFormu({
 					/>
 				</label>
 			)}
+
+			<label className="mt-4 block">
+				<span className="etiket">Kime atansın</span>
+				<select
+					value={form.atanan_id ?? ''}
+					onChange={(e) => guncelle({ atanan_id: e.target.value || null })}
+					className="alan mt-2"
+				>
+					<option value="">Herkese açık</option>
+					{kisiler.map((k) => (
+						<option key={k.id} value={k.id}>{k.ad}</option>
+					))}
+				</select>
+			</label>
 
 			<label className="mt-4 block">
 				<span className="etiket">Açıklama (isteğe bağlı)</span>

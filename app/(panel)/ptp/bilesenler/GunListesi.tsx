@@ -5,17 +5,17 @@ import {
 	GRUP_ADLARI,
 	type Bolge,
 	type GorevGrubu,
-	type GorevSatiri,
+	type GunlukGorev,
 } from '@/lib/tipler';
 import { saatiBicimle } from '@/lib/ortak/tarih';
-import { gorevleriAta } from '../eylemler';
+import { atamaDegistir } from '../eylemler';
 import { GorevSatir } from './GorevSatir';
 
 /* Günün görev listesi.
 
-   Müdürde toplu atama var: görevler işaretlenip tek seferde bir kişiye
-   veriliyor. Kullanıcının anlattığı senaryo bu — on görevin beşi bir
-   kişiye, beşi diğerine. Tek tek atamak on ayrı işlem olurdu. */
+   Toplu atama var: görevler işaretlenip tek seferde bir kişiye
+   veriliyor. Atama KALICI — her gün yeniden atamak gerekmiyor, aynı
+   işi genelde aynı kişi yapıyor. */
 
 type Kisi = { id: string; ad: string };
 
@@ -25,12 +25,14 @@ export function GunListesi({
 	kullaniciId,
 	kisiler,
 	bolgeler,
+	tarih,
 }: {
-	gorevler: GorevSatiri[];
+	gorevler: GunlukGorev[];
 	yonetici: boolean;
 	kullaniciId: string;
 	kisiler: Kisi[];
 	bolgeler: Bolge[];
+	tarih: string;
 }) {
 	const [secili, setSecili] = useState<Set<string>>(new Set());
 	const [atanacak, setAtanacak] = useState('');
@@ -43,7 +45,7 @@ export function GunListesi({
 				<span className="etiket">Görev yok</span>
 				<p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-metin-2">
 					{yonetici
-						? 'Bu güne henüz görev oluşturulmadı. Yukarıdaki “Günü oluştur” düğmesi, tanımlı şablonlardan günün görevlerini üretir.'
+						? 'Bugüne düşen görev tanımı yok. “Görev tanımları”ndan ekleyebilirsiniz.'
 						: 'Bugün size atanmış bir görev bulunmuyor.'}
 				</p>
 			</div>
@@ -62,30 +64,29 @@ export function GunListesi({
 	function ata() {
 		setHata(null);
 		basla(async () => {
-			const sonuc = await gorevleriAta([...secili], atanacak || null);
-			if (!sonuc.tamam) {
-				setHata(sonuc.mesaj);
-				return;
-			}
+			const sonuc = await atamaDegistir([...secili], atanacak || null);
+			if (!sonuc.tamam) return setHata(sonuc.mesaj);
 			setSecili(new Set());
 			setAtanacak('');
 		});
 	}
 
-	/* Gruplara ayır: açılış, teşhir, gün içi… Mağazada iş bu sırayla
-	   yapılıyor, liste de o sırayı izlesin. */
-	const gruplar = gorevler.reduce<Record<string, GorevSatiri[]>>((t, g) => {
+	/* Gruplara ayır: mağazada iş bu sırayla yapılıyor. */
+	const gruplar = gorevler.reduce<Record<string, GunlukGorev[]>>((t, g) => {
 		(t[g.grup] ??= []).push(g);
 		return t;
 	}, {});
 
-	const tamamlanan = gorevler.filter((g) => g.durum === 'tamamlandi').length;
+	/* "Yapıldı" = o güne ait en az bir 'yapildi' kaydı var. */
+	const yapilan = gorevler.filter((g) =>
+		g.kayitlar.some((k) => k.durum === 'yapildi')
+	).length;
 
 	return (
 		<>
 			<div className="flex items-baseline justify-between border-b border-kenarlik pb-3">
 				<span className="etiket">
-					{tamamlanan} / {gorevler.length} tamamlandı
+					{yapilan} / {gorevler.length} yapıldı
 				</span>
 				{yonetici && secili.size > 0 && (
 					<span className="etiket text-vurgu-metin">
@@ -97,7 +98,7 @@ export function GunListesi({
 			{yonetici && secili.size > 0 && (
 				<div className="mt-4 flex flex-col gap-3 border border-kenarlik bg-zemin-2 p-4 sm:flex-row sm:items-end">
 					<label className="flex-1">
-						<span className="etiket">Kime atansın</span>
+						<span className="etiket">Kime atansın (kalıcı)</span>
 						<select
 							value={atanacak}
 							onChange={(e) => setAtanacak(e.target.value)}
@@ -144,6 +145,7 @@ export function GunListesi({
 								isaretle={() => isaretle(gorev.id)}
 								saatiBicimle={saatiBicimle}
 								bolgeler={bolgeler}
+								tarih={tarih}
 							/>
 						))}
 					</ul>

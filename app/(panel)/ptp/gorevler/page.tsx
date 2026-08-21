@@ -4,12 +4,12 @@ import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
 import type { GorevGrubu, GorevTuru, Tekrar } from '@/lib/tipler';
-import { SablonYonetimi } from './bilesenler/SablonYonetimi';
+import { GorevYonetimi } from './bilesenler/GorevYonetimi';
 
 export const metadata: Metadata = { title: 'Görev tanımları — Karas Panel' };
 export const dynamic = 'force-dynamic';
 
-export type SablonSatiri = {
+export type GorevTanimi = {
 	id: string;
 	baslik: string;
 	tur: GorevTuru;
@@ -23,6 +23,7 @@ export type SablonSatiri = {
 	tekrar: Tekrar;
 	tekrar_gunleri: number[];
 	tek_tarih: string | null;
+	atanan_id: string | null;
 	maddeler: { id: string; metin: string; sira: number }[];
 };
 
@@ -34,15 +35,26 @@ export default async function GorevTanimlariSayfasi() {
 	const firmaId = await islemFirmasi();
 	const supabase = await sunucuIstemcisi();
 
-	const { data } = await supabase
-		.from('ptp_sablonlar')
-		.select('*, maddeler:ptp_sablon_maddeleri(id, metin, sira)')
-		.eq('firma_id', firmaId)
-		.is('silindi', null)
-		.order('grup')
-		.order('sira');
+	const [tanimSonuc, kisiSonuc] = await Promise.all([
+		supabase
+			.from('ptp_gorevler')
+			.select('*, maddeler:ptp_gorev_maddeleri(id, metin, sira)')
+			.eq('firma_id', firmaId)
+			.is('silindi', null)
+			.order('grup')
+			.order('sira'),
 
-	const sablonlar = (data ?? []) as unknown as SablonSatiri[];
+		supabase
+			.from('kullanicilar')
+			.select('id, ad')
+			.eq('firma_id', firmaId)
+			.eq('aktif', true)
+			.is('silindi', null)
+			.order('ad'),
+	]);
+
+	const tanimlar = (tanimSonuc.data ?? []) as unknown as GorevTanimi[];
+	const kisiler = (kisiSonuc.data ?? []) as { id: string; ad: string }[];
 
 	return (
 		<div className="mx-auto max-w-3xl px-6 py-10">
@@ -52,7 +64,7 @@ export default async function GorevTanimlariSayfasi() {
 
 			<span className="etiket mt-6 block text-vurgu-metin">Tanımlar</span>
 			<h1 className="mt-3 text-2xl font-semibold tracking-[-0.015em]">
-				Görev şablonları
+				Görev tanımları
 			</h1>
 			<p className="mt-2 max-w-lg text-sm leading-relaxed text-metin-2">
 				Her sabah bu tanımlardan o güne ait görevler üretilir. Buradaki
@@ -60,7 +72,7 @@ export default async function GorevTanimlariSayfasi() {
 			</p>
 
 			<div className="mt-8">
-				<SablonYonetimi sablonlar={sablonlar} />
+				<GorevYonetimi tanimlar={tanimlar} kisiler={kisiler} />
 			</div>
 		</div>
 	);
