@@ -32,6 +32,8 @@ export type KayitGirdisi = {
 	metin?: string;
 	sayi?: number;
 	not?: string;
+	/* tur = 'eksik' görevlerde: tek tek eklenen ürün adları */
+	eksikler?: string[];
 };
 
 /**
@@ -49,7 +51,7 @@ export async function kayitEkle(girdi: KayitGirdisi): Promise<Sonuc> {
 		   kopyalanıyor: tanım sonradan değişse bile geçmiş bozulmasın. */
 		const { data: gorev } = await supabase
 			.from('ptp_gorevler')
-			.select('id, baslik, tur, atanan_id, tekrarlanabilir')
+			.select('id, baslik, tur, atanan_id, tekrarlanabilir, eksik_kategori')
 			.eq('id', girdi.gorevId)
 			.eq('firma_id', firmaId)
 			.is('silindi', null)
@@ -70,6 +72,14 @@ export async function kayitEkle(girdi: KayitGirdisi): Promise<Sonuc> {
 			return { tamam: false, mesaj: 'En az bir madde işaretleyin.' };
 		}
 
+		const eksikler = (girdi.eksikler ?? [])
+			.map((e) => e.trim())
+			.filter(Boolean);
+
+		if (gorev.tur === 'eksik' && eksikler.length === 0) {
+			return { tamam: false, mesaj: 'En az bir ürün ekleyin.' };
+		}
+
 		/* Tekrarlanabilir olmayan görev günde bir kez kapatılır. */
 		if (!gorev.tekrarlanabilir) {
 			const { count } = await supabase
@@ -82,21 +92,48 @@ export async function kayitEkle(girdi: KayitGirdisi): Promise<Sonuc> {
 			}
 		}
 
-		const { error } = await supabase.from('ptp_kayitlar').insert({
-			firma_id: firmaId,
-			gorev_id: girdi.gorevId,
-			tarih: girdi.tarih,
-			yapan_id: kullanici.id,
-			durum: 'yapildi',
-			baslik_kopya: gorev.baslik,
-			bolge_idler: girdi.bolgeIdler ?? [],
-			madde_idler: girdi.maddeIdler ?? [],
-			deger_metin: girdi.metin?.trim() || null,
-			deger_sayi: girdi.sayi ?? null,
-			not_metni: girdi.not?.trim() ?? '',
-		});
+		const { data: kayit, error } = await supabase
+			.from('ptp_kayitlar')
+			.insert({
+				firma_id: firmaId,
+				gorev_id: girdi.gorevId,
+				tarih: girdi.tarih,
+				yapan_id: kullanici.id,
+				durum: 'yapildi',
+				baslik_kopya: gorev.baslik,
+				bolge_idler: girdi.bolgeIdler ?? [],
+				madde_idler: girdi.maddeIdler ?? [],
+				/* Eksik görevinde özet metin: kaydın kendisi de okunabilir olsun */
+				deger_metin:
+					gorev.tur === 'eksik'
+						? eksikler.join(', ')
+						: girdi.metin?.trim() || null,
+				deger_sayi: girdi.sayi ?? null,
+				not_metni: girdi.not?.trim() ?? '',
+			})
+			.select('id')
+			.single();
 
 		if (error) throw error;
+
+		/* Her ürün AYRI eksik kaydı. Tek metin olarak yazılsaydı
+		   "bardak takımı, kahve fincanı, supla" üç ürün olmasına rağmen
+		   tek satır olur, tek tek işaretlenemez ve sayılamazdı. */
+		if (gorev.tur === 'eksik' && eksikler.length > 0) {
+			const { error: eksikHatasi } = await supabase.from('ptp_eksikler').insert(
+				eksikler.map((metin) => ({
+					firma_id: firmaId,
+					metin,
+					kategori: gorev.eksik_kategori ?? 'urun',
+					bildiren_id: kullanici.id,
+					gorev_id: girdi.gorevId,
+					kayit_id: kayit.id,
+				}))
+			);
+			if (eksikHatasi) throw eksikHatasi;
+			revalidatePath('/ptp/eksikler');
+		}
+
 		revalidatePath('/ptp');
 		return { tamam: true, veri: undefined };
 	} catch (e) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import type { Bolge, GunlukGorev } from '@/lib/tipler';
+import { KATEGORI_ADLARI, type Bolge, type GunlukGorev } from '@/lib/tipler';
 import { atlamaEkle, kayitEkle, kayitSil } from '../eylemler';
 import { KrokiSecici } from './KrokiSecici';
 
@@ -35,6 +35,9 @@ export function GorevSatir({
 	const [seciliBolgeler, setSeciliBolgeler] = useState<Set<string>>(new Set());
 	const [seciliMaddeler, setSeciliMaddeler] = useState<Set<string>>(new Set());
 	const [sebep, setSebep] = useState('');
+	/* Eksik görevinde eklenen ürünler; kaydedilene kadar burada durur */
+	const [eksikListesi, setEksikListesi] = useState<string[]>([]);
+	const [yeniEksik, setYeniEksik] = useState('');
 	const [hata, setHata] = useState<string | null>(null);
 	const [bekliyor, basla] = useTransition();
 
@@ -71,6 +74,13 @@ export function GorevSatir({
 		if (gorev.tur === 'kontrol' && seciliMaddeler.size === 0) {
 			return setHata('En az bir madde işaretleyin');
 		}
+		/* Yazılıp "ekle" denmemiş son ürün de sayılsın: kullanıcı
+		   yazdıktan sonra doğrudan kaydete basarsa kaybolmamalı. */
+		const eksikler = [...eksikListesi];
+		if (yeniEksik.trim()) eksikler.push(yeniEksik.trim());
+		if (gorev.tur === 'eksik' && eksikler.length === 0) {
+			return setHata('En az bir ürün ekleyin');
+		}
 
 		basla(async () => {
 			const sonuc = await kayitEkle({
@@ -80,12 +90,15 @@ export function GorevSatir({
 				maddeIdler: [...seciliMaddeler],
 				metin: gorev.tur === 'metin' ? deger : undefined,
 				sayi,
+				eksikler,
 			});
 			if (!sonuc.tamam) return setHata(sonuc.mesaj);
 			setAcik(false);
 			setDeger('');
 			setSeciliBolgeler(new Set());
 			setSeciliMaddeler(new Set());
+			setEksikListesi([]);
+			setYeniEksik('');
 		});
 	}
 
@@ -263,6 +276,77 @@ export function GorevSatir({
 									</li>
 								))}
 							</ul>
+						</fieldset>
+					)}
+
+					{gorev.tur === 'eksik' && (
+						<fieldset>
+							<legend className="etiket">
+								{gorev.eksik_kategori
+									? KATEGORI_ADLARI[gorev.eksik_kategori]
+									: 'Eksikler'}
+								{eksikListesi.length > 0 && ` · ${eksikListesi.length} ürün`}
+							</legend>
+							<p className="mt-1 mb-3 text-sm text-metin-2">
+								Her ürünü ayrı ayrı ekleyin. Böylece listede tek tek
+								işaretlenebilirler.
+							</p>
+
+							{eksikListesi.length > 0 && (
+								<ul className="mb-3 space-y-2">
+									{eksikListesi.map((urun, i) => (
+										<li key={i} className="flex items-center gap-2">
+											<span className="flex-1 border border-kenarlik bg-zemin px-3 py-2 text-sm">
+												{urun}
+											</span>
+											<button
+												type="button"
+												onClick={() =>
+													setEksikListesi((e) => e.filter((_, j) => j !== i))
+												}
+												className="shrink-0 border border-kenarlik px-3 py-2 font-mono text-sm text-metin-3 hover:border-hata hover:text-hata"
+												aria-label={`${urun} — listeden çıkar`}
+											>
+												×
+											</button>
+										</li>
+									))}
+								</ul>
+							)}
+
+							<div className="flex gap-2">
+								<input
+									type="text"
+									value={yeniEksik}
+									onChange={(e) => setYeniEksik(e.target.value)}
+									onKeyDown={(e) => {
+										/* Enter yeni ürün ekler; formu göndermez.
+										   Art arda ürün yazmak yaygın, her seferinde
+										   fareye gitmek yorucu olurdu. */
+										if (e.key === 'Enter') {
+											e.preventDefault();
+											if (!yeniEksik.trim()) return;
+											setEksikListesi((l) => [...l, yeniEksik.trim()]);
+											setYeniEksik('');
+										}
+									}}
+									placeholder="Ürün adı"
+									className="alan"
+									autoFocus
+								/>
+								<button
+									type="button"
+									onClick={() => {
+										if (!yeniEksik.trim()) return;
+										setEksikListesi((l) => [...l, yeniEksik.trim()]);
+										setYeniEksik('');
+									}}
+									disabled={!yeniEksik.trim()}
+									className="dugme dugme-bos shrink-0"
+								>
+									Ekle
+								</button>
+							</div>
 						</fieldset>
 					)}
 

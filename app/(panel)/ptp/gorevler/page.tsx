@@ -3,7 +3,12 @@ import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
-import type { GorevGrubu, GorevTuru, Tekrar } from '@/lib/tipler';
+import type {
+	EksikKategori,
+	GorevGrubu,
+	GorevTuru,
+	Tekrar,
+} from '@/lib/tipler';
 import { GorevYonetimi } from './bilesenler/GorevYonetimi';
 
 export const metadata: Metadata = { title: 'Görev tanımları — Karas Panel' };
@@ -24,6 +29,7 @@ export type GorevTanimi = {
 	tekrar_gunleri: number[];
 	tek_tarih: string | null;
 	atanan_id: string | null;
+	eksik_kategori: EksikKategori | null;
 	maddeler: { id: string; metin: string; sira: number }[];
 };
 

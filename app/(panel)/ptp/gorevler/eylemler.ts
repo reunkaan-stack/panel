@@ -4,7 +4,12 @@ import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
-import type { GorevGrubu, GorevTuru, Tekrar } from '@/lib/tipler';
+import type {
+	EksikKategori,
+	GorevGrubu,
+	GorevTuru,
+	Tekrar,
+} from '@/lib/tipler';
 import type { Sonuc } from '../eylemler';
 
 /* Görev şablonu yönetimi — yalnızca yönetici.
@@ -31,6 +36,7 @@ export type GorevGirdisi = {
 	tek_tarih: string | null;
 	sira: number;
 	atanan_id: string | null;
+	eksik_kategori: EksikKategori | null;
 	/** Yalnızca tur = 'kontrol' iken kullanılır */
 	maddeler: string[];
 };
@@ -46,6 +52,9 @@ function dogrula(g: GorevGirdisi): string | null {
 	}
 	if (g.tekrar === 'tek_seferlik' && !g.tek_tarih) {
 		return 'Tek seferlik görevde tarih seçilmeli.';
+	}
+	if (g.tur === 'eksik' && !g.eksik_kategori) {
+		return 'Eksik görevinde hangi listeye yazacağı seçilmeli.';
 	}
 	if (g.tur === 'kontrol') {
 		const dolu = g.maddeler.filter((m) => m.trim());
@@ -100,6 +109,8 @@ export async function gorevKaydet(girdi: GorevGirdisi): Promise<Sonuc> {
 			tek_tarih: girdi.tekrar === 'tek_seferlik' ? girdi.tek_tarih : null,
 			sira: girdi.sira,
 			atanan_id: girdi.atanan_id,
+			/* Yalnızca eksik görevinde anlamlı; kısıt da bunu zorluyor */
+			eksik_kategori: girdi.tur === 'eksik' ? (girdi.eksik_kategori ?? 'urun') : null,
 		};
 
 		let gorevId = girdi.id;

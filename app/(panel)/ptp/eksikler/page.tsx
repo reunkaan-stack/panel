@@ -4,6 +4,7 @@ import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
 import { EksikFormu } from './bilesenler/EksikFormu';
+import { KATEGORI_ADLARI, KATEGORI_NOTU, type EksikKategori } from '@/lib/tipler';
 import { EksikListesi } from './bilesenler/EksikListesi';
 
 export const metadata: Metadata = { title: 'Eksikler — Karas Panel' };
@@ -15,6 +16,7 @@ export type EksikSatiri = {
 	aciklama: string;
 	acil: boolean;
 	durum: 'bekliyor' | 'giderildi' | 'iptal';
+	kategori: EksikKategori;
 	kapanma_zamani: string | null;
 	kapanma_notu: string;
 	olusturuldu: string;
@@ -39,6 +41,11 @@ export default async function EksiklerSayfasi() {
 	const hepsi = (data ?? []) as unknown as EksikSatiri[];
 	const bekleyen = hepsi.filter((e) => e.durum === 'bekliyor');
 	const kapanan = hepsi.filter((e) => e.durum !== 'bekliyor');
+
+	/* İki liste ayrı okunuyor: ürünler fuarda, temel ihtiyaçlar
+	   markette toplanıyor. Tedarik yolu farklı olduğu için tek listede
+	   karışmaları işi zorlaştırırdı. */
+	const kategoriler: EksikKategori[] = ['urun', 'temel'];
 
 	return (
 		<div className="mx-auto max-w-3xl px-6 py-10">
@@ -66,12 +73,41 @@ export default async function EksiklerSayfasi() {
 				</div>
 			)}
 
-			<div className="mt-10">
-				<EksikListesi
-					bekleyen={bekleyen}
-					kapanan={kapanan}
-					yonetici={yonetici}
-				/>
+			<div className="mt-10 space-y-12">
+				{kategoriler.map((kategori) => {
+					const kBekleyen = bekleyen.filter((e) => e.kategori === kategori);
+					const kKapanan = kapanan.filter((e) => e.kategori === kategori);
+					if (kBekleyen.length === 0 && kKapanan.length === 0) return null;
+
+					return (
+						<section key={kategori}>
+							<div className="flex flex-wrap items-baseline justify-between gap-2">
+								<h2 className="text-xl font-semibold tracking-[-0.015em]">
+									{KATEGORI_ADLARI[kategori]}
+								</h2>
+								<span className="etiket">
+									{KATEGORI_NOTU[kategori]} · {kBekleyen.length} bekliyor
+								</span>
+							</div>
+							<div className="mt-4">
+								<EksikListesi
+									bekleyen={kBekleyen}
+									kapanan={kKapanan}
+									yonetici={yonetici}
+								/>
+							</div>
+						</section>
+					);
+				})}
+
+				{bekleyen.length === 0 && kapanan.length === 0 && (
+					<div className="kose-nisan border border-kenarlik p-8 text-center">
+						<span className="etiket">Liste boş</span>
+						<p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-metin-2">
+							Bekleyen eksik yok. Bir şey bittiğinde yukarıdaki kutuya yazın.
+						</p>
+					</div>
+				)}
 			</div>
 		</div>
 	);

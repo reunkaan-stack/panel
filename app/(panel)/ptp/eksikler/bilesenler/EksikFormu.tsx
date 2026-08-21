@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
+import { KATEGORI_ADLARI, KATEGORI_NOTU, type EksikKategori } from '@/lib/tipler';
 import { eksikBildir } from '../eylemler';
 
 /* Eksik bildirme formu.
@@ -14,6 +15,7 @@ export function EksikFormu() {
 	const [metin, setMetin] = useState('');
 	const [aciklama, setAciklama] = useState('');
 	const [acil, setAcil] = useState(false);
+	const [kategori, setKategori] = useState<EksikKategori>('urun');
 	const [hata, setHata] = useState<string | null>(null);
 	const [bekliyor, basla] = useTransition();
 	const girdiRef = useRef<HTMLInputElement>(null);
@@ -22,7 +24,7 @@ export function EksikFormu() {
 		olay.preventDefault();
 		setHata(null);
 		basla(async () => {
-			const sonuc = await eksikBildir(metin, aciklama, acil);
+			const sonuc = await eksikBildir(metin, aciklama, acil, kategori);
 			if (!sonuc.tamam) {
 				setHata(sonuc.mesaj);
 				return;
@@ -54,6 +56,32 @@ export function EksikFormu() {
 
 			{genis && (
 				<>
+					<div className="mt-4">
+						<span className="etiket">Hangi listeye</span>
+						<div className="mt-2 flex flex-wrap gap-2">
+							{(['urun', 'temel'] as EksikKategori[]).map((k) => (
+								<button
+									key={k}
+									type="button"
+									onClick={() => setKategori(k)}
+									aria-pressed={kategori === k}
+									className={`border px-3 py-2 text-left transition-colors ${
+										kategori === k
+											? 'border-vurgu-metin bg-vurgu-metin text-zemin'
+											: 'border-kenarlik text-metin-2 hover:border-metin'
+									}`}
+								>
+									<span className="block text-sm font-medium">
+										{KATEGORI_ADLARI[k]}
+									</span>
+									<span className="block font-mono text-[0.625rem] uppercase tracking-[0.06em] opacity-80">
+										{KATEGORI_NOTU[k]}
+									</span>
+								</button>
+							))}
+						</div>
+					</div>
+
 					<label className="mt-4 block">
 						<span className="etiket">Ayrıntı (isteğe bağlı)</span>
 						<input

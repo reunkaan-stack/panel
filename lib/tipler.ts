@@ -9,7 +9,16 @@ export type Rol = 'superadmin' | 'firma_yoneticisi' | 'kullanici';
 export type Seviye = 'okuma' | 'yazma' | 'yonetim';
 export type Modul = 'ptp' | 'otp' | 'ttp' | 'mtp';
 
-export type GorevTuru = 'onay' | 'kontrol' | 'bolge' | 'metin' | 'sayi';
+export type GorevTuru =
+	| 'onay'
+	| 'kontrol'
+	| 'bolge'
+	| 'metin'
+	| 'sayi'
+	| 'eksik';
+
+/** Eksikler tedarik yoluna göre ayrılır. */
+export type EksikKategori = 'urun' | 'temel';
 export type Tekrar = 'gunluk' | 'haftalik' | 'tek_seferlik';
 export type KayitDurumu = 'yapildi' | 'atlandi';
 export type GorevGrubu =
@@ -35,6 +44,17 @@ export const TUR_ADLARI: Record<GorevTuru, string> = {
 	bolge: 'Bölüm seçimi',
 	metin: 'Metin girişi',
 	sayi: 'Sayı girişi',
+	eksik: 'Eksik listesine ekle',
+};
+
+export const KATEGORI_ADLARI: Record<EksikKategori, string> = {
+	urun: 'Ürün eksiği',
+	temel: 'Temel ihtiyaç',
+};
+
+export const KATEGORI_NOTU: Record<EksikKategori, string> = {
+	urun: 'Fuarlarda toplanır',
+	temel: 'Marketten alınır',
 };
 
 export const TEKRAR_ADLARI: Record<Tekrar, string> = {
@@ -92,6 +112,8 @@ export type Gorev = {
 	tekrar_gunleri: number[];
 	tek_tarih: string | null;
 	atanan_id: string | null;
+	/** Yalnızca tur = 'eksik' iken dolu: hangi listeye yazacak */
+	eksik_kategori: EksikKategori | null;
 };
 
 /** Kayıt defteri satırı: ne yapıldı, kim yaptı, ne zaman. */

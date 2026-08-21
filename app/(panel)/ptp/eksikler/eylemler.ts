@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
+import type { EksikKategori } from '@/lib/tipler';
 import type { Sonuc } from '../eylemler';
 
 /* Eksik listesi eylemleri.
@@ -20,7 +21,8 @@ function hataya(e: unknown, varsayilan: string): Sonuc<never> {
 export async function eksikBildir(
 	metin: string,
 	aciklama: string,
-	acil: boolean
+	acil: boolean,
+	kategori: EksikKategori = 'urun'
 ): Promise<Sonuc> {
 	try {
 		const { kullanici } = await yetkiDenetle('ptp', 'yazma');
@@ -38,6 +40,7 @@ export async function eksikBildir(
 			metin: temiz,
 			aciklama: aciklama.trim(),
 			acil,
+			kategori,
 			bildiren_id: kullanici.id,
 		});
 

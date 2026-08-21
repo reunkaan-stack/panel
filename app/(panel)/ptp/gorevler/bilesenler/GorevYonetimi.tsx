@@ -5,9 +5,11 @@ import {
 	GRUP_ADLARI,
 	GUN_ADLARI,
 	TEKRAR_ADLARI,
+	KATEGORI_ADLARI,
 	TUR_ADLARI,
 	type GorevGrubu,
 	type GorevTuru,
+	type EksikKategori,
 	type Tekrar,
 } from '@/lib/tipler';
 import type { GorevTanimi } from '../page';
@@ -31,6 +33,7 @@ const BOS: GorevGirdisi = {
 	tek_tarih: null,
 	sira: 0,
 	atanan_id: null,
+	eksik_kategori: null,
 	maddeler: [''],
 };
 
@@ -61,6 +64,7 @@ export function GorevYonetimi({
 			tek_tarih: s.tek_tarih,
 			sira: s.sira,
 			atanan_id: s.atanan_id,
+			eksik_kategori: s.eksik_kategori,
 			maddeler: s.maddeler.length
 				? [...s.maddeler].sort((a, b) => a.sira - b.sira).map((m) => m.metin)
 				: [''],
@@ -169,6 +173,9 @@ export function GorevYonetimi({
 												{s.zorunlu && <><span>·</span><span>zorunlu</span></>}
 												{s.tekrarlanabilir && <><span>·</span><span>tekrarlanabilir</span></>}
 												{s.fotograf_ister && <><span>·</span><span>fotoğraflı</span></>}
+												{s.eksik_kategori && (
+													<><span>·</span><span>{KATEGORI_ADLARI[s.eksik_kategori]}</span></>
+												)}
 												{s.tur === 'kontrol' && (
 													<><span>·</span><span>{s.maddeler.length} madde</span></>
 												)}
@@ -321,6 +328,23 @@ function TanimFormu({
 						+ Madde ekle
 					</button>
 				</div>
+			)}
+
+			{form.tur === 'eksik' && (
+				<label className="mt-4 block">
+					<span className="etiket">Hangi listeye yazsın</span>
+					<select
+						value={form.eksik_kategori ?? 'urun'}
+						onChange={(e) =>
+							guncelle({ eksik_kategori: e.target.value as EksikKategori })
+						}
+						className="alan mt-2"
+					>
+						{Object.entries(KATEGORI_ADLARI).map(([k, v]) => (
+							<option key={k} value={k}>{v}</option>
+						))}
+					</select>
+				</label>
 			)}
 
 			<label className="mt-4 block">
