@@ -240,7 +240,7 @@ create or replace function panel.ptp_gun_ozeti(
 returns table (
   tarih date, toplam bigint, yapilan bigint, atlanan bigint, oran numeric
 )
-language sql stable as $
+language sql stable as $$
   with gunler as (
     select d::date as tarih
       from generate_series(p_baslangic, p_bitis, interval '1 day') d
@@ -272,7 +272,7 @@ language sql stable as $
       on k.tarih = gu.tarih and k.firma_id = p_firma_id
    group by gu.tarih, ge.adet
    order by gu.tarih desc;
-$;
+$$;
 
 
 create or replace function panel.ptp_atlananlar(

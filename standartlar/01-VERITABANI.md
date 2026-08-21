@@ -259,6 +259,102 @@ kayıtlar da tekrarlandı.
 
 ---
 
+## 10. Dolar-tırnak tuzağı
+
+Postgres fonksiyon gövdeleri $ ile sarılır. Bu işaret, SQL dosyası
+bir betikle üretiliyorsa **sessizce bozulabilir**:
+
+- Kabuk (shell) belirli bağlamlarda $ yerine süreç numarası yazar
+- JavaScript `String.replace` içinde $ **tek** $ anlamına gelir
+
+İkisi de dosyayı okununca fark edilmez; hata ancak SQL çalıştırılınca
+"syntax error at or near $" olarak çıkar ve satır numarası gerçek
+sebebi göstermez.
+
+**Yaşanmış:** bir rapor fonksiyonu betikle yeniden yazıldı; iki
+dolar-tırnak tek 
+
+- **`select *` yazma.** Sütun eklendiğinde ağa gereksiz veri çıkar ve
+  hangi alanın kullanıldığı okunmaz olur.
+- **N+1 sorgudan kaçın.** Listede her satır için ayrı sorgu atılıyorsa
+  tek sorguya çevrilir (`in` veya `join`).
+- **Sayfalama zorunlu.** Sınırsız liste dönen uç nokta yazılmaz; veri
+  büyüdüğünde çöker. Varsayılan sayfa boyutu 50.
+- **Sıralama belirtilmeden liste dönme.** `order by` yoksa sıra
+  garantisizdir ve sayfalama bozulur.
+
+---
+
+## 12. Denetim kaydı
+
+Aşağıdakiler `denetim_kayitlari` tablosuna yazılır:
+
+- Süperadminin bir firmanın verisine erişmesi
+- Rol veya yetki değişikliği
+- Kullanıcı açma, kapatma, şifre sıfırlama
+- Gerçek silme
+- Firma açma, kapatma, modül yetkisi değişikliği
+
+```sql
+create table denetim_kayitlari (
+  id uuid primary key default gen_random_uuid(),
+  kullanici_id uuid references kullanicilar(id),
+  firma_id uuid references firmalar(id),
+  eylem text not null,
+  hedef_tablo text,
+  hedef_id uuid,
+  ayrinti jsonb,
+  ip inet,
+  olusturuldu timestamptz not null default now()
+);
+```
+
+**Denetim kaydı güncellenmez ve silinmez.** `update`/`delete` politikası
+tanımlanmaz — kimse için.
+
+---
+
+## 13. Yedekleme
+
+- Günlük otomatik yedek açık olmalı (Supabase'de plana bağlı).
+- **Yedeğin geri yüklenebildiği en az bir kez denenir.** Denenmemiş yedek
+  yedek değildir.
+- Yayın öncesi ve şema değişikliği öncesi elle yedek alınır.
+
+---
+
+## 14. Yapma
+
+- `firma_id` ve RLS olmadan firma verisi tablosu oluşturma
+- `security_invoker` olmadan görünüm oluşturma
+- `security definer` fonksiyonu `set search_path` olmadan yazma
+- `update` politikasını `with check` olmadan yazma
+- Parayı `float` ile tutma
+- `timestamp` kullanma (hep `timestamptz`)
+- Şemayı panelden elle değiştirme
+- `select *` yazma
+- Sayfalamasız liste uç noktası yazma
+- Veri ekleyen betiği `on conflict` olmadan yazma
+- Betikle üretilen SQL dosyasını dolar-tırnak denetimi yapmadan çalıştırma
+- Yabancı anahtarı indekssiz bırakma
+- Kaydı gerçekten silme (KVKK talebi hariç)
+- Denetim kaydını güncellenebilir bırakma
+a düştü ve migration çalışmadı. Onarma denemesi de
+`replace(x, '$')` yazdığı için aynı tuzağa düştü.
+
+**Kural:** SQL dosyası betikle üretildiyse çalıştırmadan önce
+dolar-tırnak sayısı denetlenir; **çift olmalı.**
+
+```js
+const adet = metin.split(String.fromCharCode(36).repeat(2)).length - 1;
+if (adet % 2 !== 0) throw new Error(`dolar-tirnak dengesiz`);
+```
+
+Değiştirirken `replace(x, () => '$')` gibi **işlev** kullanılır;
+işlevin döndürdüğü değer olduğu gibi konur, kaçış yorumlanmaz.
+
+---
+
 ## 10. Sorgu yazarken
 
 - **`select *` yazma.** Sütun eklendiğinde ağa gereksiz veri çıkar ve
