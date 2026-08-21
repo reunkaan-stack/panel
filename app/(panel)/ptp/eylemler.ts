@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
-import { islemFirmasi } from '@/lib/yetki/firma';
 import type { GorevTuru } from '@/lib/tipler';
 
 /* PTP sunucu eylemleri.
@@ -260,120 +259,28 @@ export async function gorevleriAta(
 }
 
 /**
- * Bugünün görevlerini şablonlardan üretir. Yalnızca müdür.
+ * Günün görevlerini şablonlardan üretir. Yalnızca yönetici.
  *
- * Aynı gün iki kez çalıştırılırsa görev ikiye katlanmaz; zaten
- * üretilmiş şablonlar atlanır. İleride pg_cron her sabah bu fonksiyonu
- * çağıracak — düğme, ilk kurulum ve şablon değişikliği için duruyor.
+ * ⚠️ İş mantığı BURADA DEĞİL, veri tabanındaki panel.ptp_gunu_uret()
+ * fonksiyonunda. Sebep: aynı üretimi her sabah pg_cron da çalıştırıyor.
+ * İki ayrı kod olsaydı biri diğerinden sapardı ve fark ancak günler
+ * sonra, eksik görevlerle anlaşılırdı.
+ *
+ * Bu düğme artık zorunlu değil; elle tetiklemek için duruyor (şablon
+ * değiştirildiğinde ya da cron kaçırdığında).
  */
 export async function gunuOlustur(tarih: string): Promise<Sonuc<number>> {
 	try {
 		await yetkiDenetle('ptp', 'yonetim');
-
-		/* Süperadminin firması yoktur; hangi firma adına çalıştığı
-		   burada çözülür. Önceden kullanici.firma_id yazılıyordu ve
-		   süperadminde null olduğu için kayıt reddediliyordu. */
-		const firmaId = await islemFirmasi();
 		const supabase = await sunucuIstemcisi();
 
-		const gun = new Date(tarih + 'T00:00:00');
-		/* Postgres'te 1=Pazartesi, JS'te 0=Pazar. Dönüşüm burada. */
-		const haftaninGunu = gun.getDay() === 0 ? 7 : gun.getDay();
-
-		const { data: sablonlar, error: sablonHatasi } = await supabase
-			.from('ptp_sablonlar')
-			.select('id, baslik, tur, grup, zorunlu, tekrarlanabilir, fotograf_ister, ipucu, tekrar, tekrar_gunleri, tek_tarih')
-			.eq('firma_id', firmaId)
-			.eq('aktif', true)
-			.is('silindi', null);
-
-		if (sablonHatasi) throw sablonHatasi;
-		if (!sablonlar?.length) {
-			return {
-				tamam: false,
-				mesaj: 'Tanımlı görev şablonu yok. Önce şablon oluşturulmalı.',
-			};
-		}
-
-		const { data: mevcut } = await supabase
-			.from('ptp_gorevler')
-			.select('sablon_id')
-			.eq('firma_id', firmaId)
-			.eq('tarih', tarih)
-			.is('silindi', null);
-
-		const uretilmis = new Set((mevcut ?? []).map((g) => g.sablon_id));
-
-		const bugunkuler = sablonlar.filter((s) => {
-			if (uretilmis.has(s.id)) return false;
-			if (s.tekrar === 'gunluk') return true;
-			if (s.tekrar === 'tek_seferlik') return s.tek_tarih === tarih;
-			return (s.tekrar_gunleri as number[]).includes(haftaninGunu);
+		const { data, error } = await supabase.rpc('ptp_gunumu_olustur', {
+			p_tarih: tarih,
 		});
-
-		if (bugunkuler.length === 0) return { tamam: true, veri: 0 };
-
-		const { data: yeniGorevler, error } = await supabase
-			.from('ptp_gorevler')
-			.insert(
-				bugunkuler.map((s) => ({
-					firma_id: firmaId,
-					sablon_id: s.id,
-					tarih,
-					grup: s.grup,
-					baslik: s.baslik,
-					tur: s.tur,
-					zorunlu: s.zorunlu,
-					tekrarlanabilir: s.tekrarlanabilir,
-					fotograf_ister: s.fotograf_ister,
-					ipucu: s.ipucu,
-					kaynak: 'sablon' as const,
-				}))
-			)
-			.select('id, sablon_id');
-
 		if (error) throw error;
 
-		/* Kontrol listesi maddeleri şablondan KOPYALANIR, referansla
-		   bağlanmaz. Şablon sonradan değişse bile o günkü liste olduğu
-		   gibi kalsın diye; yoksa geçmişe bakan müdür bugünkü şablonu
-		   görür ve o gün gerçekte ne işaretlendiğini bilemez. */
-		const kontrolSablonlari = bugunkuler
-			.filter((s) => s.tur === 'kontrol')
-			.map((s) => s.id);
-
-		if (kontrolSablonlari.length > 0) {
-			const { data: maddeler } = await supabase
-				.from('ptp_sablon_maddeleri')
-				.select('sablon_id, metin, sira')
-				.in('sablon_id', kontrolSablonlari)
-				.is('silindi', null)
-				.order('sira');
-
-			if (maddeler?.length) {
-				const gorevHaritasi = new Map(
-					(yeniGorevler ?? []).map((g) => [g.sablon_id, g.id])
-				);
-				const satirlar = maddeler
-					.map((m) => {
-						const gorevId = gorevHaritasi.get(m.sablon_id);
-						return gorevId
-							? { firma_id: firmaId, gorev_id: gorevId, metin: m.metin, sira: m.sira }
-							: null;
-					})
-					.filter((x): x is NonNullable<typeof x> => x !== null);
-
-				if (satirlar.length > 0) {
-					const { error: maddeHatasi } = await supabase
-						.from('ptp_gorev_maddeleri')
-						.insert(satirlar);
-					if (maddeHatasi) throw maddeHatasi;
-				}
-			}
-		}
-
 		revalidatePath('/ptp');
-		return { tamam: true, veri: bugunkuler.length };
+		return { tamam: true, veri: Number(data ?? 0) };
 	} catch (e) {
 		return hataya(e, 'Görevler oluşturulamadı. Tekrar deneyin.');
 	}

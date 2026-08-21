@@ -6,10 +6,10 @@ import { gunuOlustur } from '../eylemler';
 
 /* Müdür başlığı: gün oluşturma ve ekip özeti.
 
-   "Günü oluştur" ileride her sabah pg_cron ile otomatik çalışacak.
-   Düğme, ilk kurulum ve şablon değişikliği sonrası elle tetiklemek için
-   duruyor — otomatik iş de bu aynı fonksiyonu çağıracak, iş mantığı
-   tek yerde kalsın diye. */
+   Görevler her sabah 06:00'da kendiliğinden üretiliyor (pg_cron).
+   Düğme elle tetiklemek için duruyor: şablon değiştirildiğinde ya da
+   otomatik iş kaçırdığında. İkisi de aynı veri tabanı fonksiyonunu
+   çağırıyor, iş mantığı tek yerde. */
 
 export function MudurBasligi({
 	tarih,
@@ -48,6 +48,9 @@ export function MudurBasligi({
 				<p className="mt-1.5 text-sm text-metin-2">
 					{gorevSayisi} görev · {kisiler.length} kişi
 				</p>
+				<p className="mt-1 font-mono text-[0.625rem] tracking-[0.04em] text-metin-3">
+					Görevler her sabah 06:00'da otomatik oluşur
+				</p>
 			</div>
 
 			<div className="flex shrink-0 flex-wrap gap-3">
@@ -66,7 +69,7 @@ export function MudurBasligi({
 					disabled={bekliyor}
 					className="dugme dugme-bos"
 				>
-					{bekliyor ? 'Oluşturuluyor…' : 'Günü oluştur'}
+					{bekliyor ? 'Oluşturuluyor…' : 'Şimdi oluştur'}
 				</button>
 			</div>
 
