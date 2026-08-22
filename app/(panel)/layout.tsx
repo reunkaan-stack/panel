@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { AltBilgi } from '@/bilesenler/arayuz/AltBilgi';
 import { TemaSecici } from '@/bilesenler/arayuz/TemaSecici';
 import { CikisDugmesi } from '@/bilesenler/panel/CikisDugmesi';
 import { supabaseAyarli } from '@/lib/supabase/ayar';
@@ -36,6 +37,8 @@ export default async function PanelDuzeni({
 			</header>
 
 			<main className="flex-1">{children}</main>
+
+			<AltBilgi />
 		</div>
 	);
 }

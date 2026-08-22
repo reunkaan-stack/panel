@@ -1,3 +1,4 @@
+import { AltBilgi } from '@/bilesenler/arayuz/AltBilgi';
 import { TemaSecici } from '@/bilesenler/arayuz/TemaSecici';
 
 /* Oturumsuz sayfaların çatısı: giriş, şifre sıfırlama.
@@ -18,11 +19,7 @@ export default function GirisDuzeni({
 				<div className="w-full max-w-sm">{children}</div>
 			</main>
 
-			<footer className="border-t border-kenarlik px-6 py-4">
-				<p className="font-mono text-[0.6875rem] tracking-[0.08em] text-metin-3">
-					karasteknoloji.com
-				</p>
-			</footer>
+			<AltBilgi />
 		</div>
 	);
 }
