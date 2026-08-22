@@ -34,6 +34,9 @@ export type KayitGirdisi = {
 	not?: string;
 	/* tur = 'eksik' görevlerde: tek tek eklenen ürün adları */
 	eksikler?: string[];
+	/* tur = 'ciro' görevlerde: gün sonu tutarı ve fiş sayısı */
+	tutar?: number;
+	fisSayisi?: number | null;
 };
 
 /**
@@ -80,6 +83,33 @@ export async function kayitEkle(girdi: KayitGirdisi): Promise<Sonuc> {
 			return { tamam: false, mesaj: 'En az bir ürün ekleyin.' };
 		}
 
+		if (gorev.tur === 'ciro') {
+			if (typeof girdi.tutar !== 'number' || !Number.isFinite(girdi.tutar)) {
+				return { tamam: false, mesaj: 'Ciro tutarını yazın.' };
+			}
+			if (girdi.tutar < 0) {
+				return { tamam: false, mesaj: 'Ciro eksi olamaz.' };
+			}
+
+			/* Gün başına tek ciro. Veri tabanındaki benzersizlik indeksi de
+			   bunu tutuyor; buradaki denetim, kayıt defterine satır
+			   yazdıktan SONRA çarpıp yarım iş bırakmamak için. */
+			const { data: mevcut } = await supabase
+				.from('ptp_cirolar')
+				.select('id')
+				.eq('firma_id', firmaId)
+				.eq('tarih', girdi.tarih)
+				.is('silindi', null)
+				.maybeSingle();
+
+			if (mevcut) {
+				return {
+					tamam: false,
+					mesaj: 'Bu günün cirosu zaten girilmiş. Yanlışsa yöneticinize söyleyin.',
+				};
+			}
+		}
+
 		/* Tekrarlanabilir olmayan görev günde bir kez kapatılır. */
 		if (!gorev.tekrarlanabilir) {
 			const { count } = await supabase
@@ -108,13 +138,38 @@ export async function kayitEkle(girdi: KayitGirdisi): Promise<Sonuc> {
 					gorev.tur === 'eksik'
 						? eksikler.join(', ')
 						: girdi.metin?.trim() || null,
-				deger_sayi: girdi.sayi ?? null,
+				deger_sayi:
+					gorev.tur === 'ciro' ? (girdi.tutar ?? null) : (girdi.sayi ?? null),
 				not_metni: girdi.not?.trim() ?? '',
 			})
 			.select('id')
 			.single();
 
 		if (error) throw error;
+
+		/* Ciro ayrı tabloya da yazılıyor: aylık toplam, ortalama ve prim
+		   hesabı kayıt defterinin içinden değil oradan okunacak. */
+		if (gorev.tur === 'ciro') {
+			const { error: ciroHatasi } = await supabase.from('ptp_cirolar').insert({
+				firma_id: firmaId,
+				tarih: girdi.tarih,
+				tutar: girdi.tutar,
+				fis_sayisi: girdi.fisSayisi ?? null,
+				not_metni: girdi.not?.trim() ?? '',
+				giren_id: kullanici.id,
+				gorev_id: girdi.gorevId,
+				kayit_id: kayit.id,
+			});
+
+			/* Yazılamadıysa kayıt defterindeki satır da geri alınıyor.
+			   Aksi hâlde "ciro girildi" görünür ama rakam hiçbir yerde
+			   olmazdı — para ekranında en kötü hata sessiz olanıdır. */
+			if (ciroHatasi) {
+				await supabase.from('ptp_kayitlar').delete().eq('id', kayit.id);
+				throw ciroHatasi;
+			}
+			revalidatePath('/ptp/ciro');
+		}
 
 		/* Her ürün AYRI eksik kaydı. Tek metin olarak yazılsaydı
 		   "bardak takımı, kahve fincanı, supla" üç ürün olmasına rağmen

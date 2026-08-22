@@ -31,6 +31,9 @@ export function MudurBasligi({
 				<Link href="/ptp/kroki" className="dugme dugme-bos">
 					Kroki
 				</Link>
+				<Link href="/ptp/ciro" className="dugme dugme-bos">
+					Ciro
+				</Link>
 				<Link href={`/ptp/rapor?tarih=${tarih}`} className="dugme dugme-bos">
 					Performans
 				</Link>

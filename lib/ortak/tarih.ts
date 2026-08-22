@@ -97,3 +97,75 @@ export function araliginBasi(gun: number): string {
 	d.setDate(d.getDate() - (gun - 1));
 	return d.toLocaleDateString('en-CA');
 }
+
+
+/* ============================================================
+   AY HESAPLARI
+
+   Ciro ekranı ay ay okunuyor. Ay aritmetiği Date üzerinden değil
+   metin üzerinden yapılıyor: 'YYYY-MM' iki sayıdan ibaret ve
+   saat dilimi hiç işin içine girmiyor. Date ile yapılsaydı ayın
+   ilk günü UTC'ye kayıp bir önceki aya düşebilirdi.
+   ============================================================ */
+
+/** Bu ay: 'YYYY-MM' */
+export function buAy(): string {
+	return bugun().slice(0, 7);
+}
+
+/** Geçerli bir 'YYYY-MM' mi? */
+export function ayGecerli(ay: string | undefined): ay is string {
+	if (!ay || !/^\d{4}-\d{2}$/.test(ay)) return false;
+	const m = Number(ay.slice(5));
+	return m >= 1 && m <= 12;
+}
+
+/** Ayı kaydırır: ayKaydir('2026-01', -1) → '2025-12' */
+export function ayKaydir(ay: string, adim: number): string {
+	const yil = Number(ay.slice(0, 4));
+	const sira = Number(ay.slice(5)) - 1 + adim;
+	const yeniYil = yil + Math.floor(sira / 12);
+	const yeniAy = ((sira % 12) + 12) % 12;
+	return `${yeniYil}-${String(yeniAy + 1).padStart(2, '0')}`;
+}
+
+/** Aydaki gün sayısı. */
+export function aydakiGun(ay: string): number {
+	return new Date(
+		Date.UTC(Number(ay.slice(0, 4)), Number(ay.slice(5)), 0)
+	).getUTCDate();
+}
+
+/** Ayın günleri, eskiden yeniye: ['2026-08-01', …] */
+export function ayinGunleri(ay: string): string[] {
+	return Array.from(
+		{ length: aydakiGun(ay) },
+		(_, i) => `${ay}-${String(i + 1).padStart(2, '0')}`
+	);
+}
+
+/** Ayın adı: '2026-08' → 'Ağustos 2026' */
+export function ayAdi(ay: string): string {
+	return new Date(`${ay}-15T12:00:00`).toLocaleDateString('tr-TR', {
+		timeZone: BOLGE,
+		month: 'long',
+		year: 'numeric',
+	});
+}
+
+/** Günün kısa adı: '2026-08-22' → 'Cmt' */
+export function gunKisaAdi(gun: string): string {
+	return new Date(`${gun}T12:00:00`).toLocaleDateString('tr-TR', {
+		timeZone: BOLGE,
+		weekday: 'short',
+	});
+}
+
+/** '2026-08-22' → '22 Ağustos' (yıl yok; ay zaten başlıkta yazıyor) */
+export function gunVeAy(gun: string): string {
+	return new Date(`${gun}T12:00:00`).toLocaleDateString('tr-TR', {
+		timeZone: BOLGE,
+		day: 'numeric',
+		month: 'long',
+	});
+}

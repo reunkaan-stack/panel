@@ -15,7 +15,8 @@ export type GorevTuru =
 	| 'bolge'
 	| 'metin'
 	| 'sayi'
-	| 'eksik';
+	| 'eksik'
+	| 'ciro';
 
 /** Eksikler tedarik yoluna göre ayrılır. */
 export type EksikKategori = 'urun' | 'temel';
@@ -45,6 +46,7 @@ export const TUR_ADLARI: Record<GorevTuru, string> = {
 	metin: 'Metin girişi',
 	sayi: 'Sayı girişi',
 	eksik: 'Eksik listesine ekle',
+	ciro: 'Gün sonu cirosu',
 };
 
 export const KATEGORI_ADLARI: Record<EksikKategori, string> = {
@@ -114,6 +116,20 @@ export type Gorev = {
 	atanan_id: string | null;
 	/** Yalnızca tur = 'eksik' iken dolu: hangi listeye yazacak */
 	eksik_kategori: EksikKategori | null;
+};
+
+/** Mağazanın bir günlük cirosu. Günde tek satır.
+    Prim hesabı bunun üzerine kurulacak. */
+export type Ciro = {
+	id: string;
+	tarih: string;
+	tutar: number;
+	fis_sayisi: number | null;
+	not_metni: string;
+	giren_id: string | null;
+	olusturuldu: string;
+	guncellendi: string;
+	giren: { ad: string } | null;
 };
 
 /** Kayıt defteri satırı: ne yapıldı, kim yaptı, ne zaman. */

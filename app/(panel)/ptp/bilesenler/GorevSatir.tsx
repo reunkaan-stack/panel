@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { KATEGORI_ADLARI, type Bolge, type GunlukGorev } from '@/lib/tipler';
+import { paraBicimle, paraCoz } from '@/lib/ortak/para';
 import { atlamaEkle, kayitEkle, kayitSil } from '../eylemler';
 import { KrokiSecici } from './KrokiSecici';
 
@@ -38,6 +39,8 @@ export function GorevSatir({
 	/* Eksik görevinde eklenen ürünler; kaydedilene kadar burada durur */
 	const [eksikListesi, setEksikListesi] = useState<string[]>([]);
 	const [yeniEksik, setYeniEksik] = useState('');
+	/* Ciro görevinde fiş sayısı; isteğe bağlı */
+	const [fis, setFis] = useState('');
 	const [hata, setHata] = useState<string | null>(null);
 	const [bekliyor, basla] = useTransition();
 
@@ -82,6 +85,21 @@ export function GorevSatir({
 			return setHata('En az bir ürün ekleyin');
 		}
 
+		let tutar: number | undefined;
+		let fisSayisi: number | null = null;
+		if (gorev.tur === 'ciro') {
+			const cozulen = paraCoz(deger);
+			if (cozulen === null) return setHata('Ciro tutarını yazın');
+			if (cozulen < 0) return setHata('Ciro eksi olamaz');
+			tutar = cozulen;
+
+			if (fis.trim()) {
+				const f = Number(fis.replace(/D/g, ''));
+				if (!Number.isFinite(f)) return setHata('Fiş sayısı sayı olmalı');
+				fisSayisi = f;
+			}
+		}
+
 		basla(async () => {
 			const sonuc = await kayitEkle({
 				gorevId: gorev.id,
@@ -91,6 +109,8 @@ export function GorevSatir({
 				metin: gorev.tur === 'metin' ? deger : undefined,
 				sayi,
 				eksikler,
+				tutar,
+				fisSayisi,
 			});
 			if (!sonuc.tamam) return setHata(sonuc.mesaj);
 			setAcik(false);
@@ -99,6 +119,7 @@ export function GorevSatir({
 			setSeciliMaddeler(new Set());
 			setEksikListesi([]);
 			setYeniEksik('');
+			setFis('');
 		});
 	}
 
@@ -181,7 +202,12 @@ export function GorevSatir({
 										{kayit.madde_idler.length > 0 &&
 											` · ${kayit.madde_idler.length} madde`}
 										{kayit.deger_metin && ` · ${kayit.deger_metin}`}
-										{kayit.deger_sayi !== null && ` · ${kayit.deger_sayi}`}
+										{kayit.deger_sayi !== null &&
+											` · ${
+												gorev.tur === 'ciro'
+													? paraBicimle(kayit.deger_sayi)
+													: kayit.deger_sayi
+											}`}
 										{kayit.durum === 'atlandi' && ` · ${kayit.not_metni}`}
 										{kayit.yapan && ` · ${kayit.yapan.ad}`}
 									</span>
@@ -347,6 +373,51 @@ export function GorevSatir({
 									Ekle
 								</button>
 							</div>
+						</fieldset>
+					)}
+
+					{gorev.tur === 'ciro' && (
+						<fieldset>
+							<legend className="etiket">Gün sonu cirosu</legend>
+
+							<label className="mt-2 block">
+								<input
+									type="text"
+									inputMode="decimal"
+									value={deger}
+									onChange={(e) => setDeger(e.target.value)}
+									placeholder="12.500"
+									className="alan text-lg"
+									autoFocus
+									aria-label="Ciro tutarı"
+								/>
+							</label>
+
+							{/* Yazılan rakam okunur hâlde geri gösteriliyor: bir
+							    hane fazla yazmak (125.000) en sık yapılan hata ve
+							    kaydetmeden önce buradan yakalanıyor. */}
+							<p
+								className="mt-2 font-mono text-sm text-metin-2"
+								aria-live="polite"
+							>
+								{deger.trim() === ''
+									? 'Kasa raporundaki toplamı yazın.'
+									: paraCoz(deger) === null
+										? 'Bu bir tutar gibi görünmüyor.'
+										: paraBicimle(paraCoz(deger)!, true)}
+							</p>
+
+							<label className="mt-4 block">
+								<span className="etiket">Fiş sayısı (isteğe bağlı)</span>
+								<input
+									type="text"
+									inputMode="numeric"
+									value={fis}
+									onChange={(e) => setFis(e.target.value)}
+									placeholder="Boş bırakabilirsiniz"
+									className="alan mt-2"
+								/>
+							</label>
 						</fieldset>
 					)}
 
