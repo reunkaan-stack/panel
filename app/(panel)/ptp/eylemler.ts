@@ -310,6 +310,8 @@ export type GunKapatmaGirdisi = {
 	gorevler: {
 		gorevId: string;
 		maddeIdler?: string[];
+		bolgeIdler?: string[];
+		eksikler?: string[];
 		metin?: string;
 		sayi?: number;
 	}[];
@@ -343,7 +345,7 @@ export async function gunuKapat(
 		const [tanimSonuc, mevcutSonuc, ciroSonuc] = await Promise.all([
 			supabase
 				.from('ptp_gorevler')
-				.select('id, baslik, tur, atanan_id, tekrarlanabilir')
+				.select('id, baslik, tur, atanan_id, tekrarlanabilir, eksik_kategori')
 				.in('id', tumIdler)
 				.eq('firma_id', firmaId)
 				.is('silindi', null),
@@ -372,6 +374,7 @@ export async function gunuKapat(
 			tur: string;
 			atanan_id: string | null;
 			tekrarlanabilir: boolean;
+			eksik_kategori: string | null;
 		};
 		const tanimlar = new Map(
 			((tanimSonuc.data ?? []) as Tanim[]).map((t) => [t.id, t])
@@ -382,6 +385,9 @@ export async function gunuKapat(
 
 		const atlananlar: string[] = [];
 		const satirlar: Record<string, unknown>[] = [];
+		/* Eksik görevlerinde bildirilen ürünler; kayıt satırları
+		   yazıldıktan sonra kendi tablolarına da geçiyorlar. */
+		const eksikIstekleri: { tanim: Tanim; urunler: string[] }[] = [];
 
 		for (const istek of girdi.gorevler) {
 			const tanim = tanimlar.get(istek.gorevId);
@@ -401,6 +407,22 @@ export async function gunuKapat(
 				atlananlar.push(`${tanim.baslik} — madde işaretlenmedi`);
 				continue;
 			}
+			if (tanim.tur === 'bolge' && !(istek.bolgeIdler ?? []).length) {
+				atlananlar.push(`${tanim.baslik} — bölüm seçilmedi`);
+				continue;
+			}
+
+			const urunler = (istek.eksikler ?? [])
+				.map((u) => u.trim())
+				.filter(Boolean);
+
+			if (tanim.tur === 'eksik' && urunler.length === 0) {
+				atlananlar.push(`${tanim.baslik} — ürün eklenmedi`);
+				continue;
+			}
+			if (urunler.length > 0) {
+				eksikIstekleri.push({ tanim, urunler });
+			}
 
 			satirlar.push({
 				firma_id: firmaId,
@@ -409,9 +431,10 @@ export async function gunuKapat(
 				yapan_id: kullanici.id,
 				durum: 'yapildi',
 				baslik_kopya: tanim.baslik,
-				bolge_idler: [],
+				bolge_idler: istek.bolgeIdler ?? [],
 				madde_idler: istek.maddeIdler ?? [],
-				deger_metin: istek.metin?.trim() || null,
+				deger_metin:
+					urunler.length > 0 ? urunler.join(', ') : istek.metin?.trim() || null,
 				deger_sayi: istek.sayi ?? null,
 				not_metni: '',
 			});
@@ -470,8 +493,41 @@ export async function gunuKapat(
 		}
 
 		if (satirlar.length > 0) {
-			const { error } = await supabase.from('ptp_kayitlar').insert(satirlar);
+			/* Yazılan satırların kimlikleri geri isteniyor: eksik kayıtları
+			   hangi kayda ait olduklarını taşısın diye. */
+			const { data: yazilan, error } = await supabase
+				.from('ptp_kayitlar')
+				.insert(satirlar)
+				.select('id, gorev_id');
 			if (error) throw error;
+
+			/* Her ürün AYRI eksik kaydı: "bardak takımı, kahve fincanı,
+			   supla" tek satır olsaydı tek tek işaretlenemez ve sayılamazdı. */
+			if (eksikIstekleri.length > 0) {
+				const kayitId = new Map(
+					((yazilan ?? []) as { id: string; gorev_id: string }[]).map((k) => [
+						k.gorev_id,
+						k.id,
+					])
+				);
+
+				const { error: eksikHatasi } = await supabase
+					.from('ptp_eksikler')
+					.insert(
+						eksikIstekleri.flatMap(({ tanim, urunler }) =>
+							urunler.map((metin) => ({
+								firma_id: firmaId,
+								metin,
+								kategori: tanim.eksik_kategori ?? 'urun',
+								bildiren_id: kullanici.id,
+								gorev_id: tanim.id,
+								kayit_id: kayitId.get(tanim.id) ?? null,
+							}))
+						)
+					);
+				if (eksikHatasi) throw eksikHatasi;
+				revalidatePath('/ptp/eksikler');
+			}
 		}
 
 		revalidatePath('/ptp');

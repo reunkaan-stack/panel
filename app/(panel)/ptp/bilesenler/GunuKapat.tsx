@@ -2,14 +2,20 @@
 
 import { useState, useTransition } from 'react';
 import { paraBicimle, paraCoz } from '@/lib/ortak/para';
-import type { GunlukGorev } from '@/lib/tipler';
+import { KATEGORI_ADLARI, type Bolge, type GunlukGorev } from '@/lib/tipler';
 import { gunuKapat, type GunKapatmaSonucu } from '../eylemler';
+import { KrokiSecici } from './KrokiSecici';
 
 /* Günü kapat.
 
-   Akşam kapanışı tek ekranda: üstte ciro, altında kapanış görevleri,
-   tek kaydet. Personel mağazayı kapatırken alt alta beş kutu açıp beş
-   kez kaydetmiyor.
+   Akşam kapanışı tek ekranda: üstte ciro, altında kapanış grubundaki
+   görevler. Hepsi tek kaydetle kapanıyor. Personel mağazayı kapatırken
+   alt alta beş kutu açıp beş kez kaydetmiyor.
+
+   Kapanış grubuna eklenen HER görev buraya düşer — türü ne olursa
+   olsun. Kroki ve eksik türleri bir ara dışarıda bırakılmıştı; istisna
+   bırakmak, yeni görev eklendiğinde "neden burada yok" sorusunu
+   doğuruyordu.
 
    Gün KİLİTLENMİYOR. Kapattıktan sonra da listeden işaretleme
    yapılabilir, ciro düzeltilebilir — unutulan bir iş akşam 11'de
@@ -19,17 +25,21 @@ type Asama = 'kapali' | 'form' | 'onay' | 'bitti';
 
 export function GunuKapat({
 	gorevler,
+	bolgeler,
 	tarih,
 }: {
 	gorevler: GunlukGorev[];
+	bolgeler: Bolge[];
 	tarih: string;
 }) {
 	const [asama, setAsama] = useState<Asama>('kapali');
 	const [secili, setSecili] = useState<Set<string>>(new Set());
 	const [degerler, setDegerler] = useState<Record<string, string>>({});
 	const [maddeler, setMaddeler] = useState<Record<string, Set<string>>>({});
+	const [bolgeSecim, setBolgeSecim] = useState<Record<string, Set<string>>>({});
+	const [urunler, setUrunler] = useState<Record<string, string[]>>({});
+	const [taslaklar, setTaslaklar] = useState<Record<string, string>>({});
 	const [ciro, setCiro] = useState('');
-	const [fis, setFis] = useState('');
 	const [hata, setHata] = useState<string | null>(null);
 	const [sonuc, setSonuc] = useState<GunKapatmaSonucu | null>(null);
 	const [bekliyor, basla] = useTransition();
@@ -40,20 +50,18 @@ export function GunuKapat({
 	const yapildi = (g: GunlukGorev) =>
 		g.kayitlar.some((k) => k.durum === 'yapildi') && !g.tekrarlanabilir;
 
-	/* Kroki ve eksik görevleri burada yapılamaz: biri harita, diğeri
-	   ürün ürün giriş istiyor. Kapanış kutusunu bunlarla doldurmak,
-	   akşam işini kolaylaştırmak yerine listenin küçültülmüş bir
-	   kopyasını yapardı. Listede duruyorlar, burada hatırlatılıyorlar. */
-	const listeden = digerler.filter(
-		(g) => (g.tur === 'bolge' || g.tur === 'eksik') && !yapildi(g)
-	);
-	const kapatilabilir = digerler.filter(
-		(g) => g.tur !== 'bolge' && g.tur !== 'eksik'
-	);
-	const bekleyen = kapatilabilir.filter((g) => !yapildi(g));
-
+	const bekleyen = digerler.filter((g) => !yapildi(g));
 	const ciroYapildi = ciroGorev ? yapildi(ciroGorev) : true;
 	const yapacakIsVar = bekleyen.length > 0 || !ciroYapildi;
+
+	/* Yazılıp "ekle" denmemiş ürün de sayılır: kullanıcı yazdıktan sonra
+	   doğrudan kaydete basarsa kaybolmamalı. */
+	function urunListesi(gorevId: string): string[] {
+		const liste = [...(urunler[gorevId] ?? [])];
+		const taslak = (taslaklar[gorevId] ?? '').trim();
+		if (taslak) liste.push(taslak);
+		return liste;
+	}
 
 	function isaretle(id: string) {
 		setSecili((e) => {
@@ -64,15 +72,27 @@ export function GunuKapat({
 		});
 	}
 
-	function maddeIsaretle(gorevId: string, maddeId: string) {
-		setMaddeler((e) => {
+	function kumeIsaretle(
+		kur: React.Dispatch<React.SetStateAction<Record<string, Set<string>>>>,
+		gorevId: string,
+		deger: string
+	) {
+		kur((e) => {
 			const y = { ...e };
 			const kume = new Set(y[gorevId] ?? []);
-			if (kume.has(maddeId)) kume.delete(maddeId);
-			else kume.add(maddeId);
+			if (kume.has(deger)) kume.delete(deger);
+			else kume.add(deger);
 			y[gorevId] = kume;
 			return y;
 		});
+		setSecili((e) => new Set(e).add(gorevId));
+	}
+
+	function urunEkle(gorevId: string) {
+		const taslak = (taslaklar[gorevId] ?? '').trim();
+		if (!taslak) return;
+		setUrunler((e) => ({ ...e, [gorevId]: [...(e[gorevId] ?? []), taslak] }));
+		setTaslaklar((e) => ({ ...e, [gorevId]: '' }));
 		setSecili((e) => new Set(e).add(gorevId));
 	}
 
@@ -95,14 +115,6 @@ export function GunuKapat({
 			);
 		}
 
-		if (listeden.length > 0) {
-			liste.push(
-				`${listeden.length} görev listeden yapılmalı: ${listeden
-					.map((g) => g.baslik)
-					.join(', ')}`
-			);
-		}
-
 		return liste;
 	}
 
@@ -120,17 +132,15 @@ export function GunuKapat({
 				tarih,
 				ciro:
 					ciroGorev && !ciroYapildi && tutar !== null
-						? {
-								gorevId: ciroGorev.id,
-								tutar,
-								fisSayisi: fis.trim() ? Number(fis.replace(/\D/g, '')) : null,
-							}
+						? { gorevId: ciroGorev.id, tutar, fisSayisi: null }
 						: null,
 				gorevler: [...secili].map((id) => {
-					const g = kapatilabilir.find((x) => x.id === id);
+					const g = bekleyen.find((x) => x.id === id);
 					return {
 						gorevId: id,
 						maddeIdler: [...(maddeler[id] ?? [])],
+						bolgeIdler: [...(bolgeSecim[id] ?? [])],
+						eksikler: g?.tur === 'eksik' ? urunListesi(id) : undefined,
 						metin: g?.tur === 'metin' ? degerler[id] : undefined,
 						sayi:
 							g?.tur === 'sayi' && degerler[id]
@@ -214,7 +224,11 @@ export function GunuKapat({
 						setSonuc(null);
 						setSecili(new Set());
 						setCiro('');
-						setFis('');
+						setUrunler({});
+						setTaslaklar({});
+						setBolgeSecim({});
+						setMaddeler({});
+						setDegerler({});
 					}}
 					className="dugme dugme-bos mt-4"
 				>
@@ -273,31 +287,16 @@ export function GunuKapat({
 				<fieldset className="mt-4 border-b border-kenarlik-2 pb-5">
 					<legend className="etiket">{ciroGorev.baslik}</legend>
 
-					<div className="mt-2 flex flex-wrap gap-4">
-						<div className="min-w-40 flex-1">
-							<input
-								type="text"
-								inputMode="decimal"
-								value={ciro}
-								onChange={(e) => setCiro(e.target.value)}
-								placeholder="12.500"
-								className="alan text-lg"
-								autoFocus
-								aria-label="Ciro tutarı"
-							/>
-						</div>
-						<div className="w-28">
-							<input
-								type="text"
-								inputMode="numeric"
-								value={fis}
-								onChange={(e) => setFis(e.target.value)}
-								placeholder="Fiş"
-								className="alan"
-								aria-label="Fiş sayısı"
-							/>
-						</div>
-					</div>
+					<input
+						type="text"
+						inputMode="decimal"
+						value={ciro}
+						onChange={(e) => setCiro(e.target.value)}
+						placeholder="12.500"
+						className="alan mt-2 text-lg"
+						autoFocus
+						aria-label="Ciro tutarı"
+					/>
 
 					{/* Bir hane fazla yazmak en sık yapılan hata; kaydetmeden
 					    önce burada görünüyor. */}
@@ -323,7 +322,7 @@ export function GunuKapat({
 						Kapanış görevleri · {secili.size} / {bekleyen.length}
 					</legend>
 
-					<ul className="mt-3 space-y-3">
+					<ul className="mt-3 space-y-4">
 						{bekleyen.map((gorev) => (
 							<li key={gorev.id}>
 								<label className="flex cursor-pointer items-start gap-3">
@@ -373,7 +372,7 @@ export function GunuKapat({
 																maddeler[gorev.id]?.has(madde.id) ?? false
 															}
 															onChange={() =>
-																maddeIsaretle(gorev.id, madde.id)
+																kumeIsaretle(setMaddeler, gorev.id, madde.id)
 															}
 															className="onay mt-0.5 shrink-0"
 														/>
@@ -385,6 +384,92 @@ export function GunuKapat({
 											))}
 									</ul>
 								)}
+
+								{gorev.tur === 'bolge' && secili.has(gorev.id) && (
+									<div className="mt-2 ml-8">
+										<p className="mb-2 text-sm text-metin-2">
+											Yaptığınız bölümlere dokunun.
+											{(bolgeSecim[gorev.id]?.size ?? 0) > 0 &&
+												` ${bolgeSecim[gorev.id]!.size} seçili.`}
+										</p>
+										<KrokiSecici
+											bolgeler={bolgeler}
+											secili={bolgeSecim[gorev.id] ?? new Set()}
+											kapali={bekliyor}
+											degistir={(id) =>
+												kumeIsaretle(setBolgeSecim, gorev.id, id)
+											}
+										/>
+									</div>
+								)}
+
+								{gorev.tur === 'eksik' && secili.has(gorev.id) && (
+									<div className="mt-2 ml-8">
+										<p className="mb-2 text-sm text-metin-2">
+											{gorev.eksik_kategori
+												? KATEGORI_ADLARI[gorev.eksik_kategori]
+												: 'Eksikler'}{' '}
+											— her ürünü ayrı ekleyin.
+										</p>
+
+										{(urunler[gorev.id] ?? []).length > 0 && (
+											<ul className="mb-2 space-y-2">
+												{urunler[gorev.id]!.map((urun, i) => (
+													<li key={i} className="flex items-center gap-2">
+														<span className="flex-1 border border-kenarlik bg-zemin px-3 py-2 text-sm">
+															{urun}
+														</span>
+														<button
+															type="button"
+															onClick={() =>
+																setUrunler((e) => ({
+																	...e,
+																	[gorev.id]: e[gorev.id]!.filter(
+																		(_, j) => j !== i
+																	),
+																}))
+															}
+															className="shrink-0 border border-kenarlik px-3 py-2 font-mono text-sm text-metin-3 hover:border-hata hover:text-hata"
+															aria-label={`${urun} — listeden çıkar`}
+														>
+															×
+														</button>
+													</li>
+												))}
+											</ul>
+										)}
+
+										<div className="flex gap-2">
+											<input
+												type="text"
+												value={taslaklar[gorev.id] ?? ''}
+												onChange={(e) =>
+													setTaslaklar((t) => ({
+														...t,
+														[gorev.id]: e.target.value,
+													}))
+												}
+												onKeyDown={(e) => {
+													/* Enter yeni ürün ekler, formu göndermez. */
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														urunEkle(gorev.id);
+													}
+												}}
+												placeholder="Ürün adı"
+												className="alan"
+											/>
+											<button
+												type="button"
+												onClick={() => urunEkle(gorev.id)}
+												disabled={!(taslaklar[gorev.id] ?? '').trim()}
+												className="dugme dugme-bos shrink-0"
+											>
+												Ekle
+											</button>
+										</div>
+									</div>
+								)}
 							</li>
 						))}
 					</ul>
@@ -393,22 +478,6 @@ export function GunuKapat({
 				<p className="mt-5 text-sm text-metin-2">
 					Kapanış görevlerinin hepsi işaretlenmiş.
 				</p>
-			)}
-
-			{listeden.length > 0 && (
-				<div className="mt-5 border border-kenarlik-2 px-3 py-2.5">
-					<span className="etiket">Listeden yapılacak</span>
-					<ul className="mt-1.5 space-y-1">
-						{listeden.map((g) => (
-							<li key={g.id} className="text-sm text-metin-2">
-								· {g.baslik}
-							</li>
-						))}
-					</ul>
-					<p className="mt-1.5 font-mono text-[0.6875rem] tracking-[0.04em] text-metin-3">
-						Bunlar kroki ya da ürün girişi istiyor; aşağıdaki listeden yapılır.
-					</p>
-				</div>
 			)}
 
 			{hata && (

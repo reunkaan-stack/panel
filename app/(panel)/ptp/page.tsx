@@ -143,6 +143,7 @@ export default async function PtpSayfasi({
 					gorevler={gorevler.filter(
 						(g) => g.grup === 'kapanis' || g.tur === 'ciro'
 					)}
+					bolgeler={(bolgeSonuc.data ?? []) as Bolge[]}
 					tarih={tarih}
 				/>
 			)}

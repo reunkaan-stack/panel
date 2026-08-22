@@ -39,8 +39,6 @@ export function GorevSatir({
 	/* Eksik görevinde eklenen ürünler; kaydedilene kadar burada durur */
 	const [eksikListesi, setEksikListesi] = useState<string[]>([]);
 	const [yeniEksik, setYeniEksik] = useState('');
-	/* Ciro görevinde fiş sayısı; isteğe bağlı */
-	const [fis, setFis] = useState('');
 	const [hata, setHata] = useState<string | null>(null);
 	const [bekliyor, basla] = useTransition();
 
@@ -86,18 +84,15 @@ export function GorevSatir({
 		}
 
 		let tutar: number | undefined;
-		let fisSayisi: number | null = null;
+		/* Fiş sayısı şimdilik sorulmuyor. Kolon ve yönetici ekranındaki
+		   alan duruyor; istenirse geri açılır. */
+		const fisSayisi: number | null = null;
 		if (gorev.tur === 'ciro') {
 			const cozulen = paraCoz(deger);
 			if (cozulen === null) return setHata('Ciro tutarını yazın');
 			if (cozulen < 0) return setHata('Ciro eksi olamaz');
 			tutar = cozulen;
 
-			if (fis.trim()) {
-				const f = Number(fis.replace(/D/g, ''));
-				if (!Number.isFinite(f)) return setHata('Fiş sayısı sayı olmalı');
-				fisSayisi = f;
-			}
 		}
 
 		basla(async () => {
@@ -119,7 +114,6 @@ export function GorevSatir({
 			setSeciliMaddeler(new Set());
 			setEksikListesi([]);
 			setYeniEksik('');
-			setFis('');
 		});
 	}
 
@@ -407,17 +401,6 @@ export function GorevSatir({
 										: paraBicimle(paraCoz(deger)!, true)}
 							</p>
 
-							<label className="mt-4 block">
-								<span className="etiket">Fiş sayısı (isteğe bağlı)</span>
-								<input
-									type="text"
-									inputMode="numeric"
-									value={fis}
-									onChange={(e) => setFis(e.target.value)}
-									placeholder="Boş bırakabilirsiniz"
-									className="alan mt-2"
-								/>
-							</label>
 						</fieldset>
 					)}
 
