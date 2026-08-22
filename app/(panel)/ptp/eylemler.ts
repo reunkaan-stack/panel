@@ -287,3 +287,201 @@ export async function atamaDegistir(
 		return hataya(e, 'Atama yapılamadı. Tekrar deneyin.');
 	}
 }
+
+
+/* ============================================================
+   GÜNÜ KAPAT
+
+   Akşam kapanışı tek ekranda: ciro + kapanış görevleri, tek kaydet.
+   Personel mağazayı kapatırken alt alta beş ayrı kutu açıp beş kez
+   kaydetmiyor.
+
+   Neden ayrı bir eylem, neden kayitEkle döngüye alınmıyor:
+   kayitEkle her çağrıda tanımı okuyor ve tekrar denetimi yapıyor —
+   beş görev için on beş ayrı veri tabanı gidişi eder. Burada tanımlar
+   ve mevcut kayıtlar tek seferde okunuyor, satırlar tek seferde
+   yazılıyor: dört gidiş.
+   ============================================================ */
+
+export type GunKapatmaGirdisi = {
+	tarih: string;
+	/* Ciro görevi varsa ve doldurulduysa */
+	ciro?: { gorevId: string; tutar: number; fisSayisi: number | null } | null;
+	gorevler: {
+		gorevId: string;
+		maddeIdler?: string[];
+		metin?: string;
+		sayi?: number;
+	}[];
+};
+
+export type GunKapatmaSonucu = {
+	kaydedilen: number;
+	ciroYazildi: boolean;
+	/* Kaydedilemeyenler: başkasına atanmış, zaten yapılmış ya da eksik */
+	atlananlar: string[];
+};
+
+export async function gunuKapat(
+	girdi: GunKapatmaGirdisi
+): Promise<Sonuc<GunKapatmaSonucu>> {
+	try {
+		const { kullanici, yonetici } = await yetkiDenetle('ptp', 'yazma');
+
+		if (!/^d{4}-d{2}-d{2}$/.test(girdi.tarih)) {
+			return { tamam: false, mesaj: 'Tarih geçersiz.' };
+		}
+		if (girdi.gorevler.length === 0 && !girdi.ciro) {
+			return { tamam: false, mesaj: 'Kaydedilecek bir şey seçilmedi.' };
+		}
+
+		const firmaId = await islemFirmasi();
+		const supabase = await sunucuIstemcisi();
+		const idler = girdi.gorevler.map((g) => g.gorevId);
+		const tumIdler = girdi.ciro ? [...idler, girdi.ciro.gorevId] : idler;
+
+		const [tanimSonuc, mevcutSonuc, ciroSonuc] = await Promise.all([
+			supabase
+				.from('ptp_gorevler')
+				.select('id, baslik, tur, atanan_id, tekrarlanabilir')
+				.in('id', tumIdler)
+				.eq('firma_id', firmaId)
+				.is('silindi', null),
+
+			supabase
+				.from('ptp_kayitlar')
+				.select('gorev_id')
+				.eq('firma_id', firmaId)
+				.eq('tarih', girdi.tarih)
+				.in('gorev_id', tumIdler),
+
+			supabase
+				.from('ptp_cirolar')
+				.select('id')
+				.eq('firma_id', firmaId)
+				.eq('tarih', girdi.tarih)
+				.is('silindi', null)
+				.maybeSingle(),
+		]);
+
+		if (tanimSonuc.error) throw tanimSonuc.error;
+
+		type Tanim = {
+			id: string;
+			baslik: string;
+			tur: string;
+			atanan_id: string | null;
+			tekrarlanabilir: boolean;
+		};
+		const tanimlar = new Map(
+			((tanimSonuc.data ?? []) as Tanim[]).map((t) => [t.id, t])
+		);
+		const yapilmis = new Set(
+			((mevcutSonuc.data ?? []) as { gorev_id: string }[]).map((k) => k.gorev_id)
+		);
+
+		const atlananlar: string[] = [];
+		const satirlar: Record<string, unknown>[] = [];
+
+		for (const istek of girdi.gorevler) {
+			const tanim = tanimlar.get(istek.gorevId);
+			if (!tanim) {
+				atlananlar.push('Bilinmeyen görev');
+				continue;
+			}
+			if (!yonetici && tanim.atanan_id && tanim.atanan_id !== kullanici.id) {
+				atlananlar.push(`${tanim.baslik} — başkasına atanmış`);
+				continue;
+			}
+			if (yapilmis.has(tanim.id) && !tanim.tekrarlanabilir) {
+				atlananlar.push(`${tanim.baslik} — zaten kaydedilmiş`);
+				continue;
+			}
+			if (tanim.tur === 'kontrol' && !(istek.maddeIdler ?? []).length) {
+				atlananlar.push(`${tanim.baslik} — madde işaretlenmedi`);
+				continue;
+			}
+
+			satirlar.push({
+				firma_id: firmaId,
+				gorev_id: tanim.id,
+				tarih: girdi.tarih,
+				yapan_id: kullanici.id,
+				durum: 'yapildi',
+				baslik_kopya: tanim.baslik,
+				bolge_idler: [],
+				madde_idler: istek.maddeIdler ?? [],
+				deger_metin: istek.metin?.trim() || null,
+				deger_sayi: istek.sayi ?? null,
+				not_metni: '',
+			});
+		}
+
+		/* Ciro: günde bir kez. Zaten varsa sessizce geçilmiyor, ne olduğu
+		   söyleniyor — yazılmayan bir para rakamının fark edilmemesi en
+		   kötüsü. */
+		let ciroYazildi = false;
+		const ciroTanim = girdi.ciro ? tanimlar.get(girdi.ciro.gorevId) : null;
+
+		if (girdi.ciro && ciroTanim) {
+			if (ciroSonuc.data) {
+				atlananlar.push('Ciro — bu gün zaten girilmiş');
+			} else if (yapilmis.has(ciroTanim.id)) {
+				atlananlar.push('Ciro — zaten kaydedilmiş');
+			} else {
+				const { data: kayit, error } = await supabase
+					.from('ptp_kayitlar')
+					.insert({
+						firma_id: firmaId,
+						gorev_id: ciroTanim.id,
+						tarih: girdi.tarih,
+						yapan_id: kullanici.id,
+						durum: 'yapildi',
+						baslik_kopya: ciroTanim.baslik,
+						bolge_idler: [],
+						madde_idler: [],
+						deger_sayi: girdi.ciro.tutar,
+						not_metni: '',
+					})
+					.select('id')
+					.single();
+
+				if (error) throw error;
+
+				const { error: ciroHatasi } = await supabase.from('ptp_cirolar').insert({
+					firma_id: firmaId,
+					tarih: girdi.tarih,
+					tutar: girdi.ciro.tutar,
+					fis_sayisi: girdi.ciro.fisSayisi,
+					giren_id: kullanici.id,
+					gorev_id: ciroTanim.id,
+					kayit_id: kayit.id,
+				});
+
+				/* Ciro yazılamadıysa kayıt defterindeki satır da geri alınıyor:
+				   "ciro girildi" görünüp rakamın hiçbir yerde olmaması en
+				   tehlikeli hâl. */
+				if (ciroHatasi) {
+					await supabase.from('ptp_kayitlar').delete().eq('id', kayit.id);
+					throw ciroHatasi;
+				}
+				ciroYazildi = true;
+			}
+		}
+
+		if (satirlar.length > 0) {
+			const { error } = await supabase.from('ptp_kayitlar').insert(satirlar);
+			if (error) throw error;
+		}
+
+		revalidatePath('/ptp');
+		if (ciroYazildi) revalidatePath('/ptp/ciro');
+
+		return {
+			tamam: true,
+			veri: { kaydedilen: satirlar.length, ciroYazildi, atlananlar },
+		};
+	} catch (e) {
+		return hataya(e, 'Gün kapatılamadı. Tekrar deneyin.');
+	}
+}

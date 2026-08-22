@@ -6,6 +6,7 @@ import { islemFirmasi } from '@/lib/yetki/firma';
 import { bugun, tarihiBicimle } from '@/lib/ortak/tarih';
 import type { Bolge, GunlukGorev, Kayit } from '@/lib/tipler';
 import { GunListesi } from './bilesenler/GunListesi';
+import { GunuKapat } from './bilesenler/GunuKapat';
 import { MudurBasligi } from './bilesenler/MudurBasligi';
 
 export const metadata: Metadata = { title: 'Personel Takip — Karas Panel' };
@@ -134,6 +135,17 @@ export default async function PtpSayfasi({
 					)}
 				</Link>
 			</div>
+
+			{/* Akşam kapanışı tek ekranda. Gelecek bir güne bakılıyorsa
+			    kapatılacak bir şey yok. */}
+			{tarih <= bugun() && (
+				<GunuKapat
+					gorevler={gorevler.filter(
+						(g) => g.grup === 'kapanis' || g.tur === 'ciro'
+					)}
+					tarih={tarih}
+				/>
+			)}
 
 			{yonetici && (
 				<MudurBasligi
