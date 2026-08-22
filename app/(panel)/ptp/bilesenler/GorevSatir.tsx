@@ -32,6 +32,10 @@ export function GorevSatir({
 	tarih: string;
 }) {
 	const [acik, setAcik] = useState(false);
+	/* Kayıt dökümü kapalı başlıyor: yapılmış bir görevin sekiz satırlık
+	   geçmişi her gün ekranda durursa liste okunmaz hâle geliyor.
+	   "Ne zaman, kim" özeti üstteki satırda zaten var. */
+	const [detay, setDetay] = useState(false);
 	const [deger, setDeger] = useState('');
 	const [seciliBolgeler, setSeciliBolgeler] = useState<Set<string>>(new Set());
 	const [seciliMaddeler, setSeciliMaddeler] = useState<Set<string>>(new Set());
@@ -175,10 +179,21 @@ export function GorevSatir({
 						{atlananlar.length > 0 && (
 							<span className="text-uyari">atlandı</span>
 						)}
+
+						{kayitlar.length > 0 && (
+							<button
+								type="button"
+								onClick={() => setDetay((d) => !d)}
+								aria-expanded={detay}
+								className="underline underline-offset-2 hover:text-metin"
+							>
+								{detay ? 'gizle' : 'ayrıntı'}
+							</button>
+						)}
 					</div>
 
 					{/* Kayıt defteri: ne zaman, kim, nerede */}
-					{kayitlar.length > 0 && (
+					{detay && kayitlar.length > 0 && (
 						<ul className="mt-2 space-y-1">
 							{kayitlar.slice(0, 8).map((kayit) => (
 								<li

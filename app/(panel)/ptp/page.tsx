@@ -118,6 +118,16 @@ export default async function PtpSayfasi({
 		)
 		.sort((a, b) => a.grup.localeCompare(b.grup) || a.sira - b.sira);
 
+	/* Kapanış grubu ve ciro listede DEĞİL: ikisi de "Günü kapat"
+	   kutusunda. Aynı görevin iki yerde durması, hangisinden
+	   yapıldığını belirsizleştiriyordu. */
+	const kapanisGorevleri = gorevler.filter(
+		(g) => g.grup === 'kapanis' || g.tur === 'ciro'
+	);
+	const listeGorevleri = gorevler.filter(
+		(g) => g.grup !== 'kapanis' && g.tur !== 'ciro'
+	);
+
 	return (
 		<div className="mx-auto max-w-4xl px-6 py-10">
 			<span className="etiket text-vurgu-metin">Personel Takip</span>
@@ -140,9 +150,7 @@ export default async function PtpSayfasi({
 			    kapatılacak bir şey yok. */}
 			{tarih <= bugun() && (
 				<GunuKapat
-					gorevler={gorevler.filter(
-						(g) => g.grup === 'kapanis' || g.tur === 'ciro'
-					)}
+					gorevler={kapanisGorevleri}
 					bolgeler={(bolgeSonuc.data ?? []) as Bolge[]}
 					tarih={tarih}
 				/>
@@ -164,7 +172,7 @@ export default async function PtpSayfasi({
 			) : (
 				<div className="mt-8">
 					<GunListesi
-						gorevler={gorevler}
+						gorevler={listeGorevleri}
 						yonetici={yonetici}
 						kullaniciId={kullanici.id}
 						kisiler={kisiler}

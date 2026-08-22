@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import {
 	GRUP_ADLARI,
 	type Bolge,
@@ -15,7 +15,16 @@ import { GorevSatir } from './GorevSatir';
 
    Toplu atama var: görevler işaretlenip tek seferde bir kişiye
    veriliyor. Atama KALICI — her gün yeniden atamak gerekmiyor, aynı
-   işi genelde aynı kişi yapıyor. */
+   işi genelde aynı kişi yapıyor.
+
+   Gruplar katlanabiliyor ve tercih tarayıcıda saklanıyor: mağazada
+   ekran gün boyu açık duruyor, sabah kapatılan bir grup öğleden sonra
+   yeniden karşısına çıkmamalı. Tamamı bitmiş grup kendiliğinden
+   kapanıyor — biten iş yer kaplamasın.
+
+   Kapanış grubu bu listede YOK; o "Günü kapat" kutusunda. */
+
+const SAKLAMA_ANAHTARI = 'ptp-kapali-gruplar';
 
 type Kisi = { id: string; ad: string };
 
@@ -35,9 +44,57 @@ export function GunListesi({
 	tarih: string;
 }) {
 	const [secili, setSecili] = useState<Set<string>>(new Set());
+	/* İlk hâl sunucuda da istemcide de aynı hesaplanmalı, yoksa React
+	   uyuşmazlık uyarısı verir. Tarayıcıdaki tercih sonra uygulanıyor. */
+	const [kapali, setKapali] = useState<Set<string>>(() => new Set());
+	const [yuklendi, setYuklendi] = useState(false);
 	const [atanacak, setAtanacak] = useState('');
 	const [bekliyor, basla] = useTransition();
 	const [hata, setHata] = useState<string | null>(null);
+
+	const gruplar = gorevler.reduce<Record<string, GunlukGorev[]>>((t, g) => {
+		(t[g.grup] ??= []).push(g);
+		return t;
+	}, {});
+
+	const grupBitti = (liste: GunlukGorev[]) =>
+		liste.every((g) => g.kayitlar.some((k) => k.durum === 'yapildi'));
+
+	useEffect(() => {
+		let saklanan: string[] | null = null;
+		try {
+			const ham = localStorage.getItem(SAKLAMA_ANAHTARI);
+			if (ham) saklanan = JSON.parse(ham) as string[];
+		} catch {
+			/* Bozuk kayıt varsa yok say — tercih, veri değil. */
+		}
+
+		setKapali(
+			new Set(
+				saklanan ??
+					/* İlk açılışta bitmiş gruplar kapalı gelsin. */
+					Object.entries(gruplar)
+						.filter(([, liste]) => grupBitti(liste))
+						.map(([grup]) => grup)
+			)
+		);
+		setYuklendi(true);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	function katla(grup: string) {
+		setKapali((e) => {
+			const y = new Set(e);
+			if (y.has(grup)) y.delete(grup);
+			else y.add(grup);
+			try {
+				localStorage.setItem(SAKLAMA_ANAHTARI, JSON.stringify([...y]));
+			} catch {
+				/* Saklanamadıysa sorun değil; oturum boyunca çalışır. */
+			}
+			return y;
+		});
+	}
 
 	if (gorevler.length === 0) {
 		return (
@@ -70,12 +127,6 @@ export function GunListesi({
 			setAtanacak('');
 		});
 	}
-
-	/* Gruplara ayır: mağazada iş bu sırayla yapılıyor. */
-	const gruplar = gorevler.reduce<Record<string, GunlukGorev[]>>((t, g) => {
-		(t[g.grup] ??= []).push(g);
-		return t;
-	}, {});
 
 	/* "Yapıldı" = o güne ait en az bir 'yapildi' kaydı var. */
 	const yapilan = gorevler.filter((g) =>
@@ -129,28 +180,55 @@ export function GunListesi({
 				</p>
 			)}
 
-			{Object.entries(gruplar).map(([grup, liste]) => (
-				<section key={grup} className="mt-8">
-					<span className="etiket">
-						{GRUP_ADLARI[grup as GorevGrubu] ?? grup}
-					</span>
-					<ul className="mt-3 border-t border-kenarlik">
-						{liste.map((gorev) => (
-							<GorevSatir
-								key={gorev.id}
-								gorev={gorev}
-								yonetici={yonetici}
-								benim={gorev.atanan_id === kullaniciId}
-								secili={secili.has(gorev.id)}
-								isaretle={() => isaretle(gorev.id)}
-								saatiBicimle={saatiBicimle}
-								bolgeler={bolgeler}
-								tarih={tarih}
-							/>
-						))}
-					</ul>
-				</section>
-			))}
+			{Object.entries(gruplar).map(([grup, liste]) => {
+				const bitti = liste.filter((g) =>
+					g.kayitlar.some((k) => k.durum === 'yapildi')
+				).length;
+				const acik = yuklendi ? !kapali.has(grup) : true;
+
+				return (
+					<section key={grup} className="mt-8">
+						<button
+							type="button"
+							onClick={() => katla(grup)}
+							aria-expanded={acik}
+							className="flex w-full items-baseline justify-between border-b border-kenarlik pb-2 text-left hover:border-metin-3"
+						>
+							<span className="etiket">
+								<span className="mr-2 inline-block w-3 text-metin-3">
+									{acik ? '−' : '+'}
+								</span>
+								{GRUP_ADLARI[grup as GorevGrubu] ?? grup}
+							</span>
+							<span
+								className={`etiket ${
+									bitti === liste.length ? 'text-basarili' : 'text-metin-3'
+								}`}
+							>
+								{bitti} / {liste.length}
+							</span>
+						</button>
+
+						{acik && (
+							<ul>
+								{liste.map((gorev) => (
+									<GorevSatir
+										key={gorev.id}
+										gorev={gorev}
+										yonetici={yonetici}
+										benim={gorev.atanan_id === kullaniciId}
+										secili={secili.has(gorev.id)}
+										isaretle={() => isaretle(gorev.id)}
+										saatiBicimle={saatiBicimle}
+										bolgeler={bolgeler}
+										tarih={tarih}
+									/>
+								))}
+							</ul>
+						)}
+					</section>
+				);
+			})}
 		</>
 	);
 }
