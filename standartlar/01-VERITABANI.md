@@ -221,6 +221,38 @@ değildir ve altı ay sonra kimse neden orada olduğunu bilmez.
 
 ### Migration kuralları
 
+- **`create table if not exists` yalnızca ADI kontrol eder, ŞEKLİ
+  değil.** Tablo başka bir amaçla zaten varsa komut sessizce hiçbir şey
+  yapmaz; yeni kolonlar eklenmez ve betik ilerideki bir adımda
+  "column ... does not exist" diyerek patlar. Var olma ihtimali olan
+  bir tabloyu genişletirken **iki adım** yazılır:
+
+  ```sql
+  create table if not exists panel.ayarlar (
+    firma_id uuid primary key references panel.firmalar(id)
+  );
+
+  alter table panel.ayarlar
+    add column if not exists kdv_orani numeric(5,2) not null default 20;
+  ```
+
+  Kısıtlar da ayrı yazılır (`drop constraint if exists` + `add
+  constraint`), yoksa ikinci çalıştırmada "already exists" alınır.
+
+- **Politika eklemek kısıtlamaz, GENİŞLETİR.** RLS politikaları
+  varsayılan olarak PERMISSIVE'dir ve birbiriyle OR'lanır. Var olan bir
+  tabloya daha dar bir politika eklemek erişimi daraltmaz — eski
+  politika hâlâ izin verir. Daraltmak için **eskisi silinir**:
+
+  ```sql
+  drop policy if exists ayarlar_guncelleme on panel.ayarlar;
+  create policy ayarlar_duzeltme on panel.ayarlar for update ...
+  ```
+
+  Bir tabloya yeni ve daha hassas bir kolon eklenirken o tablonun
+  **mevcut politikaları da gözden geçirilir**: kolon yeni ama izinler
+  eski.
+
 - **Geri alınabilir yaz.** Sütun eklerken varsayılan ver, `not null`
   ikinci adımda gelsin.
 - **Veri taşıyan migration ayrı dosyada olur.** Şema değişikliği ve veri

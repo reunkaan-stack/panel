@@ -27,16 +27,33 @@
 
 -- ---------- A. Modül ayarları ----------
 
+/* ptp_ayarlar ZATEN VAR (mağaza adı, Telegram saatleri). Yeni kolonlar
+   eklenerek genişletiliyor.
+
+   Not: buraya ilk yazımda `create table if not exists` konmuştu ve
+   tablo zaten var olduğu için sessizce hiçbir şey yapmadı — kolonlar
+   eklenmedi, betik seed adımında patladı. `if not exists` yalnızca
+   tablonun ADI'na bakar, içeriğine değil. */
+
 create table if not exists panel.ptp_ayarlar (
-  firma_id         uuid primary key references panel.firmalar(id) on delete cascade,
-  -- Yeni ciro satırlarına yazılacak oran. Geçmişi etkilemez.
-  kdv_orani        numeric(5,2) not null default 20
-                   check (kdv_orani >= 0 and kdv_orani < 100),
-  -- Ay için ayrıca hedef girilmediğinde kullanılır
-  varsayilan_hedef numeric(14,2) not null default 0 check (varsayilan_hedef >= 0),
-  olusturuldu      timestamptz not null default now(),
-  guncellendi      timestamptz not null default now()
+  firma_id    uuid primary key references panel.firmalar(id) on delete cascade,
+  olusturuldu timestamptz not null default now(),
+  guncellendi timestamptz not null default now()
 );
+
+alter table panel.ptp_ayarlar
+  -- Yeni ciro satırlarına yazılacak oran. Geçmişi etkilemez.
+  add column if not exists kdv_orani numeric(5,2) not null default 20,
+  -- Ay için ayrıca hedef girilmediğinde kullanılır
+  add column if not exists varsayilan_hedef numeric(14,2) not null default 0;
+
+alter table panel.ptp_ayarlar drop constraint if exists ayar_kdv_araligi;
+alter table panel.ptp_ayarlar
+  add constraint ayar_kdv_araligi check (kdv_orani >= 0 and kdv_orani < 100);
+
+alter table panel.ptp_ayarlar drop constraint if exists ayar_hedef_eksi_degil;
+alter table panel.ptp_ayarlar
+  add constraint ayar_hedef_eksi_degil check (varsayilan_hedef >= 0);
 
 drop trigger if exists t_ptp_ayarlar_guncellendi on panel.ptp_ayarlar;
 create trigger t_ptp_ayarlar_guncellendi before update on panel.ptp_ayarlar
@@ -168,8 +185,27 @@ alter table panel.ptp_hedefler        enable row level security;
 alter table panel.ptp_prim_kademeleri enable row level security;
 alter table panel.ptp_maaslar         enable row level security;
 
-drop policy if exists ptp_ayarlar_yonetim on panel.ptp_ayarlar;
-create policy ptp_ayarlar_yonetim on panel.ptp_ayarlar for all
+/* ptp_ayarlar'ın eski kuralları firmadaki HERKESE yazma izni
+   veriyordu. Tabloya varsayılan hedef girince bu bir açık oldu:
+   personel kendi primini hesaplayan hedefi düşürebilirdi. Yazma
+   yönetime kapatılıyor, okuma firmada kalıyor (mağaza adı, Telegram
+   saati gibi zararsız alanlar da burada).
+
+   Politikalar PERMISSIVE ve birbiriyle OR'lanır; eskileri silmeden
+   yenisini eklemek hiçbir şeyi kısıtlamazdı. */
+
+drop policy if exists ptp_ayarlar_ekleme on panel.ptp_ayarlar;
+drop policy if exists ptp_ayarlar_guncelleme on panel.ptp_ayarlar;
+
+drop policy if exists ptp_ayarlar_yazma on panel.ptp_ayarlar;
+create policy ptp_ayarlar_yazma on panel.ptp_ayarlar for insert
+  with check (
+    panel.superadmin_mi()
+    or (firma_id = panel.aktif_firma() and panel.modul_seviyesi('ptp') = 'yonetim')
+  );
+
+drop policy if exists ptp_ayarlar_duzeltme on panel.ptp_ayarlar;
+create policy ptp_ayarlar_duzeltme on panel.ptp_ayarlar for update
   using (
     panel.superadmin_mi()
     or (firma_id = panel.aktif_firma() and panel.modul_seviyesi('ptp') = 'yonetim')
