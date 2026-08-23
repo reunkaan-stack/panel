@@ -62,6 +62,9 @@ export default async function CiroSayfasi({
 		ay > buAy() ? 0 : ay === buAy() ? Number(bugun().slice(8, 10)) : aydakiGun(ay);
 
 	const toplam = cirolar.reduce((t, c) => t + Number(c.tutar), 0);
+	/* Net toplam veri tabanında satır satır üretiliyor; burada yalnızca
+	   toplanıyor. Prim hesabı bu rakamın üzerinden yapılıyor. */
+	const netToplam = cirolar.reduce((t, c) => t + Number(c.net_tutar ?? 0), 0);
 	const girilenGun = cirolar.length;
 	const ortalama = girilenGun > 0 ? toplam / girilenGun : 0;
 	const enYuksek = cirolar.reduce<Ciro | null>(
@@ -148,6 +151,18 @@ export default async function CiroSayfasi({
 					alt={fisToplam > 0 ? `${fisToplam} fiş` : 'fiş sayısı girilmedi'}
 				/>
 			</div>
+
+			<p className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-metin-2">
+				<span>
+					KDV hariç <strong className="tabular-nums">{paraBicimle(netToplam)}</strong>
+				</span>
+				<Link
+					href={`/ptp/prim?ay=${ay}`}
+					className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-metin-3 underline underline-offset-4 hover:text-metin"
+				>
+					Prim hesabı
+				</Link>
+			</p>
 
 			{eksikGun > 0 && (
 				<p className="mt-4 border border-uyari px-4 py-3 text-sm text-metin-2">

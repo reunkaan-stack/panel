@@ -118,12 +118,48 @@ export type Gorev = {
 	eksik_kategori: EksikKategori | null;
 };
 
+/** Prim kademesi. Üst kademeler sabit tutar değil maaş katı:
+    zam geldiğinde prim de kendiliğinden yükselsin diye. */
+export type PrimKademesi = {
+	id: string;
+	oran: number;
+	tur: 'sabit' | 'maas_kati';
+	tutar: number | null;
+	kat: number | null;
+};
+
+/** Aylık ciro hedefi. Girilmemişse ayarlardaki varsayılan kullanılır. */
+export type Hedef = {
+	id: string;
+	ay: string;
+	hedef: number;
+	not_metni: string;
+};
+
+/** Tarihli maaş kaydı. Zam yeni satır olarak yazılır. */
+export type Maas = {
+	id: string;
+	kullanici_id: string;
+	gecerli_ay: string;
+	tutar: number;
+};
+
+/** Modül ayarları. */
+export type PtpAyarlari = {
+	firma_id: string;
+	kdv_orani: number;
+	varsayilan_hedef: number;
+};
+
 /** Mağazanın bir günlük cirosu. Günde tek satır.
     Prim hesabı bunun üzerine kurulacak. */
 export type Ciro = {
 	id: string;
 	tarih: string;
 	tutar: number;
+	/** KDV hariç karşılığı — veri tabanında üretiliyor */
+	net_tutar: number;
+	kdv_orani: number;
 	fis_sayisi: number | null;
 	not_metni: string;
 	giren_id: string | null;
