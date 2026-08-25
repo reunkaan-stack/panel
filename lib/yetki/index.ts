@@ -108,6 +108,28 @@ export async function yetkiDenetle(
 	return { kullanici, seviye, yonetici: seviye === 'yonetim' };
 }
 
+/**
+ * Süperadmin denetimi. Modül yetkisinden bağımsız: kişi yönetimi ve
+ * firma işleri modüllerin üstünde durur.
+ */
+export async function superadminDenetle(): Promise<Kullanici> {
+	const kullanici = await aktifKullanici();
+	if (kullanici.rol !== 'superadmin') {
+		throw new YetkisizHata('Bu sayfa yalnızca süperadmine açık.');
+	}
+	return kullanici;
+}
+
+/** Hata fırlatmadan sorar — menüde bağlantı göstermek için. */
+export async function superadminMi(): Promise<boolean> {
+	try {
+		const kullanici = await aktifKullanici();
+		return kullanici.rol === 'superadmin';
+	} catch {
+		return false;
+	}
+}
+
 /** Hata fırlatmadan sorar — menü ve sekme göstermek için. */
 export async function yetkiVarMi(
 	modul: Modul,
