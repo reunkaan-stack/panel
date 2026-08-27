@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { yetkiDenetle } from '@/lib/yetki';
-import { otpFirmalari } from '@/lib/otp/veri';
+import Link from 'next/link';
+import { modulSeviyesi } from '@/lib/yetki';
 
 export const metadata: Metadata = { title: 'Ödeme Takip — Karas Panel' };
 export const dynamic = 'force-dynamic';
@@ -8,43 +8,57 @@ export const dynamic = 'force-dynamic';
 /* Ödeme Takip.
 
    Arayüz yerel programdan olduğu gibi geldi: public/otp/uygulama.html.
-   Tek değişiklik API adreslerinin /api/otp/ olması. Tasarım, düzen ve
-   akış aynen korundu — tek satır yeniden yazılmadı.
+   Tasarım, düzen ve akış aynen korundu — tek satır yeniden yazılmadı.
+   Dönüşümler araclar/otp-arayuz-tasi.mjs içinde tanımlı.
 
-   Çerçeve içinde açılıyor. Sayfa kendi içinde tam bir uygulama; React
-   bileşenine çevirmek 1400 satırlık bir arayüzü yeniden yazmak
-   demekti ve her satırı bozma ihtimali taşıyordu. Aynı kaynaktan
-   servis edildiği için oturum çerezi de sorunsuz geçiyor.
+   Çerçeve içinde açılıyor. React bileşenine çevirmek 1400 satırlık bir
+   arayüzü yeniden yazmak demekti. Aynı kaynaktan servis edildiği için
+   oturum çerezi sorunsuz geçiyor.
 
-   Uygulama zaten çerçeve içinde olduğunu anlıyor ve kendi modül
-   çubuğunu gizliyor (window.top !== window.self denetimi) — yereldeki
-   portal da böyle gömüyordu. */
+   Sayfa BİLEREK sade: yetki dışında hiçbir sorgu yapmıyor. Önceki
+   hâlinde firma listesi de buradan okunuyordu ve o sorgu hata verince
+   bütün sayfa açılmıyordu — oysa listeyi arayüz zaten kendi ucundan
+   alıyor. Bir ekranın açılması, göstereceği şeyden fazlasına bağlı
+   olmamalı. */
+
+const ADRES = '/otp/uygulama.html';
 
 export default async function OtpSayfasi() {
-	await yetkiDenetle('otp', 'okuma');
-	const firmalar = await otpFirmalari();
+	/* yetkiDenetle yerine seviye sorgusu: hata fırlatmıyor, yetkisizlik
+	   ekranda anlaşılır biçimde anlatılıyor. */
+	const seviye = await modulSeviyesi('otp');
 
-	if (firmalar.length === 0) {
+	if (!seviye) {
 		return (
 			<div className="mx-auto max-w-2xl px-6 py-16">
-				<span className="etiket text-uyari">Firma yok</span>
+				<span className="etiket text-uyari">Yetki yok</span>
 				<h1 className="mt-3 text-2xl font-semibold tracking-[-0.015em]">
 					Ödeme Takip açılamadı
 				</h1>
 				<p className="mt-4 text-sm leading-relaxed text-metin-2">
-					Bu modül hiçbir firmada açık değil ya da hesabınızın eriştiği
-					firmalarda kapalı. Süperadmin, firmaya <code>otp</code> modülünü
-					açtıktan sonra burası çalışır.
+					Bu modüle yetkiniz yok ya da firmanızda kapalı. Süperadmin,{' '}
+					<strong>Kişiler</strong> ekranından Ödeme Takip yetkisi verdikten
+					sonra burası açılır.
 				</p>
+				<Link href="/" className="dugme dugme-bos mt-6 inline-block">
+					← Panele dön
+				</Link>
 			</div>
 		);
 	}
 
 	return (
-		<iframe
-			src="/otp/uygulama.html"
-			title="Ödeme Takip"
-			className="h-[calc(100vh-8.5rem)] w-full border-0"
-		/>
+		<div className="flex h-[calc(100vh-8.5rem)] flex-col">
+			<iframe
+				src={ADRES}
+				title="Ödeme Takip"
+				className="min-h-0 flex-1 border-0"
+			/>
+
+			{/* Çerçeve bir sebeple açılmazsa kullanıcı burada kalmasın. */}
+			<noscript>
+				<a href={ADRES}>Ödeme Takip’i aç</a>
+			</noscript>
+		</div>
 	);
 }

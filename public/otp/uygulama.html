@@ -1,7 +1,7 @@
-<!-- Karas Panel'e taşındı. Kaynak: OdemeTakip/index.html
-     TEK değişiklik: /api/ adresleri /api/otp/ oldu (panelin uçlarıyla
-     çakışmaması için). Tasarım, düzen ve mantık aynen korundu.
-     Bu dosyayı elle düzenleme; kaynak dosyadan yeniden üretilir. -->
+<!-- Karas Panel'e taşındı — ELLE DÜZENLEME.
+     Kaynak: Karas Takip Programı/otp/OdemeTakip/index.html
+     Üreten: araclar/otp-arayuz-tasi.mjs
+     Değişiklik gerekiyorsa o betiğe yazılır ve yeniden çalıştırılır. -->
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -234,18 +234,7 @@
 </style>
 </head>
 <body>
-<div id="modulBar" class="no-print">
-  <button id="modOtp" class="msek aktif" onclick="modulSec('otp')">💰 Ödeme Takip Paneli</button>
-  <button id="modTtp" class="msek" onclick="modulSec('ttp')">📞 Tahsilat Takip Paneli</button>
-  <button id="modPtp" class="msek" onclick="modulSec('ptp')">👥 Personel Takip Paneli</button>
-</div>
-<script>
-/* TAKİP PANELİ içinde açıldığında kendi modül barımızı gizle — üstte panelin sekmeleri var,
-   iki sıra sekme kullanıcıyı şaşırtıyor. Tek başına açıldığında bar normal görünür. */
-if (window.top !== window.self) { document.getElementById('modulBar').style.display = 'none'; }
-</script>
-<iframe id="ttpFrame" title="Tahsilat Takip Paneli"></iframe>
-<iframe id="ptpFrame" title="Personel Takip Paneli"></iframe>
+<!-- Modül çubuğu kaldırıldı: gezinme panelde. -->
 <header>
   <h1>💰 Ödeme Takip Paneli</h1>
   <select id="sirketSec" onchange="sirketSec(this.value)" title="Firma"
@@ -378,18 +367,9 @@ if (window.top !== window.self) { document.getElementById('modulBar').style.disp
     </div>
 
     <div class="ayar-blok">
-      <div class="ayar-baslik" style="color:var(--amber)">🔑 Şifre Değiştir</div>
-      <p>Panel giriş şifrelerini değiştirir. Kurulum (aktivasyon) şifresi değişmez.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <select id="sdHedef" style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;background:#fff">
-          <option value="admin">admin</option><option value="wellmop">wellmop</option>
-        </select>
-        <input type="password" id="sdYeni" placeholder="Yeni şifre (en az 6)"
-          style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px">
-      </div>
-      <input type="password" id="sdMevcut" placeholder="Onay için mevcut ADMIN şifreniz"
-        style="width:100%;margin-top:8px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px">
-      <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="sifreDegistir()">Şifreyi Değiştir</button>
+      <div class="ayar-baslik">🔑 Şifreler</div>
+      <p>Şifre ve kullanıcı işlemleri panelin <strong>Kişiler</strong>
+         ekranından yapılır. Giriş buraya panelden geliyor.</p>
     </div>
 
     <div class="ayar-blok tehlike">
