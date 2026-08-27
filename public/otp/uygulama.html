@@ -1,0 +1,1434 @@
+<!-- Karas Panel'e taşındı. Kaynak: OdemeTakip/index.html
+     TEK değişiklik: /api/ adresleri /api/otp/ oldu (panelin uçlarıyla
+     çakışmaması için). Tasarım, düzen ve mantık aynen korundu.
+     Bu dosyayı elle düzenleme; kaynak dosyadan yeniden üretilir. -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ödeme Takip Paneli</title>
+<style>
+  :root{
+    --bg:#f1f4f9; --card:#ffffff; --ink:#1e293b; --muted:#64748b;
+    --line:#e2e8f0; --blue:#2563eb; --green:#16a34a; --red:#dc2626;
+    --amber:#d97706; --teal:#0d9488; --purple:#7c3aed; --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+  /* Modül sekmeleri: ÖTP | TTP */
+  #modulBar{background:#060b18;display:flex;gap:4px;padding:6px 26px 0;border-bottom:1px solid #1e293b}
+  #modulBar .msek{border:0;background:transparent;color:#7d8ba3;font-family:inherit;font-size:14px;font-weight:700;
+    padding:10px 20px;cursor:pointer;border-radius:10px 10px 0 0}
+  #modulBar .msek.aktif{background:#0f172a;color:#fff}
+  #modulBar .msek:not(.aktif):hover{color:#cbd5e1}
+  #ttpFrame,#ptpFrame{display:none;position:fixed;top:44px;left:0;width:100%;height:calc(100vh - 44px);border:0;background:#fff;z-index:40}
+  header{background:#0f172a;color:#fff;padding:14px 26px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{font-size:19px;font-weight:600}
+  header .date{color:#94a3b8;font-size:14px}
+  header .spacer{flex:1}
+  .btn{border:0;border-radius:9px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn-primary{background:var(--blue);color:#fff}
+  .btn-teal{background:var(--teal);color:#fff}
+  .btn-ghost{background:#1e293b;color:#cbd5e1}
+  .btn:hover{filter:brightness(1.13)}
+  nav{display:flex;gap:6px;padding:14px 26px 0;flex-wrap:wrap}
+  nav button{border:0;background:transparent;padding:10px 18px;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer;border-radius:10px 10px 0 0;font-family:inherit}
+  nav button.active{background:var(--card);color:var(--blue);box-shadow:0 -2px 6px rgba(15,23,42,.06)}
+  main{padding:20px 26px 40px;max-width:1560px;margin:0 auto}
+  footer{text-align:center;padding:18px 0 26px;font-size:13.5px}
+  footer a{color:var(--muted);text-decoration:none;font-weight:600}
+  footer a:hover{color:var(--blue)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px;margin-bottom:18px}
+  .card{background:var(--card);border-radius:var(--radius);padding:15px 17px;box-shadow:0 1px 3px rgba(15,23,42,.07)}
+  .card .lbl{font-size:12.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .card .val{font-size:21px;font-weight:700;margin-top:6px}
+  .card .sub{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .c-blue .val{color:var(--blue)} .c-green .val{color:var(--green)}
+  .c-red .val{color:var(--red)} .c-amber .val{color:var(--amber)} .c-teal .val{color:var(--teal)}
+  .c-purple .val{color:var(--purple)}
+  .grp{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:4px 0 10px}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .split>div{min-width:0}
+  @media (max-width:900px){.split{grid-template-columns:1fr}}
+  .panel{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:0 1px 3px rgba(15,23,42,.07);margin-bottom:18px}
+  .panel h2{font-size:16px;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .plist{display:flex;flex-direction:column;gap:8px}
+  .prow{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;flex-wrap:wrap}
+  .prow .d{font-weight:700;min-width:90px}
+  .prow .f{flex:1;font-weight:600;min-width:150px}
+  .prow .f small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+  .prow .meta{color:var(--muted);font-size:13px;min-width:130px}
+  .prow .amt{font-weight:700;font-size:16px;min-width:105px;text-align:right}
+  .prow.late{border-color:#fecaca;background:#fef2f2}
+  .prow.today{border-color:#fde68a;background:#fffbeb}
+  .prow.income{border-color:#a7f3d0;background:#ecfdf5}
+  .prow.income .amt{color:var(--green)}
+  .badge{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap}
+  .b-green{background:#dcfce7;color:#15803d} .b-red{background:#fee2e2;color:#b91c1c}
+  .b-amber{background:#fef3c7;color:#b45309} .b-gray{background:#e2e8f0;color:#475569}
+  .b-teal{background:#ccfbf1;color:#0f766e} .b-purple{background:#ede9fe;color:#6d28d9}
+  .b-indigo{background:#e0e7ff;color:#4338ca} .b-slate{background:#f1f5f9;color:#64748b}
+  .empty{color:var(--muted);padding:14px;text-align:center}
+  .mini-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:13px;font-family:inherit;font-weight:600}
+  .mini-btn:hover{background:#f8fafc}
+  .mini-btn.pay{color:var(--green);border-color:#bbf7d0}
+  .mini-btn.del{color:var(--red)}
+  .mini-btn.act{color:var(--teal);border-color:#99f6e4}
+  .mini-btn.warn{color:var(--red);border-color:#fecaca}
+  details.done{margin-bottom:18px}
+  details.done summary{cursor:pointer;font-weight:700;font-size:15px;padding:14px 20px;background:var(--card);border-radius:var(--radius);box-shadow:0 1px 3px rgba(15,23,42,.07)}
+  details.done[open] summary{border-radius:var(--radius) var(--radius) 0 0}
+  details.done .inner{background:var(--card);border-radius:0 0 var(--radius) var(--radius);padding:14px 20px 20px}
+  /* aylık görünüm */
+  details.month-det{margin-bottom:14px}
+  details.month-det summary{cursor:pointer;background:var(--card);border-radius:var(--radius);padding:15px 20px;box-shadow:0 1px 3px rgba(15,23,42,.07);display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:15px}
+  details.month-det summary::-webkit-details-marker{display:none}
+  details.month-det summary .ok{transition:transform .15s;font-size:12px;color:var(--muted)}
+  details.month-det[open] summary .ok{transform:rotate(90deg)}
+  details.month-det summary .ay{font-weight:700;font-size:16px;min-width:130px}
+  details.month-det summary .ozet-txt{color:var(--muted);font-size:13.5px}
+  details.month-det summary .spacer{flex:1}
+  details.month-det summary .tot{font-weight:700;color:var(--blue)}
+  details.month-det summary .tah{font-weight:700;color:var(--green)}
+  details.month-det[open] summary{border-radius:var(--radius) var(--radius) 0 0}
+  details.month-det .inner{background:var(--card);border-radius:0 0 var(--radius) var(--radius);padding:16px 20px 20px;box-shadow:0 1px 3px rgba(15,23,42,.07)}
+  details.month-det.gecmis summary{opacity:.75}
+  details.year-det{margin-bottom:16px}
+  details.year-det>summary{cursor:pointer;background:#0f172a;color:#fff;border-radius:var(--radius);padding:13px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:15px}
+  details.year-det>summary::-webkit-details-marker{display:none}
+  details.year-det>summary .ok{transition:transform .15s;font-size:12px;color:#94a3b8}
+  details.year-det[open]>summary .ok{transform:rotate(90deg)}
+  details.year-det>summary .yl{font-weight:700;font-size:17px}
+  details.year-det>summary .ozet-txt{color:#94a3b8;font-size:13.5px}
+  details.year-det>summary .spacer{flex:1}
+  details.year-det>summary .tot{font-weight:700;color:#93c5fd}
+  details.year-det>summary .tah{font-weight:700;color:#86efac}
+  details.year-det .yinner{padding-top:12px}
+  details.year-det.yil-gizli{display:none}
+  /* geçmiş yıllar: ufacık satır */
+  details.year-det.eski{margin-bottom:6px}
+  details.year-det.eski>summary{background:#e9edf3;color:#64748b;padding:5px 14px;font-size:12px;border-radius:8px}
+  details.year-det.eski>summary .yl{font-size:13px;font-weight:700;color:#475569}
+  details.year-det.eski>summary .ok{font-size:10px;color:#94a3b8}
+  details.year-det.eski>summary .ozet-txt{font-size:11.5px;color:#94a3b8}
+  details.year-det.eski>summary .tot{color:#64748b;font-weight:600;font-size:12px}
+  details.year-det.eski>summary .tah{color:#4d9e6a;font-size:12px}
+  details.year-det.eski>summary .mchip{font-size:10.5px;padding:1px 7px}
+  .mchip{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap}
+  .mchip.tem{background:#ede9fe;color:#6d28d9}
+  .mchip.ciro{background:#fef3c7;color:#b45309}
+  .ayar-blok.tehlike{border-color:#fecaca;background:#fef2f2}
+  #dropHint{display:none;position:fixed;inset:14px;border:3px dashed var(--teal);border-radius:20px;background:rgba(13,148,136,.12);z-index:99;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--teal);pointer-events:none}
+  /* Karanlık tema */
+  body.dark{--bg:#0b1220;--card:#131c31;--ink:#e2e8f0;--muted:#8fa3bd;--line:#26334d}
+  body.dark th,body.dark .tfoot td{background:#1a2440}
+  body.dark tr.cur td{background:#14325f}
+  body.dark tr.paid td{color:#5b6a84}
+  body.dark .filters input,body.dark .filters select,body.dark .modal input,body.dark .modal select,
+  body.dark .mini-btn,body.dark input[type=month],body.dark .yon-pick button,body.dark #actOverlay input,body.dark #logAra{background:#0f1830;color:var(--ink);border-color:var(--line)}
+  body.dark .mini-btn:hover{background:#1a2440}
+  body.dark .modal{background:#131c31}
+  body.dark .prow.late,body.dark .log-satir.uyari,body.dark .ayar-blok.tehlike{background:#2a1216;border-color:#7f1d1d}
+  body.dark .prow.today{background:#2b2208;border-color:#92640e}
+  body.dark .prow.income{background:#0c2a1c;border-color:#14532d}
+  body.dark .pbar,body.dark .bar-row .track{background:#22304b}
+  body.dark .yon-pick button.sel-v{background:#12233f}
+  body.dark .yon-pick button.sel-a{background:#0e2a1c}
+  body.dark details.year-det.eski>summary{background:#182238;color:#8fa3bd}
+  body.dark details.year-det.eski>summary .yl,body.dark details.year-det.eski>summary .tot{color:#aebbd2}
+  body.dark .mchip.tem{background:#2a2350;color:#c4b5fd}
+  body.dark .mchip.ciro{background:#3a2c10;color:#fcd34d}
+  .msec-title{font-size:12.5px;font-weight:700;letter-spacing:.5px;color:var(--muted);margin:0 0 8px}
+  .msec-title.in{color:var(--green)}
+  .mlist{max-height:420px;overflow:auto}
+  .mrow{display:flex;gap:8px;padding:6px 4px;border-bottom:1px dashed var(--line);font-size:13.5px;align-items:center}
+  .mrow:last-of-type{border-bottom:0}
+  .mrow .dt{color:var(--muted);min-width:44px}
+  .mrow .fm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mrow .bk{color:var(--muted);font-size:11.5px}
+  .mrow .am{font-weight:600;white-space:nowrap}
+  .mrow .am.in{color:var(--green)}
+  .dot{width:9px;height:9px;border-radius:99px;flex:none}
+  .dot.g{background:var(--green)} .dot.r{background:var(--red)} .dot.a{background:var(--amber)}
+  .dot.gr{background:#cbd5e1} .dot.t{background:var(--teal)} .dot.p{background:var(--purple)}
+  .pbar{height:7px;background:#e2e8f0;border-radius:99px;margin-top:10px;overflow:hidden}
+  .pbar>div{height:100%;background:var(--green);border-radius:99px}
+  .pbar-lbl{font-size:12px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between}
+  /* tablo */
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .filters input,.filters select{padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff}
+  .filters input{flex:1;min-width:170px}
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.07)}
+  th{background:#f8fafc;text-align:left;padding:11px 13px;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;cursor:pointer;user-select:none;white-space:nowrap}
+  td{padding:10px 13px;border-top:1px solid var(--line);font-size:14px}
+  td.num{text-align:right;font-weight:600;white-space:nowrap}
+  td.num.in{color:var(--green)}
+  tr.paid td{color:#94a3b8}
+  tr.cur td{background:#eff6ff}
+  .tfoot td{font-weight:700;background:#f8fafc}
+  /* raporlar */
+  .rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:13.5px}
+  .bar-row .bl{width:135px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .bar-row .track{flex:1;background:#eef2f7;border-radius:99px;height:22px;position:relative;overflow:hidden}
+  .bar-row .fill{height:100%;border-radius:99px;min-width:2px}
+  .bar-row .bv{width:110px;text-align:right;font-weight:700}
+  .dual .fill{position:absolute;top:0;left:0}
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:50}
+  .overlay.show{display:flex}
+  .modal{background:#fff;border-radius:16px;padding:26px;width:460px;max-width:94vw;max-height:92vh;overflow:auto}
+  .modal h2{margin-bottom:16px}
+  .modal label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:11px 0 5px}
+  .modal input,.modal select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit;background:#fff}
+  .modal .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal .actions{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+  .yon-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+  .yon-pick button{padding:12px;border:2px solid var(--line);border-radius:11px;background:#fff;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;color:var(--muted)}
+  .yon-pick button.sel-v{border-color:var(--blue);color:var(--blue);background:#eff6ff}
+  .yon-pick button.sel-a{border-color:var(--green);color:var(--green);background:#f0fdf4}
+  .dia-list{max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:13px;margin-top:6px}
+  .dia-list div{padding:3px 0;border-bottom:1px dashed var(--line)}
+  .ayar-blok{border:1px solid var(--line);border-radius:12px;padding:15px;margin-top:12px}
+  .ayar-blok .ayar-baslik{font-weight:700;margin-bottom:5px}
+  .ayar-blok p{font-size:13px;color:var(--muted);margin-bottom:10px}
+  .yedek-satir{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;font-size:13px;flex-wrap:wrap}
+  .yedek-satir .ya{flex:1;font-weight:600;min-width:150px;word-break:break-all}
+  .log-satir{display:flex;gap:10px;padding:7px 10px;border-bottom:1px dashed var(--line);font-size:13px;align-items:baseline}
+  .log-satir .lz{color:var(--muted);white-space:nowrap;min-width:135px}
+  .log-satir .lk{color:var(--blue);font-weight:700;white-space:nowrap;min-width:70px}
+  .log-satir .li{font-weight:700;white-space:nowrap;min-width:180px}
+  .log-satir .ld{color:var(--muted);word-break:break-word}
+  .log-satir.uyari{background:#fef2f2}.log-satir.uyari .li{color:var(--red)}
+  #printBaslik{display:none}
+  @media print{
+    header,nav,.filters,.mini-btn,.btn,td.acts,th.acts,footer,.no-print,#dropHint{display:none!important}
+    body.dark{--bg:#fff;--card:#fff;--ink:#000;--muted:#555;--line:#ccc}
+    #printBaslik{display:block;font-size:17px;font-weight:700;margin-bottom:4px}
+    #printTarih{font-size:12px;color:#555;margin-bottom:14px}
+    body{background:#fff;font-size:12px} main{padding:0;max-width:none}
+    .panel,.card,table,details.month-det summary,details.month-det .inner{box-shadow:none;border:1px solid #bbb}
+    .prow,tr,.mrow,.bar-row{page-break-inside:avoid}
+    .mlist{max-height:none;overflow:visible}
+    /* Her ay yeni sayfada başlar; satırlar sıkıştırılır ki bir ay tek sayfaya sığsın */
+    .yinner details.month-det{break-before:page}
+    .yinner details.month-det:first-of-type{break-before:auto}
+    details.month-det summary{padding:7px 12px;font-size:12px}
+    details.month-det .inner{padding:8px 12px 12px}
+    .mrow{font-size:10px;padding:1px 2px;gap:5px}
+    .mrow .dt{min-width:32px}
+    .mrow .bk{font-size:9px}
+    .msec-title{font-size:10px;margin-bottom:3px}
+    .mrow .badge,details.month-det summary .badge{font-size:8.5px;padding:1px 5px}
+    .mchip{font-size:9px;padding:1px 6px}
+    .pbar{height:4px;margin-top:5px}
+    .pbar-lbl{font-size:9px;margin-top:2px}
+    details.year-det>summary{padding:6px 12px;font-size:12px}
+    details.year-det>summary .yl{font-size:13px}
+    .cards{grid-template-columns:repeat(3,1fr)}
+    .split{grid-template-columns:1fr 1fr}
+    .badge{border:1px solid #999}
+    a{color:#000;text-decoration:none}
+  }
+</style>
+</head>
+<body>
+<div id="modulBar" class="no-print">
+  <button id="modOtp" class="msek aktif" onclick="modulSec('otp')">💰 Ödeme Takip Paneli</button>
+  <button id="modTtp" class="msek" onclick="modulSec('ttp')">📞 Tahsilat Takip Paneli</button>
+  <button id="modPtp" class="msek" onclick="modulSec('ptp')">👥 Personel Takip Paneli</button>
+</div>
+<script>
+/* TAKİP PANELİ içinde açıldığında kendi modül barımızı gizle — üstte panelin sekmeleri var,
+   iki sıra sekme kullanıcıyı şaşırtıyor. Tek başına açıldığında bar normal görünür. */
+if (window.top !== window.self) { document.getElementById('modulBar').style.display = 'none'; }
+</script>
+<iframe id="ttpFrame" title="Tahsilat Takip Paneli"></iframe>
+<iframe id="ptpFrame" title="Personel Takip Paneli"></iframe>
+<header>
+  <h1>💰 Ödeme Takip Paneli</h1>
+  <select id="sirketSec" onchange="sirketSec(this.value)" title="Firma"
+    style="background:#1e293b;color:#fff;border:1px solid #334155;border-radius:9px;padding:8px 12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">
+  </select>
+  <span class="date" id="todayLbl"></span>
+  <span class="spacer"></span>
+  <button class="btn btn-ghost" onclick="window.print()">🖨️ Yazdır</button>
+  <button class="btn btn-ghost" onclick="exportXlsx()">📊 Excel'e Aktar</button>
+  <button class="btn btn-ghost" title="Açık/koyu tema" onclick="temaDegistir()" id="temaBtn">🌙</button>
+  <button class="btn btn-teal" onclick="document.getElementById('diaFile').click()">🔄 DIA Raporu Yükle</button>
+  <input type="file" id="diaFile" accept=".xlsx" style="display:none" onchange="diaUpload(this)">
+  <button class="btn btn-primary" onclick="openModal()">＋ Yeni Kayıt</button>
+  <button class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">⚙️</button>
+  <span id="kullaniciChip" style="color:#94a3b8;font-size:13.5px;font-weight:600"></span>
+  <button class="btn btn-ghost" title="Oturumu kapat" onclick="cikisYap()">⏻ Çıkış</button>
+</header>
+<nav id="tabs">
+  <button data-tab="ozet" class="active">Özet</button>
+  <button data-tab="aylik">Aylık Görünüm</button>
+  <button data-tab="cekler">Çek Portföyü</button>
+  <button data-tab="krediler">Krediler</button>
+  <button data-tab="tumu">Tüm Kayıtlar</button>
+  <button data-tab="rapor">Raporlar</button>
+  <button data-tab="icgoru">💡 İçgörüler</button>
+</nav>
+<main>
+  <div id="printBaslik"></div>
+  <div id="printTarih"></div>
+  <section id="tab-ozet"></section>
+  <section id="tab-aylik" style="display:none"></section>
+  <section id="tab-cekler" style="display:none"></section>
+  <section id="tab-krediler" style="display:none"></section>
+  <section id="tab-tumu" style="display:none"></section>
+  <section id="tab-rapor" style="display:none"></section>
+  <section id="tab-icgoru" style="display:none"></section>
+</main>
+<footer>
+  <a href="https://www.karasteknoloji.com" target="_blank" rel="noopener">Karas Teknoloji ❤️</a><span id="surumLbl" style="color:var(--muted);font-weight:600"></span>
+</footer>
+<div id="dropHint">📄 Bırakın — DIA raporu yüklenecek</div>
+
+<!-- Kayıt ekleme/düzenleme -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Yeni Kayıt</h2>
+    <form id="pform" onsubmit="return submitForm(event)">
+      <input type="hidden" id="f_id">
+      <label>Kayıt Türü</label>
+      <div class="yon-pick">
+        <button type="button" id="yonV" onclick="setYon('VERILEN')">📤 Ödeme / Verdiğimiz Çek</button>
+        <button type="button" id="yonA" onclick="setYon('ALINAN')">📥 Gelen Çek / Senet</button>
+      </div>
+      <div class="row2">
+        <div><label>Vade / Tarih</label><input type="date" id="f_tarih" required></div>
+        <div><label>Tutar (₺)</label><input type="number" id="f_tutar" min="0" step="any" required></div>
+      </div>
+      <label id="lblFirma">Firma / Açıklama</label><input type="text" id="f_firma" required list="firmalar">
+      <datalist id="firmalar"></datalist>
+      <div class="row2">
+        <div><label>Tür</label>
+          <select id="f_tur">
+            <option>ÇEK</option><option>SENET</option><option>KREDİ</option><option>MAAŞ</option><option>DİĞER</option>
+          </select></div>
+        <div><label id="lblBanka">Banka</label><input type="text" id="f_banka" list="bankalar"><datalist id="bankalar"></datalist></div>
+      </div>
+      <div class="row2">
+        <div><label>Seri No <span style="font-weight:400">(çekse)</span></label><input type="text" id="f_seri"></div>
+        <div><label>Durum</label><select id="f_durum" onchange="durumChanged()"></select></div>
+      </div>
+      <div id="hedefWrap" style="display:none">
+        <label id="lblHedef">Verildiği Banka</label><input type="text" id="f_hedef" list="bankalar">
+      </div>
+      <label>Not</label><input type="text" id="f_not">
+      <div class="row2" id="tekrarWrap">
+        <div><label>Tekrar</label>
+          <select id="f_tekrar" onchange="document.getElementById('tekrarAyWrap').style.display=this.value==='A'?'':'none'">
+            <option value="1">Tek seferlik</option><option value="A">Aylık tekrarla</option>
+          </select></div>
+        <div id="tekrarAyWrap" style="display:none"><label>Kaç ay?</label><input type="number" id="f_tekrarAy" min="2" max="36" value="12"></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="mini-btn" onclick="closeModal()">Vazgeç</button>
+        <button type="submit" class="btn btn-primary">Kaydet</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Çek aksiyonu (tahsile ver / teminata ver / cirola) -->
+<div class="overlay" id="actOverlay">
+  <div class="modal" style="width:400px">
+    <h2 id="actTitle"></h2>
+    <p id="actDesc" style="color:var(--muted);font-size:14px"></p>
+    <label id="actLbl" style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 5px"></label>
+    <input type="text" id="actInput" list="bankalar" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit">
+    <div class="actions" style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+      <button type="button" class="mini-btn" onclick="closeAct()">Vazgeç</button>
+      <button type="button" class="btn btn-primary" onclick="saveAct()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ayarlar -->
+<div class="overlay" id="ayarOverlay">
+  <div class="modal" style="width:540px">
+    <h2>⚙️ Ayarlar</h2>
+    <div id="ayarYetkisiz" style="display:none;border:1px solid #fde68a;background:#fffbeb;border-radius:12px;padding:16px;margin-top:6px">
+      <div style="font-weight:700;color:var(--amber)">🔒 Yetki Gerekli</div>
+      <p style="font-size:13.5px;color:var(--muted);margin-top:6px">Bu bölüm yalnızca <b>admin</b> kullanıcısına açıktır.
+      Yedek yükleme, işlem günlüğü ve sıfırlama için admin hesabıyla giriş yapın.</p>
+    </div>
+    <div id="ayarAdmin">
+    <p style="font-size:13.5px;color:var(--muted);margin-bottom:2px">Admin olarak giriş yaptınız — tüm yönetim işlemleri açık.</p>
+    <div id="ayarHata" style="color:var(--red);font-size:13px;font-weight:600;min-height:18px;margin-top:4px"></div>
+
+    <div class="ayar-blok">
+      <div class="ayar-baslik" style="color:var(--teal)">💾 Yedekten Geri Yükle</div>
+      <p>Otomatik alınan yedeklerden birini seçerek verileri o güne döndürürsünüz.
+      Geri yüklemeden önce mevcut durumun da yedeği alınır.</p>
+      <button type="button" class="btn btn-teal" onclick="yedekleriListele()">Yedekleri Listele</button>
+      <div id="yedekListe" style="margin-top:10px;max-height:230px;overflow:auto"></div>
+    </div>
+
+    <div class="ayar-blok">
+      <div class="ayar-baslik" style="color:var(--blue)">📖 İşlem Günlüğü</div>
+      <p>Programda yapılan tüm kritik işlemler (ekleme, silme, düzenleme, DIA yükleme,
+      sıfırlama, hatalı şifre denemeleri...) tarih ve saatiyle kayıt altındadır.</p>
+      <button type="button" class="btn btn-primary" onclick="gunluguAc()">Günlüğü Görüntüle</button>
+    </div>
+
+    <div class="ayar-blok">
+      <div class="ayar-baslik" style="color:var(--amber)">🔑 Şifre Değiştir</div>
+      <p>Panel giriş şifrelerini değiştirir. Kurulum (aktivasyon) şifresi değişmez.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <select id="sdHedef" style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;background:#fff">
+          <option value="admin">admin</option><option value="wellmop">wellmop</option>
+        </select>
+        <input type="password" id="sdYeni" placeholder="Yeni şifre (en az 6)"
+          style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px">
+      </div>
+      <input type="password" id="sdMevcut" placeholder="Onay için mevcut ADMIN şifreniz"
+        style="width:100%;margin-top:8px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px">
+      <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="sifreDegistir()">Şifreyi Değiştir</button>
+    </div>
+
+    <div class="ayar-blok tehlike">
+      <div class="ayar-baslik" style="color:var(--red)">🏭 Fabrika Ayarlarına Dön</div>
+      <p>Programdaki <b>TÜM kayıtları siler</b>. Silmeden önce yedek otomatik alınır.</p>
+      <button type="button" class="btn" style="background:var(--red);color:#fff" onclick="fabrikaSifirla()">Verileri Sıfırla</button>
+    </div>
+    </div>
+
+    <div class="actions" style="display:flex;margin-top:16px;justify-content:flex-end">
+      <button type="button" class="mini-btn" onclick="ayarKapat()">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- İşlem Günlüğü -->
+<div class="overlay" id="logOverlay">
+  <div class="modal" style="width:780px;max-width:96vw">
+    <h2>📖 İşlem Günlüğü <span id="logSayi" style="font-weight:400;font-size:13px;color:var(--muted)"></span></h2>
+    <input type="text" id="logAra" placeholder="🔍 Günlükte ara (işlem, firma, tutar...)" oninput="logFiltrele()"
+      style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;margin-bottom:10px">
+    <div id="logIcerik" style="max-height:60vh;overflow:auto"></div>
+    <div class="actions" style="display:flex;margin-top:16px;justify-content:flex-end">
+      <button type="button" class="mini-btn" onclick="window.print()">🖨️ Yazdır</button>
+      <button type="button" class="btn btn-primary" onclick="document.getElementById('logOverlay').classList.remove('show')">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIA önizleme / sonuç -->
+<div class="overlay" id="diaOverlay">
+  <div class="modal" style="width:560px">
+    <h2 id="diaBaslik">🔄 DIA Raporu</h2>
+    <div id="diaResult"></div>
+    <div class="actions" id="diaButonlar" style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end"></div>
+  </div>
+</div>
+
+<script>
+const AYLAR=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+const fmt=new Intl.NumberFormat('tr-TR',{maximumFractionDigits:0});
+const para=v=>fmt.format(v)+" ₺";
+let DB={payments:[]};
+let sortKey="tarih",sortDir=1;
+let AYLIK_TUM=false,PBAS=null,PBIT=null;
+let SIRKET=localStorage.getItem("sirket")||"";
+
+const todayStr=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+// Bir sonraki ayın aynı günü (örn. 03.07 → 03.08); ay kısaysa son güne çekilir
+const birAySonra=s=>{const[y,m,g]=s.split("-").map(Number);let ny=y,nm=m+1;if(nm>12){nm=1;ny++;}
+  const ng=Math.min(g,new Date(ny,nm,0).getDate());
+  return ny+"-"+String(nm).padStart(2,"0")+"-"+String(ng).padStart(2,"0");};
+const trDate=s=>{const[y,m,g]=s.split("-");return `${+g} ${AYLAR[+m-1]} ${y}`;};
+const trDateKisa=s=>{const[y,m,g]=s.split("-");return `${g}.${m}.${y}`;};
+const trDateShort=s=>{const[y,m,g]=s.split("-");return `${g}.${m}`;};
+
+const DURUM_AD={BEKLIYOR:"BEKLİYOR",ODENDI:"ÖDENDİ",PORTFOYDE:"KASADA",TAHSILDE:"TAHSİLDE",
+  TEMINATTA:"TEMİNATTA",CIROLANDI:"CİROLANDI",TAHSIL:"TAHSİL EDİLDİ",KARSILIKSIZ:"KARŞILIKSIZ",IPTAL:"İPTAL"};
+const DURUM_BADGE={BEKLIYOR:"b-gray",ODENDI:"b-green",PORTFOYDE:"b-indigo",TAHSILDE:"b-teal",
+  TEMINATTA:"b-purple",CIROLANDI:"b-amber",TAHSIL:"b-green",KARSILIKSIZ:"b-red",IPTAL:"b-slate",
+  GECIKMIS:"b-red",BUGUN:"b-amber"};
+
+function status(p){
+  if(p.yon==="ALINAN")return p.durum;
+  if(p.durum==="IPTAL"||p.durum==="KARSILIKSIZ")return p.durum;
+  if(p.odendi||p.tutar<=0)return "ODENDI";
+  const t=todayStr();
+  if(p.tarih<t)return "GECIKMIS";
+  if(p.tarih===t)return "BUGUN";
+  return "BEKLIYOR";
+}
+function badge(p){
+  const s=status(p);
+  const ad=s==="GECIKMIS"?"GECİKMİŞ":s==="BUGUN"?"BUGÜN":DURUM_AD[s]||s;
+  return `<span class="badge ${DURUM_BADGE[s]||"b-gray"}">${ad}</span>`;
+}
+const dotCls=p=>{const s=status(p);
+  return s==="ODENDI"||s==="TAHSIL"?"g":s==="GECIKMIS"||s==="KARSILIKSIZ"?"r":s==="BUGUN"?"a":
+         s==="TAHSILDE"?"t":s==="TEMINATTA"?"p":s==="PORTFOYDE"?"t":"gr";};
+
+async function loadData(){
+  const res=await fetch("/api/otp/payments?sirket="+encodeURIComponent(SIRKET));
+  if(res.status===403||res.status===401){location.reload();return;}
+  DB=await res.json();
+  SIRKET=DB.sirketAktif||SIRKET;
+  localStorage.setItem("sirket",SIRKET);
+  const sec=document.getElementById("sirketSec");
+  sec.innerHTML=(DB.sirketler||[]).map(s=>`<option value="${s.kod}" ${s.kod===SIRKET?"selected":""}>🏢 ${s.ad}</option>`).join("");
+  sec.style.display=(DB.sirketler||[]).length>1?"":"none";
+  document.getElementById("kullaniciChip").textContent=DB.oturum?"👤 "+DB.oturum.kullanici:"";
+  document.getElementById("surumLbl").textContent=DB.surum?" · v"+DB.surum:"";
+  renderAll();
+}
+async function cikisYap(){
+  await fetch("/api/otp/cikis",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+  location.reload();
+}
+function sirketSec(kod){
+  SIRKET=kod;
+  localStorage.setItem("sirket",SIRKET);
+  loadData();
+}
+function exportXlsx(){
+  location.href="/api/otp/export.xlsx?sirket="+encodeURIComponent(SIRKET);
+}
+// Verilen (borç) kayıtları — iptal hariç
+const borclar=()=>DB.payments.filter(p=>p.yon!=="ALINAN"&&p.durum!=="IPTAL");
+// Gelen çekler
+const alinanlar=()=>DB.payments.filter(p=>p.yon==="ALINAN");
+// Alacak sayılan çekler: kasada + tahsilde (TEMİNATTAKİLER DAHİL DEĞİL)
+const alacakCekler=()=>alinanlar().filter(p=>["PORTFOYDE","TAHSILDE"].includes(p.durum));
+// Kredi taksitlerini sanal ödeme kayıtlarına çevirir (Özet/Aylık/Rapor birleşimi için)
+const krediKisaAd=k=>k.kod&&!/^\d+$/.test(k.kod)?k.kod:(k.banka?k.banka+" KREDİ":k.ad.slice(0,28));
+function krediSanal(){
+  const out=[];
+  (DB.krediler||[]).forEach((k,ki)=>{
+    const kisa=krediKisaAd(k);
+    (k.taksitler||[]).forEach((t,ti)=>{
+      out.push({sanal:[ki,ti],id:"KS"+ki+"_"+ti,yon:"VERILEN",tur:"KREDİ",
+        tarih:t.vade,firma:`${kisa} · Taksit ${t.no}`,banka:k.banka||"",
+        tutar:t.tutar,odenen:t.odenen,odendi:t.kalan<=0.01,
+        durum:t.kalan<=0.01?"ODENDI":"BEKLIYOR",seriNo:"",hedef:"",
+        not:t.odenen>0.01&&t.kalan>0.01?"Kısmi ödendi: "+para(t.odenen):""});
+    });
+  });
+  return out;
+}
+// Tüm borç yükü: ödeme planı + kredi taksitleri
+const borclarTum=()=>borclar().concat(krediSanal());
+async function krediToggle(ki,ti){
+  const k=DB.krediler[ki],t=k.taksitler[ti];
+  await apiPost("/api/otp/kredi-taksit",{kod:k.kod,ad:k.ad,no:t.no,vade:t.vade,sirket:SIRKET});
+  loadData();
+}
+
+function renderAll(){renderOzet();renderAylik();renderCekler();renderKrediler();renderTumu();renderRapor();renderIcgoruler();fillDatalists();}
+
+/* ---------- ÖZET ---------- */
+function renderOzet(){
+  const t=todayStr(),son=birAySonra(t),b=borclar(),bt=borclarTum();
+  const toplam=b.reduce((s,p)=>s+p.tutar,0);
+  const odenen=b.reduce((s,p)=>s+(p.odenen||0),0);
+  const gec=bt.filter(p=>status(p)==="GECIKMIS");
+  const bugun=bt.filter(p=>p.tarih===t&&!p.odendi&&p.tutar>0);
+  // 1 aylık kayan pencere: bugünden gelecek ayın aynı gününe kadar (krediler dahil)
+  const g30=bt.filter(p=>!p.odendi&&p.tutar>0&&p.tarih>=t&&p.tarih<=son).sort((a,c)=>a.tarih<c.tarih?-1:1);
+  const g30Top=g30.reduce((s,p)=>s+p.tutar,0);
+  const g30Liste=g30.filter(p=>p.tarih>t);
+  // Kredi özetleri
+  const ks=DB.krediler||[];
+  const kKalan=ks.reduce((s,k)=>s+k.taksitler.reduce((x,tk)=>x+tk.kalan,0),0);
+  const aktifKredi=ks.filter(k=>k.taksitler.some(tk=>tk.kalan>0.01)).length;
+  const kSanal=krediSanal();
+  const kAy=kSanal.filter(p=>!p.odendi&&p.tarih>=t&&p.tarih<=son);
+  const kGec=kSanal.filter(p=>status(p)==="GECIKMIS");
+  const alacak=alacakCekler().sort((a,c)=>a.tarih<c.tarih?-1:1);
+  const alacakTop=alacak.reduce((s,p)=>s+p.tutar,0);
+  const kasada=alinanlar().filter(p=>p.durum==="PORTFOYDE");
+  const tahsilde=alinanlar().filter(p=>p.durum==="TAHSILDE");
+  const teminatta=alinanlar().filter(p=>p.durum==="TEMINATTA");
+  const kalan=toplam-odenen, net=kalan-alacakTop;
+  const sum=l=>l.reduce((s,p)=>s+p.tutar,0);
+  document.getElementById("tab-ozet").innerHTML=`
+  <div class="grp">Ödemeler</div>
+  <div class="cards">
+    <div class="card c-blue"><div class="lbl">Toplam Borç</div><div class="val">${para(toplam)}</div><div class="sub">${b.length} kayıt · krediler hariç</div></div>
+    <div class="card c-green"><div class="lbl">Ödenen</div><div class="val">${para(odenen)}</div><div class="sub">%${toplam?Math.round(odenen/toplam*100):0} tamamlandı</div></div>
+    <div class="card"><div class="lbl">Kalan Borç</div><div class="val">${para(kalan)}</div></div>
+    <div class="card c-amber"><div class="lbl">1 Ay İçinde Ödenecek</div><div class="val">${g30.length?para(g30Top):"—"}</div><div class="sub">${g30.length} adet · ${trDateShort(t)} → ${trDateShort(son)} · krediler dahil</div></div>
+    <div class="card ${gec.length?"c-red":""}"><div class="lbl">Geciken</div><div class="val">${gec.length?para(gec.reduce((s,p)=>s+p.tutar-(p.odenen||0),0)):"—"}</div><div class="sub">${gec.length} adet · krediler dahil</div></div>
+    <div class="card ${bugun.length?"c-amber":""}"><div class="lbl">Bugün Ödenecek</div><div class="val">${bugun.length?para(sum(bugun)):"—"}</div><div class="sub">${bugun.length} adet</div></div>
+  </div>
+  ${ks.length?`<div class="grp">Krediler</div>
+  <div class="cards">
+    <div class="card c-purple"><div class="lbl">Kalan Kredi Borcu</div><div class="val">${para(kKalan)}</div><div class="sub">${aktifKredi} aktif kredi</div></div>
+    <div class="card c-amber"><div class="lbl">1 Ay İçinde Taksit</div><div class="val">${kAy.length?para(kAy.reduce((s,p)=>s+p.tutar-(p.odenen||0),0)):"—"}</div><div class="sub">${kAy.length} taksit</div></div>
+    <div class="card ${kGec.length?"c-red":""}"><div class="lbl">Geciken Taksit</div><div class="val">${kGec.length?para(kGec.reduce((s,p)=>s+p.tutar-(p.odenen||0),0)):"—"}</div><div class="sub">${kGec.length} taksit</div></div>
+  </div>`:""}
+  <div class="grp">Çek Portföyü ve Tahsilatlar</div>
+  <div class="cards">
+    <div class="card c-blue"><div class="lbl">💼 Kasadaki Çekler</div><div class="val">${kasada.length?para(sum(kasada)):"—"}</div><div class="sub">${kasada.length} adet</div></div>
+    <div class="card c-teal"><div class="lbl">🏦 Tahsildeki Çekler</div><div class="val">${tahsilde.length?para(sum(tahsilde)):"—"}</div><div class="sub">${tahsilde.length} adet</div></div>
+    <div class="card c-purple"><div class="lbl">🛡️ Teminattaki Çekler</div><div class="val">${teminatta.length?para(sum(teminatta)):"—"}</div><div class="sub">${teminatta.length} adet · alacağa dahil değil</div></div>
+    <div class="card c-green"><div class="lbl">Beklenen Tahsilat</div><div class="val">${alacakTop?para(alacakTop):"—"}</div><div class="sub">${alacak.length} çek (kasada + tahsilde)</div></div>
+    <div class="card ${net<=0?"c-green":""}"><div class="lbl">Net Durum</div><div class="val">${para(net)}</div><div class="sub">Kalan borç − beklenen tahsilat</div></div>
+  </div>
+  ${listPanel("📌 Bugün Ödenecekler ("+trDate(t)+")",bugun,"Bugün ödemeniz yok 🎉","today")}
+  ${gec.length?listPanel("⚠️ Gecikmiş Ödemeler",gec,"","late"):""}
+  <div class="split">
+    <div>
+      <div class="grp">📤 Ödenecekler</div>
+      ${listPanel("🗓️ Önümüzdeki 1 Ay ("+trDateKisa(t)+" → "+trDateKisa(son)+") — toplam "+para(g30Top),g30Liste,"Önümüzdeki 1 ay içinde bekleyen ödeme yok 🎉")}
+    </div>
+    <div>
+      <div class="grp">📥 Tahsilatlar</div>
+      ${listPanel("💵 Beklenen Tahsilatlar — toplam "+para(alacakTop),alacak,"Kasada veya tahsilde bekleyen çek yok.","income")}
+      ${teminatta.length?listPanel("🛡️ Teminattaki Çekler (alacağa dahil edilmez)",teminatta,""):""}
+    </div>
+  </div>`;
+  // Tarayıcı sekmesinde günün özeti görünsün
+  const sekme=[];
+  if(bugun.length)sekme.push("Bugün "+bugun.length);
+  if(gec.length)sekme.push("Geciken "+gec.length);
+  document.title=sekme.length?"("+sekme.join(" · ")+") Ödeme Takip Paneli":"Ödeme Takip Paneli";
+}
+function listPanel(title,list,emptyMsg,rowCls=""){
+  const rows=list.map(p=>`
+    <div class="prow ${rowCls}">
+      <span class="d">${trDate(p.tarih)}</span>
+      <span class="f">${p.firma}${p.not?`<small>${p.not}</small>`:""}</span>
+      <span class="meta">${p.tur}${p.banka?" · "+p.banka:""}${p.hedef?" → "+p.hedef:""}</span>
+      <span class="amt">${p.yon==="ALINAN"?"+":""}${para(p.tutar)}</span>
+      ${badge(p)}
+      <button class="mini-btn pay" ${p.sanal?`onclick="krediToggle(${p.sanal[0]},${p.sanal[1]})"`:`onclick="togglePaid('${p.id}')"`}>${p.odendi?"↩ Geri Al":"✓ "+(p.yon==="ALINAN"?"Tahsil Edildi":"Ödendi")}</button>
+    </div>`).join("");
+  return `<div class="panel"><h2>${title}</h2><div class="plist">${rows||`<div class="empty">${emptyMsg}</div>`}</div></div>`;
+}
+
+/* ---------- AYLIK ---------- */
+function renderAylik(){
+  const el=document.getElementById("tab-aylik");
+  const buAy=todayStr().slice(0,7),buYil=buAy.slice(0,4);
+  const items=[...DB.payments,...krediSanal()];
+  const yillar=[...new Set(items.map(p=>p.tarih.slice(0,4)))].sort();
+  // Varsayılan: sadece bu yıl ve gelecek yıl görünür; kutucuk işaretlenirse hepsi
+  const varsayilan=[buYil,String(+buYil+1)];
+  const gizliYillar=yillar.filter(y=>!varsayilan.includes(y));
+  if(PBAS===null)PBAS=buAy;
+  if(PBIT===null)PBIT=buAy;
+  const mrow=p=>`<div class="mrow"><span class="dot ${dotCls(p)}"></span>
+    <span class="dt">${trDateShort(p.tarih)}</span>
+    <span class="fm" title="${p.firma}${p.banka?" · "+p.banka:""}">${p.firma}${p.banka?` <span class="bk">· ${p.banka}</span>`:""}</span>
+    ${badge(p)}
+    <span class="am ${p.yon==="ALINAN"?"in":""}">${p.yon==="ALINAN"?"+":""}${fmt.format(p.tutar)}</span></div>`;
+  let html="";
+  for(const yil of yillar){
+    let aylarHtml="",yilTot=0,yilTah=0,yilTem=0,yilCiro=0,yilAy=0,yilGec=0;
+    for(let m=1;m<=12;m++){
+      const mm=String(m).padStart(2,"0"),ayKey=`${yil}-${mm}`;
+      const ps=items.filter(p=>p.tarih.slice(0,7)===ayKey).sort((a,c)=>a.tarih<c.tarih?-1:1);
+      if(!ps.length)continue;
+      const odeme=ps.filter(p=>p.yon!=="ALINAN"&&p.durum!=="IPTAL");
+      const tahsilat=ps.filter(p=>p.yon==="ALINAN");
+      const tot=odeme.reduce((s,p)=>s+p.tutar,0),od=odeme.reduce((s,p)=>s+(p.odenen||0),0);
+      // Gerçek tahsilat = kasada + tahsilde + tahsil edilmiş; ciro ve teminat AYRI gösterilir
+      const sumT=l=>l.reduce((s,p)=>s+p.tutar,0);
+      const tahTot=sumT(tahsilat.filter(p=>["PORTFOYDE","TAHSILDE","TAHSIL"].includes(p.durum)));
+      const temTot=sumT(tahsilat.filter(p=>p.durum==="TEMINATTA"));
+      const ciroTot=sumT(tahsilat.filter(p=>p.durum==="CIROLANDI"));
+      const gecSayi=odeme.filter(p=>status(p)==="GECIKMIS").length;
+      yilTot+=tot;yilTah+=tahTot;yilTem+=temTot;yilCiro+=ciroTot;yilAy++;yilGec+=gecSayi;
+      const gecmis=ayKey<buAy;
+      aylarHtml+=`<details class="month-det ${gecmis?"gecmis":""}" data-ay="${ayKey}" ${gecmis?"":"open"}>
+      <summary><span class="ok">▶</span><span class="ay">${AYLAR[m-1]} ${yil}</span>
+        <span class="ozet-txt">${odeme.length} ödeme${tahsilat.length?` · ${tahsilat.length} tahsilat`:""}</span>
+        ${gecSayi?`<span class="badge b-red">${gecSayi} geciken</span>`:""}
+        <span class="spacer"></span>
+        ${tahTot?`<span class="tah" title="Kasada + tahsilde + tahsil edilmiş">+${para(tahTot)}</span>`:""}
+        ${temTot?`<span class="mchip tem" title="Teminattaki çekler — tahsilata dahil değil">🛡 teminatta ${fmt.format(temTot)}</span>`:""}
+        ${ciroTot?`<span class="mchip ciro" title="Cirolanan çekler — borç ödemede kullanıldı, tahsilata dahil değil">↪ cirolandı ${fmt.format(ciroTot)}</span>`:""}
+        <span class="tot">${para(tot)}</span></summary>
+      <div class="inner">
+        <div class="split">
+          <div>
+            <div class="msec-title">📤 ÖDEMELER (${odeme.length})</div>
+            <div class="mlist">${odeme.map(mrow).join("")||'<div class="empty">Ödeme yok.</div>'}</div>
+            <div class="pbar"><div style="width:${tot?Math.min(100,od/tot*100):0}%"></div></div>
+            <div class="pbar-lbl"><span>Ödenen: ${para(od)}</span><span>Kalan: ${para(tot-od)}</span></div>
+          </div>
+          ${tahsilat.length?`<div>
+            <div class="msec-title in">📥 TAHSİLATLAR (${tahsilat.length}) — gelecek para: +${para(tahTot)}${temTot?` · 🛡 teminatta: ${para(temTot)}`:""}${ciroTot?` · ↪ cirolanan: ${para(ciroTot)}`:""}</div>
+            <div class="mlist">${tahsilat.map(mrow).join("")}</div>
+          </div>`:""}
+        </div>
+      </div></details>`;
+    }
+    html+=`<details class="year-det ${yil<buYil?"eski":""} ${!AYLIK_TUM&&!varsayilan.includes(yil)?"yil-gizli":""}" data-yil="${yil}" ${yil===buYil?"open":""}>
+      <summary><span class="ok">▶</span><span class="yl">${yil}</span>
+        <span class="ozet-txt">${yilAy} ay</span>
+        ${yilGec?`<span class="badge b-red">${yilGec} geciken</span>`:""}
+        <span class="spacer"></span>
+        ${yilTah?`<span class="tah">+${para(yilTah)}</span>`:""}
+        ${yilTem?`<span class="mchip tem">🛡 ${fmt.format(yilTem)}</span>`:""}
+        ${yilCiro?`<span class="mchip ciro">↪ ${fmt.format(yilCiro)}</span>`:""}
+        <span class="tot">${para(yilTot)}</span></summary>
+      <div class="yinner">${aylarHtml}</div></details>`;
+  }
+  const kontrol=`<div class="panel no-print" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 16px;margin-bottom:14px">
+    <label style="display:flex;gap:7px;align-items:center;font-size:14px;font-weight:600;cursor:pointer">
+      <input type="checkbox" ${AYLIK_TUM?"checked":""} onchange="AYLIK_TUM=this.checked;renderAylik()" style="width:16px;height:16px">
+      Geçmiş ve uzak yılları göster${gizliYillar.length&&!AYLIK_TUM?` <span style="font-weight:400;color:var(--muted)">(${gizliYillar.join(", ")} gizli)</span>`:""}
+    </label>
+    <span style="flex:1"></span>
+    <span style="font-size:13.5px;color:var(--muted);font-weight:600">🖨 Yazdırma aralığı:</span>
+    <input type="month" id="pBas" value="${PBAS}" onchange="PBAS=this.value" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13.5px">
+    <span style="color:var(--muted)">—</span>
+    <input type="month" id="pBit" value="${PBIT}" onchange="PBIT=this.value" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13.5px">
+    <button class="mini-btn" onclick="window.print()">🖨 Seçili Aralığı Yazdır</button>
+  </div>`;
+  el.innerHTML=kontrol+(html||'<div class="empty">Kayıt yok.</div>');
+}
+
+/* ---------- KREDİLER ---------- */
+function renderKrediler(){
+  const el=document.getElementById("tab-krediler");
+  const ks=DB.krediler||[];
+  if(!ks.length){
+    el.innerHTML='<div class="panel"><div class="empty">Henüz kredi kaydı yok.<br>DIA\'dan aldığınız "Banka Kredi Taksit Ödeme Listesi" raporunu üstteki 🔄 DIA Raporu Yükle düğmesiyle yükleyin — program dosyayı otomatik tanır.</div></div>';
+    return;
+  }
+  const t=todayStr(),son=birAySonra(t);
+  const stat=k=>{
+    const top=k.taksitler.reduce((s,x)=>s+x.tutar,0),od=k.taksitler.reduce((s,x)=>s+x.odenen,0),kal=k.taksitler.reduce((s,x)=>s+x.kalan,0);
+    const anapara=k.taksitler.reduce((s,x)=>s+x.anapara,0);
+    const faiz=k.taksitler.reduce((s,x)=>s+x.faiz,0),bsmv=k.taksitler.reduce((s,x)=>s+(x.bsmv||0),0);
+    // Ortalama aylık faiz maliyeti: toplam faiz / anapara / taksit sayısı (yaklaşık — sabit oranlı basit hesap)
+    const aylikOran=anapara>0&&k.taksitler.length?(faiz/anapara/k.taksitler.length*100):0;
+    return {top,od,kal,anapara,faiz,bsmv,aylikOran,sonraki:k.taksitler.find(x=>x.kalan>0.01),bekleyen:k.taksitler.filter(x=>x.kalan>0.01).length};
+  };
+  const zengin=ks.map((k,ki)=>({k,ki,s:stat(k)}));
+  const aktif=zengin.filter(z=>z.s.kal>0.01).sort((a,b)=>(a.s.sonraki?.vade||"9")<(b.s.sonraki?.vade||"9")?-1:1);
+  const biten=zengin.filter(z=>z.s.kal<=0.01);
+  const kSanal=krediSanal();
+  const kAy=kSanal.filter(p=>!p.odendi&&p.tarih>=t&&p.tarih<=son);
+  const kGec=kSanal.filter(p=>status(p)==="GECIKMIS");
+  const kKalan=zengin.reduce((s,z)=>s+z.s.kal,0);
+  const tDurum=x=>{
+    if(x.kalan<=0.01)return '<span class="badge b-green">ÖDENDİ</span>';
+    if(x.odenen>0.01)return '<span class="badge b-amber">KISMİ</span>';
+    if(x.vade<t)return '<span class="badge b-red">GECİKMİŞ</span>';
+    if(x.vade<=son)return '<span class="badge b-amber">YAKLAŞAN</span>';
+    return '<span class="badge b-gray">BEKLİYOR</span>';
+  };
+  const blok=(z,acik)=>{
+    const {k,ki,s}=z;
+    const rows=k.taksitler.map((x,ti)=>`
+      <tr class="${x.kalan<=0.01?"paid":""}">
+        <td>${x.no}</td><td>${trDate(x.vade)}</td>
+        <td class="num">${para(x.tutar)}</td>
+        <td class="num" style="font-weight:400">${para(x.anapara)}</td>
+        <td class="num" style="font-weight:400">${para(x.faiz)}</td>
+        <td class="num" style="font-weight:400">${para(x.bsmv||0)}</td>
+        <td class="num">${x.odenen?para(x.odenen):"—"}</td>
+        <td class="num">${x.kalan>0.01?para(x.kalan):"—"}</td>
+        <td>${tDurum(x)}</td>
+        <td class="acts"><button class="mini-btn pay" title="Ödendi / geri al" onclick="krediToggle(${ki},${ti})">${x.kalan<=0.01?"↩":"✓"}</button></td>
+      </tr>`).join("");
+    const oranTxt=s.aylikOran?s.aylikOran.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2}):null;
+    return `<details class="month-det" ${acik?"open":""}>
+    <summary><span class="ok">▶</span><span class="ay" style="min-width:170px">${krediKisaAd(k)}</span>
+      ${k.banka?`<span class="badge b-indigo">${k.banka}</span>`:""}
+      <span class="ozet-txt">${s.bekleyen?`${s.bekleyen} taksit kaldı${s.sonraki?` · sıradaki: ${trDateKisa(s.sonraki.vade)} (${para(s.sonraki.kalan)})`:""}`:"tamamlandı"}</span>
+      <span class="spacer"></span>
+      ${oranTxt?`<span class="badge b-amber" title="Toplam faiz ÷ ana para ÷ taksit sayısı — yaklaşık ortalama aylık maliyet">~%${oranTxt}/ay</span>`:""}
+      <span class="ozet-txt" title="Bu kredi boyunca toplam ödenen/ödenecek faiz ve BSMV">Faiz: ${para(s.faiz)} · BSMV: ${para(s.bsmv)}</span>
+      <span class="tot" style="color:${s.kal>0.01?"var(--purple)":"var(--green)"}">${s.kal>0.01?"kalan "+para(s.kal):"✓ bitti"}</span></summary>
+    <div class="inner">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">${k.ad}</div>
+      <div class="pbar"><div style="width:${s.top?Math.min(100,s.od/s.top*100):0}%"></div></div>
+      <div class="pbar-lbl"><span>Ödenen: ${para(s.od)}</span><span>Toplam: ${para(s.top)}</span></div>
+      <div style="max-height:340px;overflow:auto;margin-top:10px">
+      <table><thead><tr><th>No</th><th>Vade</th><th style="text-align:right">Taksit</th><th style="text-align:right">Ana Para</th><th style="text-align:right">Faiz</th><th style="text-align:right">BSMV</th><th style="text-align:right">Ödenen</th><th style="text-align:right">Kalan</th><th>Durum</th><th class="acts"></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    </div></details>`;
+  };
+  el.innerHTML=`
+  <div class="cards">
+    <div class="card c-purple"><div class="lbl">Kalan Kredi Borcu</div><div class="val">${para(kKalan)}</div><div class="sub">${aktif.length} aktif kredi</div></div>
+    <div class="card c-amber"><div class="lbl">1 Ay İçinde Taksit</div><div class="val">${kAy.length?para(kAy.reduce((s,p)=>s+p.tutar-(p.odenen||0),0)):"—"}</div><div class="sub">${kAy.length} taksit · ${trDateShort(t)} → ${trDateShort(son)}</div></div>
+    <div class="card ${kGec.length?"c-red":""}"><div class="lbl">Geciken Taksit</div><div class="val">${kGec.length?para(kGec.reduce((s,p)=>s+p.tutar-(p.odenen||0),0)):"—"}</div><div class="sub">${kGec.length} taksit</div></div>
+    <div class="card"><div class="lbl">Toplam Kredi</div><div class="val">${ks.length}</div><div class="sub">${biten.length} tanesi kapandı</div></div>
+  </div>
+  <div class="grp">Aktif Krediler (sıradaki taksite göre)</div>
+  ${aktif.map(z=>blok(z,false)).join("")||'<div class="panel"><div class="empty">Aktif kredi yok 🎉</div></div>'}
+  ${biten.length?`<details class="done" style="margin-top:16px"><summary>✔️ Kapanan Krediler — ${biten.length} adet</summary>
+    <div class="inner">${biten.map(z=>blok(z,false)).join("")}</div></details>`:""}`;
+}
+
+/* ---------- ÇEK PORTFÖYÜ ---------- */
+function cekRow(p,buttons){
+  return `<div class="prow ${p.durum==="KARSILIKSIZ"?"late":""}">
+    <span class="d">${trDate(p.tarih)}</span>
+    <span class="f">${p.firma}${p.seriNo?`<small>Seri: ${p.seriNo}${p.banka?" · "+p.banka:""}</small>`:(p.banka?`<small>${p.banka}</small>`:"")}</span>
+    <span class="meta">${p.hedef?"→ "+p.hedef:(p.not||"")}</span>
+    <span class="amt">${para(p.tutar)}</span>
+    ${badge(p)}
+    <span style="display:flex;gap:5px;flex-wrap:wrap">${buttons}</span>
+  </div>`;
+}
+function renderCekler(){
+  const el=document.getElementById("tab-cekler");
+  const a=alinanlar().sort((x,y)=>x.tarih<y.tarih?-1:1);
+  const grp=d=>a.filter(p=>p.durum===d);
+  const kasada=grp("PORTFOYDE"),tahsilde=grp("TAHSILDE"),teminatta=grp("TEMINATTA"),ciro=grp("CIROLANDI");
+  const bitti=a.filter(p=>["TAHSIL","KARSILIKSIZ","IPTAL"].includes(p.durum)).sort((x,y)=>x.tarih<y.tarih?1:-1);
+  const btn=(id,fn,cls,txt)=>`<button class="mini-btn ${cls}" onclick="${fn}('${id}')">${txt}</button>`;
+  const std=id=>btn(id,"editPayment","","✎")+btn(id,"delPayment","del","🗑");
+  const sec=(title,list,mkBtns,emptyMsg)=>`<div class="panel"><h2>${title} <span style="color:var(--muted);font-weight:400;font-size:13px">${list.length} adet · ${para(list.reduce((s,p)=>s+p.tutar,0))}</span></h2>
+    <div class="plist">${list.map(p=>cekRow(p,mkBtns(p.id))).join("")||`<div class="empty">${emptyMsg}</div>`}</div></div>`;
+  el.innerHTML=`
+  <div style="margin-bottom:16px"><button class="btn btn-primary" onclick="openModal('ALINAN')">＋ Gelen Çek Ekle</button></div>
+  ${sec("💼 Kasadaki Çekler (Portföy)",kasada,id=>
+      btn(id,"actTahsil","act","🏦 Tahsile Ver")+btn(id,"actTeminat","act","🛡️ Teminata Ver")+
+      btn(id,"actCiro","act","↪️ Cirola")+btn(id,"actTahsilEdildi","pay","✓ Tahsil Edildi")+std(id),
+    "Kasada çek yok. Gelen çekleri \"＋ Gelen Çek Ekle\" ile kaydedin.")}
+  ${sec("🏦 Tahsildeki Çekler",tahsilde,id=>
+      btn(id,"actTahsilEdildi","pay","✓ Tahsil Edildi")+btn(id,"actKarsiliksiz","warn","✗ Karşılıksız")+
+      btn(id,"actGeriAl","","💼 Kasaya Geri Al")+std(id),
+    "Tahsilde çek yok.")}
+  ${sec("🛡️ Teminattaki Çekler",teminatta,id=>
+      btn(id,"actGeriAl","","💼 Kasaya Geri Al")+btn(id,"actTahsilEdildi","pay","✓ Tahsil Edildi")+std(id),
+    "Teminatta çek yok.")}
+  ${sec("↪️ Cirolanan Çekler",ciro,id=>btn(id,"actGeriAl","","💼 Kasaya Geri Al")+std(id),
+    "Cirolanan çek yok.")}
+  <details class="done"><summary>✔️ Sonuçlanan Çekler (tahsil edildi / karşılıksız / iptal) — ${bitti.length} adet</summary>
+    <div class="inner"><div class="plist">${bitti.map(p=>cekRow(p,btn(p.id,"actGeriAl","","↩ Geri Al")+std(p.id))).join("")||'<div class="empty">Kayıt yok.</div>'}</div></div>
+  </details>`;
+}
+/* çek aksiyonları */
+let actState=null;
+function openAct(id,durum,title,desc,lbl){
+  actState={id,durum};
+  document.getElementById("actTitle").textContent=title;
+  document.getElementById("actDesc").textContent=desc;
+  document.getElementById("actLbl").textContent=lbl;
+  document.getElementById("actInput").value="";
+  document.getElementById("actOverlay").classList.add("show");
+  setTimeout(()=>document.getElementById("actInput").focus(),50);
+}
+function closeAct(){document.getElementById("actOverlay").classList.remove("show");actState=null;}
+async function saveAct(){
+  if(!actState)return;
+  await fetch(`/api/otp/payments/${actState.id}/durum`,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({durum:actState.durum,hedef:document.getElementById("actInput").value.trim(),sirket:SIRKET})});
+  closeAct();loadData();
+}
+const cekAd=id=>{const p=DB.payments.find(x=>x.id===id);return `${p.firma} · ${para(p.tutar)} (vade ${trDate(p.tarih)})`;};
+function actTahsil(id){openAct(id,"TAHSILDE","🏦 Tahsile Ver",cekAd(id),"Hangi bankaya tahsile verildi?");}
+function actTeminat(id){openAct(id,"TEMINATTA","🛡️ Teminata Ver",cekAd(id),"Hangi bankaya teminata verildi?");}
+function actCiro(id){openAct(id,"CIROLANDI","↪️ Cirola",cekAd(id),"Kime cirolandı? (firma adı)");}
+async function setDurum(id,durum){
+  await fetch(`/api/otp/payments/${id}/durum`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({durum,sirket:SIRKET})});
+  loadData();
+}
+const actTahsilEdildi=id=>setDurum(id,"TAHSIL");
+const actKarsiliksiz=id=>setDurum(id,"KARSILIKSIZ");
+const actGeriAl=id=>setDurum(id,"PORTFOYDE");
+
+/* ---------- TÜM KAYITLAR ---------- */
+function renderTumu(){
+  const el=document.getElementById("tab-tumu");
+  const aylar=[...new Set(DB.payments.map(p=>p.tarih.slice(0,7)))].sort();
+  const bankalar=[...new Set(DB.payments.map(p=>p.banka).filter(Boolean))].sort();
+  const turler=[...new Set(DB.payments.map(p=>p.tur))].sort();
+  el.innerHTML=`
+  <div class="filters">
+    <input id="q" placeholder="🔍 Firma / seri no ara..." oninput="renderTable()">
+    <select id="fYon" onchange="renderTable()"><option value="">Ödeme + Gelen</option>
+      <option value="VERILEN">Sadece Ödemeler</option><option value="ALINAN">Sadece Gelen Çekler</option></select>
+    <select id="fAy" onchange="renderTable()"><option value="">Tüm Aylar</option>
+      ${aylar.map(a=>`<option value="${a}">${AYLAR[+a.slice(5)-1]} ${a.slice(0,4)}</option>`).join("")}</select>
+    <select id="fBanka" onchange="renderTable()"><option value="">Tüm Bankalar</option>
+      ${bankalar.map(b=>`<option>${b}</option>`).join("")}</select>
+    <select id="fTur" onchange="renderTable()"><option value="">Tüm Türler</option>
+      ${turler.map(t=>`<option>${t}</option>`).join("")}</select>
+    <select id="fDurum" onchange="renderTable()"><option value="">Tüm Durumlar</option>
+      <option value="acik">Bekleyenler</option><option value="bitti">Ödenen / Tahsil Edilen</option>
+      <option value="GECIKMIS">Gecikenler</option><option value="PORTFOYDE">Kasada</option>
+      <option value="TAHSILDE">Tahsilde</option><option value="TEMINATTA">Teminatta</option>
+      <option value="CIROLANDI">Cirolanan</option><option value="KARSILIKSIZ">Karşılıksız</option>
+      <option value="IPTAL">İptal</option></select>
+  </div>
+  <div id="tableWrap"></div>`;
+  renderTable();
+}
+function filtreOzeti(){
+  const g=id=>document.getElementById(id)?.value||"";
+  const parcalar=[];
+  if(g("q"))parcalar.push('Arama: "'+g("q")+'"');
+  if(g("fYon"))parcalar.push(g("fYon")==="VERILEN"?"Sadece ödemeler":"Sadece gelen çekler");
+  if(g("fAy"))parcalar.push(AYLAR[+g("fAy").slice(5)-1]+" "+g("fAy").slice(0,4));
+  if(g("fBanka"))parcalar.push(g("fBanka"));
+  if(g("fTur"))parcalar.push(g("fTur"));
+  if(g("fDurum"))parcalar.push({acik:"Bekleyenler",bitti:"Ödenen/Tahsil edilen"}[g("fDurum")]||DURUM_AD[g("fDurum")]||g("fDurum"));
+  return parcalar.join(" · ");
+}
+function renderTable(){
+  const g=id=>document.getElementById(id)?.value||"";
+  const q=g("q").toLocaleLowerCase("tr");
+  let list=[...DB.payments,...krediSanal()].filter(p=>{
+    const s=status(p);
+    return (!q||p.firma.toLocaleLowerCase("tr").includes(q)||(p.seriNo||"").toLocaleLowerCase("tr").includes(q))&&
+    (!g("fYon")||p.yon===g("fYon"))&&(!g("fAy")||p.tarih.slice(0,7)===g("fAy"))&&
+    (!g("fBanka")||p.banka===g("fBanka"))&&(!g("fTur")||p.tur===g("fTur"))&&
+    (!g("fDurum")||(g("fDurum")==="acik"?!p.odendi&&!["IPTAL","CIROLANDI","KARSILIKSIZ"].includes(p.durum):
+      g("fDurum")==="bitti"?p.odendi:s===g("fDurum")));});
+  list.sort((a,b)=>{
+    let va=a[sortKey],vb=b[sortKey];
+    if(typeof va==="string"){va=va.toLocaleLowerCase("tr");vb=(vb||"").toLocaleLowerCase("tr");}
+    return (va<vb?-1:va>vb?1:0)*sortDir;});
+  const bs=list.filter(p=>p.yon!=="ALINAN"&&p.durum!=="IPTAL");
+  const al=list.filter(p=>p.yon==="ALINAN");
+  const fo=filtreOzeti();
+  const rows=list.map(p=>`
+    <tr class="${p.odendi?"paid":""}">
+      <td>${trDate(p.tarih)}</td><td>${p.firma}${p.not?`<br><small style="color:var(--muted)">${p.not}</small>`:""}</td>
+      <td>${p.yon==="ALINAN"?"📥":"📤"} ${p.tur}</td><td>${p.banka||"—"}${p.hedef?`<br><small style="color:var(--muted)">→ ${p.hedef}</small>`:""}</td>
+      <td>${p.seriNo||"—"}</td>
+      <td class="num ${p.yon==="ALINAN"?"in":""}">${p.yon==="ALINAN"?"+":""}${para(p.tutar)}</td>
+      <td>${badge(p)}</td>
+      <td class="acts" style="white-space:nowrap">${p.sanal?`
+        <button class="mini-btn pay" title="Ödendi / geri al" onclick="krediToggle(${p.sanal[0]},${p.sanal[1]})">${p.odendi?"↩":"✓"}</button>`:`
+        <button class="mini-btn pay" title="${p.yon==="ALINAN"?"Tahsil edildi":"Ödendi"} / geri al" onclick="togglePaid('${p.id}')">${p.odendi?"↩":"✓"}</button>
+        <button class="mini-btn" title="Düzenle" onclick="editPayment('${p.id}')">✎</button>
+        <button class="mini-btn del" title="Sil" onclick="delPayment('${p.id}')">🗑</button>`}
+      </td>
+    </tr>`).join("");
+  const th=(k,l)=>`<th onclick="setSort('${k}')">${l}${sortKey===k?(sortDir>0?" ▲":" ▼"):""}</th>`;
+  document.getElementById("tableWrap").innerHTML=`
+  ${fo?`<div style="margin-bottom:10px;font-size:13.5px;color:var(--muted);font-weight:600">Filtre: ${fo}</div>`:""}
+  <table>
+    <thead><tr>${th("tarih","Tarih")}${th("firma","Firma")}${th("tur","Tür")}${th("banka","Banka")}${th("seriNo","Seri No")}${th("tutar","Tutar")}<th>Durum</th><th class="acts"></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="8" class="empty">Kayıt bulunamadı.</td></tr>'}</tbody>
+    <tfoot><tr class="tfoot"><td colspan="5">TOPLAM — ${bs.length} ödeme${al.length?` + ${al.length} gelen çek`:""}</td>
+      <td class="num">${para(bs.reduce((s,p)=>s+p.tutar,0))}${al.length?`<br><span style="color:var(--green)">+${para(al.reduce((s,p)=>s+p.tutar,0))}</span>`:""}</td>
+      <td colspan="2">Ödenen: ${para(bs.reduce((s,p)=>s+(p.odenen||0),0))}</td></tr></tfoot>
+  </table>`;
+}
+function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1;}renderTable();}
+
+/* ---------- RAPORLAR ---------- */
+function renderRapor(){
+  const el=document.getElementById("tab-rapor"),b=borclar(),a=alinanlar();
+  const buAy=todayStr().slice(0,7);
+  const byKey=(arr,fn)=>{const m={};arr.forEach(p=>{const k=fn(p)||"—";(m[k]=m[k]||{tutar:0,odenen:0,adet:0});m[k].tutar+=p.tutar;m[k].odenen+=p.odenen||0;m[k].adet++;});return m;};
+  const aylik=byKey(b,p=>p.tarih.slice(0,7));
+  const banka=byKey(b,p=>p.banka);
+  const firma=byKey(b.filter(p=>!p.odendi),p=>p.firma);
+  const cekDurum=byKey(a,p=>p.durum);
+  const cekler=b.filter(p=>p.tur==="ÇEK");
+
+  /* Aylık nakit dengesi: borç (ödemeler+kredi taksitleri) vs alacak (kasada+tahsilde+tahsil edilen çekler; TEMİNAT HARİÇ)
+     Kapsam: bu yılın başından bugünden 12 ay sonrasına kadar */
+  const ayEkle=(ay,n)=>{let[y,m]=ay.split("-").map(Number);m+=n;y+=Math.floor((m-1)/12);m=((m-1)%12)+1;return y+"-"+String(m).padStart(2,"0");};
+  const dBas=buAy.slice(0,4)+"-01",dBit=ayEkle(buAy,12);
+  const aylikTum=byKey(borclarTum(),p=>p.tarih.slice(0,7));
+  const alacakAy=byKey(a.filter(p=>["PORTFOYDE","TAHSILDE","TAHSIL"].includes(p.durum)),p=>p.tarih.slice(0,7));
+  const tumAylar=[...new Set([...Object.keys(aylikTum),...Object.keys(alacakAy)])].filter(ay=>ay>=dBas&&ay<=dBit).sort();
+  let dToplamB=0,dToplamA=0;
+  const nakitRows=tumAylar.map(ay=>{
+    const borc=aylikTum[ay]?aylikTum[ay].tutar:0;
+    const alacak=alacakAy[ay]?alacakAy[ay].tutar:0;
+    dToplamB+=borc;dToplamA+=alacak;
+    const fark=alacak-borc;
+    const frk=fark<0?`<span class="badge b-red">${para(-fark)} eksik</span>`:
+              fark>0?`<span class="badge b-green">${para(fark)} fazla</span>`:
+              `<span class="badge b-gray">denk</span>`;
+    return `<tr class="${ay===buAy?"cur":""}">
+      <td>${AYLAR[+ay.slice(5)-1]} ${ay.slice(0,4)}${ay===buAy?" 📍":""}</td>
+      <td class="num">${borc?para(borc):"—"}</td>
+      <td class="num in">${alacak?"+"+para(alacak):"—"}</td>
+      <td style="text-align:right">${frk}</td></tr>`;
+  }).join("");
+  const dFark=dToplamA-dToplamB;
+
+  const bars=(m,color,labelFn)=>{
+    const es=Object.entries(m).sort((x,y)=>y[1].tutar-x[1].tutar);
+    const max=Math.max(...es.map(e=>e[1].tutar),1);
+    return es.map(([k,v])=>`<div class="bar-row"><span class="bl" title="${k}">${labelFn?labelFn(k):k}</span>
+      <div class="track dual">
+        <div class="fill" style="width:${v.tutar/max*100}%;background:${color}33"></div>
+        <div class="fill" style="width:${v.odenen/max*100}%;background:${color}"></div>
+      </div><span class="bv">${para(v.tutar)}</span></div>`).join("")||'<div class="empty">Kayıt yok.</div>';
+  };
+  const kalanBars=(m,color)=>{
+    const es=Object.entries(m).map(([k,v])=>[k,v.tutar-v.odenen]).filter(e=>e[1]>0).sort((x,y)=>y[1]-x[1]).slice(0,12);
+    const max=Math.max(...es.map(e=>e[1]),1);
+    return es.map(([k,v])=>`<div class="bar-row"><span class="bl" title="${k}">${k}</span>
+      <div class="track"><div class="fill" style="width:${v/max*100}%;background:${color}"></div></div>
+      <span class="bv">${para(v)}</span></div>`).join("")||'<div class="empty">Bekleyen borç yok 🎉</div>';
+  };
+  const durumBars=Object.entries(cekDurum).sort((x,y)=>y[1].tutar-x[1].tutar).map(([k,v])=>{
+    const max=Math.max(...Object.values(cekDurum).map(z=>z.tutar),1);
+    return `<div class="bar-row"><span class="bl">${DURUM_AD[k]||k} (${v.adet})</span>
+      <div class="track"><div class="fill" style="width:${v.tutar/max*100}%;background:#0d9488"></div></div>
+      <span class="bv">${para(v.tutar)}</span></div>`;}).join("")||'<div class="empty">Gelen çek kaydı yok.</div>';
+
+  el.innerHTML=`
+  <div class="panel">
+    <h2>⚖️ Aylık Nakit Dengesi <span style="font-weight:400;font-size:12.5px;color:var(--muted)">Borç = ödemeler + kredi taksitleri · Alacak = kasadaki, tahsildeki ve tahsil edilmiş çekler (teminattakiler ve cirolananlar DAHİL DEĞİLDİR) · Kapsam: ${buAy.slice(0,4)} başı → ${AYLAR[+dBit.slice(5)-1]} ${dBit.slice(0,4)}</span></h2>
+    <table>
+      <thead><tr><th>Ay</th><th style="text-align:right">Ödenecek Borç</th><th style="text-align:right">Tahsilat (Alacak)</th><th style="text-align:right">Denge</th></tr></thead>
+      <tbody>${nakitRows}</tbody>
+      <tfoot><tr class="tfoot"><td>TOPLAM</td><td class="num">${para(dToplamB)}</td><td class="num in">+${para(dToplamA)}</td>
+        <td style="text-align:right">${dFark<0?`<span class="badge b-red">${para(-dFark)} eksik</span>`:`<span class="badge b-green">${para(dFark)} fazla</span>`}</td></tr></tfoot>
+    </table>
+  </div>
+  <div class="rgrid">
+    <div class="panel"><h2>📆 Aylık Ödeme Planı <span style="font-weight:400;font-size:12px;color:var(--muted)">(koyu: ödenen, açık: toplam)</span></h2>
+      ${bars(aylik,"#2563eb",k=>AYLAR[+k.slice(5)-1]+" "+k.slice(0,4))}</div>
+    <div class="panel"><h2>🏦 Banka Bazında Ödemeler</h2>${bars(banka,"#0d9488")}
+      <div style="margin-top:14px;font-size:13.5px;color:var(--muted)">
+      ${Object.entries(byKey(cekler,p=>p.banka)).map(([k,v])=>`<div>• ${k}: <b>${v.adet} çek</b> (${para(v.tutar)})</div>`).join("")||"Çek kaydı yok."}
+      <div style="margin-top:5px">• Toplam kesilen çek: <b>${cekler.length} adet</b></div></div></div>
+    <div class="panel"><h2>🏢 Firma Bazında Kalan Borç</h2>${kalanBars(firma,"#dc2626")}</div>
+    <div class="panel"><h2>📥 Gelen Çekler — Durum Dağılımı</h2>${durumBars}</div>
+  </div>`;
+}
+
+/* ---------- İÇGÖRÜLER (yoğunlaşma riski, sabit gider, kredi maliyeti, alacak yaşlanma) ---------- */
+function renderIcgoruler(){
+  const el=document.getElementById("tab-icgoru");
+  const t=todayStr();
+  const kalanTutar=p=>p.tutar-(p.odenen||0);
+  const gunFark=(d1,d2)=>Math.round((new Date(d2+"T12:00:00")-new Date(d1+"T12:00:00"))/86400000);
+  const yzdBar=(list,toplam,renk)=>{
+    const max=Math.max(...list.map(e=>e[1]),1);
+    return list.map(([ad,tutar])=>{
+      const yzd=toplam?tutar/toplam*100:0;
+      return `<div class="bar-row"><span class="bl" title="${ad}">${ad}</span>
+        <div class="track"><div class="fill" style="width:${tutar/max*100}%;background:${renk}"></div></div>
+        <span class="bv">${para(tutar)} <span style="color:var(--muted);font-weight:400">(%${yzd.toFixed(1)})</span></span></div>`;
+    }).join("")||'<div class="empty">Kayıt yok.</div>';
+  };
+
+  /* --- A) Yoğunlaşma Riski: kalan borcun firma ve banka bazında ne kadarı tek noktada --- */
+  const bekleyen=borclar().filter(p=>!p.odendi);
+  const ks=DB.krediler||[];
+  const firmaMap={},bankaMap={};
+  bekleyen.forEach(p=>{firmaMap[p.firma]=(firmaMap[p.firma]||0)+kalanTutar(p);});
+  bekleyen.forEach(p=>{const k=p.banka||"—";bankaMap[k]=(bankaMap[k]||0)+kalanTutar(p);});
+  ks.forEach(k=>{
+    const kalan=k.taksitler.reduce((s,x)=>s+x.kalan,0);
+    if(kalan>0.01)bankaMap[k.banka||"—"]=(bankaMap[k.banka||"—"]||0)+kalan;
+  });
+  const toplamFirma=Object.values(firmaMap).reduce((s,v)=>s+v,0);
+  const toplamBanka=Object.values(bankaMap).reduce((s,v)=>s+v,0);
+  const top5Firma=Object.entries(firmaMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const top3Banka=Object.entries(bankaMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const top5FirmaYzd=toplamFirma?top5Firma.reduce((s,[,v])=>s+v,0)/toplamFirma*100:0;
+  const enBuyukBankaYzd=toplamBanka&&top3Banka.length?top3Banka[0][1]/toplamBanka*100:0;
+
+  /* --- B) Sabit/Tekrarlayan Gider Tespiti: aynı firma, ≥3 kayıt, tutarlar birbirine yakın (±%15) --- */
+  const grupFirma={};
+  borclar().forEach(p=>{(grupFirma[p.firma]=grupFirma[p.firma]||[]).push(p);});
+  const sabitGiderler=[];
+  Object.entries(grupFirma).forEach(([firma,list])=>{
+    if(list.length<3)return;
+    const tutarlar=list.map(p=>p.tutar);
+    const ort=tutarlar.reduce((s,v)=>s+v,0)/tutarlar.length;
+    const maxSapma=Math.max(...tutarlar.map(v=>Math.abs(v-ort)));
+    if(ort>0&&maxSapma/ort<=0.15){
+      sabitGiderler.push({firma,adet:list.length,ort,yillik:ort*12,minT:Math.min(...tutarlar),maxT:Math.max(...tutarlar)});
+    }
+  });
+  sabitGiderler.sort((a,b)=>b.yillik-a.yillik);
+  const toplamSabitYillik=sabitGiderler.reduce((s,x)=>s+x.yillik,0);
+
+  /* --- C) Kredi Maliyet Sıralaması: aktif krediler en pahalıdan ucuza --- */
+  const krediListesi=ks.map(k=>{
+    const tak=k.taksitler;
+    const anapara=tak.reduce((s,x)=>s+x.anapara,0);
+    const faiz=tak.reduce((s,x)=>s+x.faiz,0);
+    const bsmv=tak.reduce((s,x)=>s+(x.bsmv||0),0);
+    const kalan=tak.reduce((s,x)=>s+x.kalan,0);
+    const kalanFaizBsmv=tak.filter(x=>x.kalan>0.01).reduce((s,x)=>s+x.faiz+(x.bsmv||0),0);
+    const oran=anapara>0&&tak.length?faiz/anapara/tak.length*100:0;
+    return {kod:krediKisaAd(k),banka:k.banka,anapara,faiz,bsmv,kalan,kalanFaizBsmv,oran};
+  }).filter(x=>x.kalan>0.01).sort((a,b)=>b.oran-a.oran);
+
+  /* --- D) Alacak Yaşlanma: vadesi geçmiş ama hâlâ kasada/tahsilde/teminatta olan çekler --- */
+  const bekleyenCekler=alinanlar().filter(p=>["PORTFOYDE","TAHSILDE","TEMINATTA"].includes(p.durum)&&p.tarih<=t)
+    .map(p=>({...p,gun:gunFark(p.tarih,t)})).sort((a,b)=>b.gun-a.gun);
+  const kovalar=[["0-30 gün",0,30],["31-60 gün",31,60],["61-90 gün",61,90],["90+ gün",91,99999]];
+  const kovaData=kovalar.map(([ad,minG,maxG])=>{
+    const list=bekleyenCekler.filter(p=>p.gun>=minG&&p.gun<=maxG);
+    return {ad,adet:list.length,tutar:list.reduce((s,p)=>s+p.tutar,0)};
+  });
+  const acil90=kovaData[3];
+
+  el.innerHTML=`
+  <div class="cards">
+    <div class="card ${top5FirmaYzd>=40?"c-red":""}"><div class="lbl">Firma Yoğunlaşması</div><div class="val">%${top5FirmaYzd.toFixed(0)}</div><div class="sub">kalan borcun ilk 5 firmada</div></div>
+    <div class="card ${enBuyukBankaYzd>=40?"c-red":""}"><div class="lbl">En Büyük Banka Payı</div><div class="val">%${enBuyukBankaYzd.toFixed(0)}</div><div class="sub">${top3Banka[0]?.[0]||"—"}</div></div>
+    <div class="card c-amber"><div class="lbl">Tespit Edilen Sabit Gider</div><div class="val">${sabitGiderler.length?para(toplamSabitYillik):"—"}</div><div class="sub">${sabitGiderler.length} firma · yıllık tahmini</div></div>
+    <div class="card c-purple"><div class="lbl">En Pahalı Kredi</div><div class="val">${krediListesi.length?"%"+krediListesi[0].oran.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+"/ay":"—"}</div><div class="sub">${krediListesi[0]?.kod||"aktif kredi yok"}</div></div>
+    <div class="card ${acil90.adet?"c-red":""}"><div class="lbl">90+ Gün Bekleyen Alacak</div><div class="val">${acil90.adet?para(acil90.tutar):"—"}</div><div class="sub">${acil90.adet} çek</div></div>
+  </div>
+
+  <div class="rgrid">
+    <div class="panel"><h2>⚠️ Firma Yoğunlaşma Riski <span style="font-weight:400;font-size:12px;color:var(--muted)">kalan borcun en çok kime yığıldığı</span></h2>
+      ${yzdBar(top5Firma,toplamFirma,"#dc2626")}
+      ${top5FirmaYzd>=40?`<div style="margin-top:10px;font-size:13px;color:var(--red);font-weight:600">⚠ İlk 5 firma kalan borcun %${top5FirmaYzd.toFixed(1)}'ini oluşturuyor — tek bir firmada sorun çıkması nakit akışınızı ciddi etkileyebilir.</div>`:""}
+    </div>
+    <div class="panel"><h2>🏦 Banka Yoğunlaşma Riski <span style="font-weight:400;font-size:12px;color:var(--muted)">çek + kredi toplamı</span></h2>
+      ${yzdBar(top3Banka,toplamBanka,"#0d9488")}
+      ${enBuyukBankaYzd>=40?`<div style="margin-top:10px;font-size:13px;color:var(--red);font-weight:600">⚠ Borcunuzun %${enBuyukBankaYzd.toFixed(1)}'i tek bankada — o bankayla ilişkide sorun çıkarsa etkisi büyük olur.</div>`:""}
+    </div>
+
+    <div class="panel"><h2>🔁 Sabit / Tekrarlayan Gider Tespiti <span style="font-weight:400;font-size:12px;color:var(--muted)">aynı firmaya ≥3 kez, benzer tutarla ödeme</span></h2>
+      ${sabitGiderler.length?`<table><thead><tr><th>Firma</th><th style="text-align:right">Kayıt</th><th style="text-align:right">Ortalama</th><th style="text-align:right">Yıllık Tahmini</th></tr></thead>
+      <tbody>${sabitGiderler.map(x=>`<tr><td>${x.firma}</td><td class="num">${x.adet}</td><td class="num">${para(x.ort)}</td><td class="num" style="font-weight:700">${para(x.yillik)}</td></tr>`).join("")}</tbody>
+      <tfoot><tr class="tfoot"><td colspan="3">TOPLAM YILLIK SABİT GİDER (tahmini)</td><td class="num">${para(toplamSabitYillik)}</td></tr></tfoot></table>
+      <div style="color:var(--muted);font-size:12px;margin-top:8px">Bu firmalara yaptığınız ödemeler düzenli aralıklarla benzer tutarda tekrarlanıyor — kira, aidat, sabit hizmet bedeli gibi bir gider olabilir.</div>`
+      :'<div class="empty">Tekrarlayan bir ödeme deseni tespit edilmedi.</div>'}
+    </div>
+
+    <div class="panel"><h2>💳 Kredi Maliyet Sıralaması <span style="font-weight:400;font-size:12px;color:var(--muted)">en pahalıdan ucuza</span></h2>
+      ${krediListesi.length?`<table><thead><tr><th>Kredi</th><th>Banka</th><th style="text-align:right">Aylık Oran</th><th style="text-align:right">Kalan Bakiye</th><th style="text-align:right">Kalan Taksitlerde Faiz+BSMV</th></tr></thead>
+      <tbody>${krediListesi.map(x=>`<tr><td>${x.kod}</td><td>${x.banka||"—"}</td>
+        <td class="num" style="font-weight:700;color:${x.oran>=2?"var(--red)":"var(--ink)"}">%${x.oran.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+        <td class="num">${para(x.kalan)}</td><td class="num">${para(x.kalanFaizBsmv)}</td></tr>`).join("")}</tbody></table>
+      <div style="color:var(--muted);font-size:12px;margin-top:8px">"Kalan taksitlerde faiz+BSMV" — bu krediyi bugünden itibaren sonuna kadar öderseniz taksitlerin içinde ödeyeceğiniz toplam faiz+BSMV (erken kapamada banka farklı hesaplayabilir, gösterge niteliğindedir). Öncelik en yüksek orandan başlamalı.</div>`
+      :'<div class="empty">Aktif kredi yok.</div>'}
+    </div>
+
+    <div class="panel"><h2>📥 Alacak Yaşlanma <span style="font-weight:400;font-size:12px;color:var(--muted)">vadesi geçtiği hâlde hâlâ kasada/tahsilde/teminatta olan çekler</span></h2>
+      ${bekleyenCekler.length?`<table><thead><tr><th>Bekleme</th><th style="text-align:right">Adet</th><th style="text-align:right">Tutar</th></tr></thead>
+      <tbody>${kovaData.map(x=>`<tr class="${x.ad==="90+ gün"&&x.adet?"cur":""}"><td>${x.ad}</td><td class="num">${x.adet||"—"}</td><td class="num">${x.adet?para(x.tutar):"—"}</td></tr>`).join("")}</tbody></table>
+      <div style="margin-top:12px;font-size:12.5px;color:var(--muted);font-weight:700">En eski 5 çek:</div>
+      ${bekleyenCekler.slice(0,5).map(p=>`<div class="mrow"><span class="dt">${p.gun}g</span><span class="fm">${p.firma}</span><span class="am">${para(p.tutar)}</span></div>`).join("")}
+      <div style="color:var(--muted);font-size:12px;margin-top:8px">Süre, çekin VADE tarihinden bugüne geçen gün sayısıdır (durum değişim tarihi değil) — vadesi geçmesine rağmen tahsile/teminata verilmemiş veya sonuçlanmamış çekleri işaret eder.</div>`
+      :'<div class="empty">Vadesi geçmiş, sonuçlanmamış gelen çek yok 🎉</div>'}
+    </div>
+  </div>`;
+}
+
+/* ---------- CRUD ---------- */
+async function togglePaid(id){await fetch(`/api/otp/payments/${id}/toggle`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sirket:SIRKET})});loadData();}
+async function delPayment(id){
+  const p=DB.payments.find(x=>x.id===id);
+  if(confirm(`"${p.firma}" (${trDate(p.tarih)}, ${para(p.tutar)}) kaydı silinsin mi?`)){
+    await fetch(`/api/otp/payments/${id}?sirket=${encodeURIComponent(SIRKET)}`,{method:"DELETE"});loadData();}
+}
+const DURUMLAR={VERILEN:["BEKLIYOR","ODENDI","KARSILIKSIZ","IPTAL"],
+  ALINAN:["PORTFOYDE","TAHSILDE","TEMINATTA","CIROLANDI","TAHSIL","KARSILIKSIZ","IPTAL"]};
+let formYon="VERILEN";
+function setYon(y,keepDurum){
+  formYon=y;
+  document.getElementById("yonV").className=y==="VERILEN"?"sel-v":"";
+  document.getElementById("yonA").className=y==="ALINAN"?"sel-a":"";
+  document.getElementById("lblFirma").textContent=y==="ALINAN"?"Borçlu / Çeki Veren Firma":"Firma / Açıklama";
+  document.getElementById("lblBanka").textContent=y==="ALINAN"?"Çekin Bankası":"Banka";
+  const sel=document.getElementById("f_durum");
+  const eski=keepDurum?sel.value:"";
+  sel.innerHTML=DURUMLAR[y].map(d=>`<option value="${d}">${DURUM_AD[d]}</option>`).join("");
+  if(eski&&DURUMLAR[y].includes(eski))sel.value=eski;
+  durumChanged();
+}
+function durumChanged(){
+  const d=document.getElementById("f_durum").value;
+  const show=["TAHSILDE","TEMINATTA","CIROLANDI"].includes(d);
+  document.getElementById("hedefWrap").style.display=show?"":"none";
+  document.getElementById("lblHedef").textContent=d==="CIROLANDI"?"Kime Cirolandı?":"Verildiği Banka";
+}
+function editPayment(id){
+  const p=DB.payments.find(x=>x.id===id);
+  openModal(p.yon||"VERILEN");
+  document.getElementById("tekrarWrap").style.display="none";
+  document.getElementById("modalTitle").textContent="Kaydı Düzenle";
+  f_id.value=p.id;f_tarih.value=p.tarih;f_tutar.value=p.tutar;f_firma.value=p.firma;
+  f_tur.value=p.tur;f_banka.value=p.banka;f_not.value=p.not||"";
+  f_seri.value=p.seriNo||"";f_hedef.value=p.hedef||"";
+  if(![...f_tur.options].some(o=>o.value===p.tur))f_tur.add(new Option(p.tur,p.tur,true,true));
+  f_durum.value=p.durum;durumChanged();
+}
+function openModal(yon){
+  document.getElementById("pform").reset();
+  document.getElementById("modalTitle").textContent=yon==="ALINAN"?"Gelen Çek Ekle":"Yeni Kayıt";
+  f_id.value="";f_tarih.value=todayStr();
+  document.getElementById("tekrarWrap").style.display="";
+  document.getElementById("tekrarAyWrap").style.display="none";
+  setYon(yon||"VERILEN");
+  document.getElementById("overlay").classList.add("show");
+  setTimeout(()=>f_firma.focus(),50);
+}
+function closeModal(){document.getElementById("overlay").classList.remove("show");}
+document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeModal();});
+async function submitForm(e){
+  e.preventDefault();
+  const tutar=parseFloat(f_tutar.value)||0;
+  const body={tarih:f_tarih.value,firma:f_firma.value.trim().toLocaleUpperCase("tr"),tur:f_tur.value,
+    banka:f_banka.value.trim().toLocaleUpperCase("tr"),tutar,yon:formYon,durum:f_durum.value,
+    seriNo:f_seri.value.trim(),hedef:f_hedef.value.trim().toLocaleUpperCase("tr"),not:f_not.value.trim(),sirket:SIRKET};
+  if(f_id.value)await fetch(`/api/otp/payments/${f_id.value}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  else{
+    // Aylık tekrar: aynı kaydı her ayın aynı gününe kopyalar
+    const kez=document.getElementById("f_tekrar").value==="A"?Math.max(2,Math.min(36,+document.getElementById("f_tekrarAy").value||2)):1;
+    let tarih=body.tarih;
+    for(let i=0;i<kez;i++){
+      await fetch("/api/otp/payments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body,tarih})});
+      tarih=birAySonra(tarih);
+    }
+    if(kez>1)alert(kez+" aylık kayıt oluşturuldu ("+trDateKisa(body.tarih)+" → "+trDateKisa(tarih)+" öncesi).");
+  }
+  closeModal();loadData();return false;
+}
+function fillDatalists(){
+  document.getElementById("firmalar").innerHTML=[...new Set(DB.payments.map(p=>p.firma))].sort().map(f=>`<option value="${f}">`).join("");
+  const bankalar=new Set();
+  DB.payments.forEach(p=>{if(p.banka)bankalar.add(p.banka);if(p.hedef)bankalar.add(p.hedef);});
+  document.getElementById("bankalar").innerHTML=[...bankalar].sort().map(b=>`<option value="${b}">`).join("");
+}
+
+/* ---------- DIA: önce önizleme, onaydan sonra uygulama ---------- */
+let DIA_BEKLEYEN=null;
+async function diaUpload(input){
+  const file=input.files[0];
+  input.value="";
+  if(file)diaDosya(file);
+}
+function diaOzetHtml(r,onizleme){
+  const liste=(baslik,l,toplamAdet)=>l&&l.length?`<p style="font-weight:700;margin-top:10px">${baslik}</p>
+    <div class="dia-list">${l.map(x=>`<div>${x}</div>`).join("")}${toplamAdet>l.length?`<div style="font-weight:700">… ve ${toplamAdet-l.length} kayıt daha</div>`:""}</div>`:"";
+  const korumaNotu=`<p style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:8px 12px;font-size:12px;color:#1e40af;margin-top:10px">🔒 <b>Koruma kuralı:</b> Bir kayıt "Ödendi/Tahsil Edildi" olduysa, DIA'nın eski/işlenmemiş verisi bunu otomatik geri "bekliyor"a çeviremez — yalnızca Karşılıksız/İptal bilgisi her zaman işlenir.</p>`;
+  if(r.tip==="kredi")return `
+    <p style="font-size:15px;margin-bottom:10px">💳 Kredi listesi tanındı — <b>${r.toplam}</b> taksit ${onizleme?"incelendi":"işlendi"}:</p>
+    <div class="cards" style="grid-template-columns:repeat(4,1fr)">
+      <div class="card c-purple"><div class="lbl">Yeni Kredi</div><div class="val">${r.krediYeni}</div></div>
+      <div class="card c-green"><div class="lbl">Yeni Taksit</div><div class="val">${r.taksitYeni}</div></div>
+      <div class="card c-blue"><div class="lbl">Güncellenecek</div><div class="val">${r.guncellenen}</div></div>
+      <div class="card"><div class="lbl">Değişmeyen</div><div class="val">${r.degismeyen}</div></div>
+    </div>
+    ${liste("🆕 Eklenecek taksitler:",r.yeniListe,r.taksitYeni)}
+    ${liste("🔄 Güncellenecek taksitler:",r.guncelListe,r.guncellenen)}
+    ${liste("🔒 Korunacaklar (ödendi kalacak):",r.korunanListe,(r.korunanListe||[]).length)}
+    ${(r.korunanListe&&r.korunanListe.length)?korumaNotu:""}`;
+  return `
+    <p style="font-size:15px;margin-bottom:10px">📥 Çek listesi tanındı — <b>${r.toplam}</b> kayıt ${onizleme?"incelendi":"işlendi"}:</p>
+    <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+      <div class="card c-green"><div class="lbl">Yeni Eklenecek</div><div class="val">${r.yeni.length}</div></div>
+      <div class="card c-blue"><div class="lbl">Güncellenecek</div><div class="val">${r.guncellenen.length}</div></div>
+      <div class="card"><div class="lbl">Değişmeyen</div><div class="val">${r.degismeyen}</div></div>
+    </div>
+    ${liste("🆕 Yeni eklenecekler:",r.yeni,r.yeni.length)}
+    ${liste("🔄 Güncellenecekler:",r.guncellenen,r.guncellenen.length)}
+    ${liste("🔒 Korunacaklar (ödendi/tahsil edildi kalacak):",r.korunan,(r.korunan||[]).length)}
+    ${(r.korunan&&r.korunan.length)?korumaNotu:""}
+    <p style="color:var(--muted);font-size:12.5px;margin-top:12px">Not: DIA raporunda olmayan kayıtlara (kredi, maaş vb.) dokunulmaz.</p>`;
+}
+const diaKapatBtn='<button type="button" class="btn btn-primary" onclick="diaKapat()">Tamam</button>';
+function diaKapat(){DIA_BEKLEYEN=null;document.getElementById("diaOverlay").classList.remove("show");}
+async function diaDosya(file){
+  const buf=await file.arrayBuffer();
+  const res=await fetch("/api/otp/dia-import?onizle=1&sirket="+encodeURIComponent(SIRKET),{method:"POST",headers:{"Content-Type":"application/octet-stream"},body:buf});
+  const r=await res.json();
+  const el=document.getElementById("diaResult"),btns=document.getElementById("diaButonlar");
+  if(r.error){
+    document.getElementById("diaBaslik").textContent="⚠️ DIA Raporu Okunamadı";
+    el.innerHTML=`<p style="color:var(--red);font-weight:600">${r.error}</p>`;
+    btns.innerHTML=diaKapatBtn;
+  }else{
+    const degisiklik=r.tip==="kredi"?(r.krediYeni+r.taksitYeni+r.guncellenen):(r.yeni.length+r.guncellenen.length);
+    document.getElementById("diaBaslik").textContent="🔍 Önizleme — Onayınız Bekleniyor";
+    el.innerHTML=`<p style="background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:9px 13px;font-size:13.5px;font-weight:600;color:var(--amber)">Henüz hiçbir şey değişmedi. Aşağıdaki değişiklikler ancak onaylarsanız uygulanacak.</p>`+diaOzetHtml(r,true);
+    if(degisiklik===0){
+      el.innerHTML+=`<p style="font-weight:700;margin-top:10px;color:var(--green)">✔ Veri zaten güncel — yapılacak değişiklik yok.</p>`;
+      btns.innerHTML=diaKapatBtn;
+    }else{
+      DIA_BEKLEYEN=buf;
+      btns.innerHTML=`<button type="button" class="mini-btn del" style="padding:9px 16px" onclick="diaKapat()">✖ Reddet</button>
+        <button type="button" class="btn" style="background:var(--green);color:#fff" onclick="diaOnayla()">✔ Onayla ve Uygula</button>`;
+    }
+  }
+  document.getElementById("diaOverlay").classList.add("show");
+}
+async function diaOnayla(){
+  if(!DIA_BEKLEYEN)return;
+  const res=await fetch("/api/otp/dia-import?sirket="+encodeURIComponent(SIRKET),{method:"POST",headers:{"Content-Type":"application/octet-stream"},body:DIA_BEKLEYEN});
+  const r=await res.json();
+  DIA_BEKLEYEN=null;
+  const el=document.getElementById("diaResult"),btns=document.getElementById("diaButonlar");
+  if(r.error){el.innerHTML=`<p style="color:var(--red);font-weight:600">⚠️ ${r.error}</p>`;}
+  else{
+    document.getElementById("diaBaslik").textContent="✅ Değişiklikler Uygulandı";
+    el.innerHTML=diaOzetHtml(r,false)+`<p style="color:var(--muted);font-size:12.5px;margin-top:10px">Uygulama öncesi verinin yedeği otomatik alındı.</p>`;
+    loadData();
+  }
+  btns.innerHTML=diaKapatBtn;
+}
+
+/* ---------- AYARLAR ---------- */
+const apiPost=async(url,body)=>await(await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})})).json();
+const ayarHata=m=>{document.getElementById("ayarHata").textContent=m||"";};
+function ayarAc(){
+  const admin=DB.oturum&&DB.oturum.rol==="admin";
+  document.getElementById("ayarAdmin").style.display=admin?"":"none";
+  document.getElementById("ayarYetkisiz").style.display=admin?"none":"";
+  document.getElementById("ayarOverlay").classList.add("show");
+}
+function ayarKapat(){
+  document.getElementById("ayarOverlay").classList.remove("show");
+  ayarHata("");
+  document.getElementById("yedekListe").innerHTML="";
+}
+async function yedekleriListele(){
+  const r=await apiPost("/api/otp/yedekler",{sirket:SIRKET});
+  if(r.error){ayarHata(r.error);return;}
+  const el=document.getElementById("yedekListe");
+  el.innerHTML=r.yedekler.map(y=>`
+    <div class="yedek-satir">
+      <span class="ya">${y.ad}</span>
+      <span style="color:var(--muted)">${y.tarih}</span>
+      <span class="badge ${y.kayit?"b-teal":"b-gray"}">${y.kayit} kayıt</span>
+      <span class="badge ${y.kaynak==="yerel"?"b-indigo":"b-purple"}">${y.kaynak==="yerel"?"program klasörü":"gizli ayna"}</span>
+      <button class="mini-btn act" onclick="yedekYukle('${y.kaynak}','${y.ad}',${y.kayit})">⬆ Geri Yükle</button>
+    </div>`).join("")||'<div class="empty">Yedek bulunamadı.</div>';
+}
+async function yedekYukle(kaynak,ad,kayit){
+  if(!confirm(`"${ad}" yedeği geri yüklenecek (${kayit} kayıt).\nMevcut veriler bu yedekle DEĞİŞTİRİLECEK.\n(Önce mevcut durumun yedeği alınır.)\n\nDevam edilsin mi?`))return;
+  const r=await apiPost("/api/otp/yedek-yukle",{kaynak,ad,sirket:SIRKET});
+  if(r.ok){ayarKapat();alert(`Yedek geri yüklendi: ${r.kayit} kayıt.`);loadData();}
+  else ayarHata(r.error||"Geri yükleme başarısız.");
+}
+let LOG_KAYITLAR=[];
+async function gunluguAc(){
+  const r=await apiPost("/api/otp/log",{sirket:SIRKET});
+  if(r.error){ayarHata(r.error);return;}
+  LOG_KAYITLAR=r.kayitlar;
+  document.getElementById("logAra").value="";
+  logFiltrele();
+  document.getElementById("logOverlay").classList.add("show");
+}
+function logFiltrele(){
+  const q=document.getElementById("logAra").value.toLocaleLowerCase("tr");
+  const list=LOG_KAYITLAR.filter(k=>!q||(k.islem+" "+k.detay+" "+(k.kim||"")).toLocaleLowerCase("tr").includes(q));
+  document.getElementById("logSayi").textContent=`(${list.length} kayıt gösteriliyor)`;
+  document.getElementById("logIcerik").innerHTML=list.map(k=>`
+    <div class="log-satir ${k.islem.includes("⚠️")?"uyari":""}">
+      <span class="lz">${k.zaman}</span><span class="lk">${k.kim||"—"}</span><span class="li">${k.islem}</span><span class="ld">${k.detay||""}</span>
+    </div>`).join("")||'<div class="empty">Kayıt yok.</div>';
+}
+async function sifreDegistir(){
+  const hedef=document.getElementById("sdHedef").value;
+  const yeni=document.getElementById("sdYeni").value;
+  const mevcut=document.getElementById("sdMevcut").value;
+  if(yeni.length<6){ayarHata("Yeni şifre en az 6 karakter olmalı.");return;}
+  if(!mevcut){ayarHata("Onay için mevcut admin şifrenizi girin.");return;}
+  const r=await apiPost("/api/otp/sifre-degistir",{hedef,yeni,mevcut});
+  if(r.ok){
+    document.getElementById("sdYeni").value=document.getElementById("sdMevcut").value="";
+    ayarHata("");
+    alert(`"${hedef}" hesabının şifresi değiştirildi.\nBir sonraki girişte yeni şifre geçerli olacak.`);
+  }else ayarHata(r.error||"Şifre değiştirilemedi.");
+}
+async function fabrikaSifirla(){
+  const sirketAdi=DB.sirketler?.find(s=>s.kod===SIRKET)?.ad||SIRKET;
+  if(!confirm(`SADECE "${sirketAdi}" firmasının TÜM kayıtları silinecek (diğer firmalar etkilenmez). Emin misiniz?\n(Silmeden önce yedek alınır.)`))return;
+  const r=await apiPost("/api/otp/sifirla",{sirket:SIRKET});
+  if(r.ok){ayarKapat();alert("Tüm veriler sıfırlandı. Eski verinin yedeği alındı.");loadData();}
+  else ayarHata(r.error||"İşlem başarısız.");
+}
+
+/* ---------- SEKME + YAZDIRMA ---------- */
+const TAB_AD={ozet:"Özet",aylik:"Aylık Görünüm",cekler:"Çek Portföyü",krediler:"Krediler",tumu:"Tüm Kayıtlar",rapor:"Raporlar",icgoru:"İçgörüler"};
+let aktifTab="ozet";
+document.getElementById("tabs").addEventListener("click",e=>{
+  const btn=e.target.closest("button");if(!btn)return;
+  aktifTab=btn.dataset.tab;
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("active",b===btn));
+  document.querySelectorAll("main section").forEach(s=>s.style.display=s.id==="tab-"+aktifTab?"":"none");
+});
+let acilanlar=[],printGizli=[],printAcik=[];
+const ayAd=a=>AYLAR[+a.slice(5)-1]+" "+a.slice(0,4);
+window.addEventListener("beforeprint",()=>{
+  // Yazdırırken kapalı ayları/bölümleri geçici olarak aç
+  acilanlar=[...document.querySelectorAll("details:not([open])")];
+  acilanlar.forEach(d=>d.open=true);
+  let alt="Ödeme Takip Paneli — "+TAB_AD[aktifTab];
+  if(aktifTab==="tumu"){const fo=filtreOzeti();if(fo)alt+=" ("+fo+")";}
+  if(aktifTab==="aylik"){
+    // Seçili ay aralığı dışındaki ayları/yılları çıktıya alma; aralıktaki gizli yılları çıktı için göster
+    const bas=document.getElementById("pBas")?.value,bit=document.getElementById("pBit")?.value;
+    if(bas&&bit&&bas<=bit){
+      document.querySelectorAll("#tab-aylik details.month-det").forEach(d=>{
+        if(d.dataset.ay<bas||d.dataset.ay>bit){d.style.display="none";printGizli.push(d);}
+      });
+      document.querySelectorAll("#tab-aylik details.year-det").forEach(d=>{
+        const y=d.dataset.yil;
+        if(y<bas.slice(0,4)||y>bit.slice(0,4)){d.style.display="none";printGizli.push(d);}
+        else if(d.classList.contains("yil-gizli")){d.classList.remove("yil-gizli");printAcik.push(d);}
+      });
+      alt+=bas===bit?` — ${ayAd(bas)}`:` — ${ayAd(bas)} → ${ayAd(bit)}`;
+    }
+  }
+  document.getElementById("printBaslik").textContent=alt;
+  document.getElementById("printTarih").textContent="Yazdırma tarihi: "+new Date().toLocaleDateString("tr-TR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+});
+window.addEventListener("afterprint",()=>{
+  acilanlar.forEach(d=>d.open=false);acilanlar=[];
+  printGizli.forEach(d=>d.style.display="");printGizli=[];
+  printAcik.forEach(d=>d.classList.add("yil-gizli"));printAcik=[];
+});
+
+/* ---------- SÜRÜKLE-BIRAK DIA ---------- */
+let dragSayac=0;
+window.addEventListener("dragover",e=>e.preventDefault());
+window.addEventListener("dragenter",e=>{e.preventDefault();dragSayac++;
+  if(e.dataTransfer&&[...e.dataTransfer.types].includes("Files"))document.getElementById("dropHint").style.display="flex";});
+window.addEventListener("dragleave",()=>{if(--dragSayac<=0){dragSayac=0;document.getElementById("dropHint").style.display="none";}});
+window.addEventListener("drop",e=>{
+  e.preventDefault();dragSayac=0;document.getElementById("dropHint").style.display="none";
+  const f=e.dataTransfer.files[0];
+  if(!f)return;
+  if(f.name.toLowerCase().endsWith(".xlsx"))diaDosya(f);
+  else alert("Lütfen .xlsx uzantılı bir DIA raporu bırakın.");
+});
+
+/* ---------- MODÜL SEKMELERİ (ÖTP | TTP | PTP) ---------- */
+const MODULLER={
+  ttp:{buton:"modTtp",frame:"ttpFrame",url:"http://127.0.0.1:8000/"},
+  ptp:{buton:"modPtp",frame:"ptpFrame",url:"http://127.0.0.1:4747/"},
+};
+function modulSec(m){
+  document.getElementById("modOtp").classList.toggle("aktif",m==="otp");
+  for(const [ad,mod] of Object.entries(MODULLER)){
+    const aktif=m===ad,fr=document.getElementById(mod.frame);
+    document.getElementById(mod.buton).classList.toggle("aktif",aktif);
+    if(aktif&&!fr.src)fr.src=mod.url;
+    fr.style.display=aktif?"block":"none";
+  }
+  const otp=m==="otp";
+  for(const s of ["header","nav","main","footer"])document.querySelector(s).style.display=otp?"":"none";
+}
+
+/* ---------- TEMA ---------- */
+function temaUygula(){
+  const koyu=localStorage.getItem("tema")==="dark";
+  document.body.classList.toggle("dark",koyu);
+  document.getElementById("temaBtn").textContent=koyu?"☀️":"🌙";
+}
+function temaDegistir(){
+  localStorage.setItem("tema",document.body.classList.contains("dark")?"light":"dark");
+  temaUygula();
+}
+temaUygula();
+
+document.getElementById("todayLbl").textContent=new Date().toLocaleDateString("tr-TR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+loadData();
+</script>
+</body>
+</html>
