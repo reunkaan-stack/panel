@@ -62,6 +62,7 @@ export function TeklifDuzenle({
 	);
 
 	const [durum, setDurum] = useState<string | null>(null);
+	const [sonEklenen, setSonEklenen] = useState<number | null>(null);
 	const [bekliyor, basla] = useTransition();
 
 	const hesap = useMemo(
@@ -79,6 +80,23 @@ export function TeklifDuzenle({
 
 	function yaz(ad: keyof typeof alan, deger: string) {
 		setAlan((a) => ({ ...a, [ad]: deger }));
+	}
+
+	/* Yeni kalem listenin sonuna eklenip odaklanıyor: eklendiğini
+	   görmek için sayfada aranmasın. */
+	function kalemEkle() {
+		setKalemler((k) => [
+			...k,
+			{
+				sira: k.length + 1,
+				baslik: '',
+				aciklama: '',
+				miktar: '1',
+				birim: 'adet',
+				birim_fiyat: '0',
+			},
+		]);
+		setSonEklenen(kalemler.length);
 	}
 
 	function kalemYaz(i: number, ad: keyof KalemGirdisi, deger: string) {
@@ -226,20 +244,8 @@ export function TeklifDuzenle({
 					<span className="etiket">Kalemler · {kalemler.length}</span>
 					<button
 						type="button"
-						onClick={() =>
-							setKalemler((k) => [
-								...k,
-								{
-									sira: k.length + 1,
-									baslik: '',
-									aciklama: '',
-									miktar: '1',
-									birim: 'adet',
-									birim_fiyat: '0',
-								},
-							])
-						}
-						className="etiket text-vurgu-metin hover:text-metin"
+						onClick={kalemEkle}
+						className="dugme dugme-bos !px-3 !py-1.5"
 					>
 						+ Kalem ekle
 					</button>
@@ -263,6 +269,7 @@ export function TeklifDuzenle({
 										placeholder="Kalem adı"
 										className="alan min-w-40 flex-1"
 										aria-label={`${i + 1}. kalem adı`}
+										autoFocus={sonEklenen === i}
 									/>
 									<button
 										type="button"
@@ -317,6 +324,16 @@ export function TeklifDuzenle({
 						);
 					})}
 				</ul>
+
+				{/* Liste uzayınca üstteki düğmeye dönmek için yukarı
+				    kaydırmak gerekiyordu; ikincisi burada duruyor. */}
+				<button
+					type="button"
+					onClick={kalemEkle}
+					className="dugme dugme-bos mt-4 w-full"
+				>
+					+ Kalem ekle
+				</button>
 			</section>
 
 			{/* ---- Toplam ---- */}

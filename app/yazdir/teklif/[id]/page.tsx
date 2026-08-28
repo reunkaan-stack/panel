@@ -5,6 +5,7 @@ import { superadminDenetle } from '@/lib/yetki';
 import { paraBicimle } from '@/lib/ortak/para';
 import { tarihiBicimle } from '@/lib/ortak/tarih';
 import { toplamlar, type Teklif, type TeklifKalemi } from '@/lib/teklif';
+import { Logo } from '@/bilesenler/arayuz/Logo';
 import { YazdirDugmesi } from './YazdirDugmesi';
 
 export const metadata: Metadata = { title: 'Teklif' };
@@ -58,8 +59,9 @@ export default async function TeklifYazdir({
 			<main className="kagit">
 				<header className="ust">
 					<div>
-						<p className="marka">KARAS TEKNOLOJİ</p>
-						<p className="marka-alt">
+						{/* Vektör logo: kâğıtta da keskin çıkıyor. */}
+						<Logo yukseklik={26} className="logo" />
+						<p className="marka-alt" style={{ marginTop: '10px' }}>
 							Karas Teknoloji ve Mağazacılık İth. İhr. Ltd. Şti.
 						</p>
 						<p className="marka-alt">
@@ -207,8 +209,7 @@ const STIL = `
 
   .ust { display: flex; justify-content: space-between; gap: 20px;
          border-bottom: 2px solid #16160f; padding-bottom: 14px; }
-  .marka { font-family: var(--font-plex-mono), monospace; font-size: 13pt;
-           font-weight: 600; letter-spacing: .18em; margin: 0 0 6px; }
+  .kagit .logo { color: #16160f; display: block; }
   .marka-alt { font-size: 8.5pt; color: #5b5b4f; margin: 0; }
   .no-kutu { text-align: right; flex-shrink: 0; }
   .no { font-family: var(--font-plex-mono), monospace; font-size: 12pt;
