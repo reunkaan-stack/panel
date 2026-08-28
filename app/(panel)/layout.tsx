@@ -35,12 +35,20 @@ export default async function PanelDuzeni({
 
 				<div className="flex items-center gap-4">
 					{superadmin && (
-						<Link
-							href="/kisiler"
-							className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-metin-3 hover:text-metin"
-						>
-							Kişiler
-						</Link>
+						<>
+							<Link
+								href="/teklifler"
+								className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-metin-3 hover:text-metin"
+							>
+								Teklifler
+							</Link>
+							<Link
+								href="/kisiler"
+								className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-metin-3 hover:text-metin"
+							>
+								Kişiler
+							</Link>
+						</>
 					)}
 					<span className="hidden font-mono text-[0.6875rem] tracking-[0.04em] text-metin-3 sm:inline">
 						{kullanici.email}
