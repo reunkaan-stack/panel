@@ -5,6 +5,7 @@ import { superadminDenetle } from '@/lib/yetki';
 import { paraBicimle } from '@/lib/ortak/para';
 import { tarihiBicimle } from '@/lib/ortak/tarih';
 import { toplamlar, type Teklif, type TeklifKalemi } from '@/lib/teklif';
+import { KURUM, adresTekSatir } from '@/lib/kurum';
 import { Logo } from '@/bilesenler/arayuz/Logo';
 import { YazdirDugmesi } from './YazdirDugmesi';
 
@@ -62,11 +63,13 @@ export default async function TeklifYazdir({
 						{/* Vektör logo: kâğıtta da keskin çıkıyor. */}
 						<Logo yukseklik={26} className="logo" />
 						<p className="marka-alt" style={{ marginTop: '10px' }}>
-							Karas Teknoloji ve Mağazacılık İth. İhr. Ltd. Şti.
+							{KURUM.unvan}
 						</p>
+						<p className="marka-alt">{adresTekSatir()}</p>
 						<p className="marka-alt">
-							karasteknoloji.com · info@karasteknoloji.com
+							{KURUM.telefonGosterim} · {KURUM.eposta}
 						</p>
+						<p className="marka-alt">{KURUM.site}</p>
 					</div>
 					<div className="no-kutu">
 						<p className="etiket">Teklif No</p>
@@ -175,7 +178,8 @@ export default async function TeklifYazdir({
 
 				<footer className="alt">
 					<p>
-						Sorularınız için: <strong>info@karasteknoloji.com</strong>
+						Sorularınız için:{' '}
+						<strong>{KURUM.telefonGosterim}</strong> · {KURUM.eposta}
 					</p>
 					<p className="imza">Karas Teknoloji ❤️</p>
 				</footer>
