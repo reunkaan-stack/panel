@@ -39,6 +39,10 @@ export default async function PtpSayfasi({
 				<p className="mt-4 max-w-lg text-sm leading-relaxed text-metin-2">
 					{e instanceof YetkisizHata ? e.message : 'Firma bilgisi çözülemedi.'}
 				</p>
+				<p className="mt-3 max-w-lg text-sm leading-relaxed text-metin-3">
+					Seçimi sayfanın <strong>sağ üstündeki</strong> firma kutusundan
+					yapabilirsiniz. Seçtiğiniz firma hatırlanır.
+				</p>
 			</div>
 		);
 	}

@@ -85,3 +85,36 @@ export async function firmaSec(firmaId: string): Promise<void> {
 		maxAge: 60 * 60 * 24 * 30,
 	});
 }
+
+/**
+ * Süperadminin seçebileceği firmalar. Süperadmin değilse boş liste —
+ * normal kullanıcının seçeceği bir şey yok, firması bellidir.
+ */
+export const secilebilirFirmalar = cache(async function secilebilirFirmalar(): Promise<
+	{ id: string; ad: string; kisa_ad: string }[]
+> {
+	const kullanici = await aktifKullanici();
+	if (kullanici.rol !== 'superadmin') return [];
+
+	const supabase = await sunucuIstemcisi();
+	const { data } = await supabase
+		.from('firmalar')
+		.select('id, ad, kisa_ad')
+		.eq('aktif', true)
+		.is('silindi', null)
+		.order('ad');
+
+	return data ?? [];
+});
+
+/**
+ * Seçili firma; seçilmemişse null. islemFirmasi() hata fırlatıyor —
+ * bu, "seçim var mı" sorusunu hata yakalamadan sormak için.
+ */
+export const seciliFirma = cache(async function seciliFirma(): Promise<string | null> {
+	try {
+		return await islemFirmasi();
+	} catch {
+		return null;
+	}
+});

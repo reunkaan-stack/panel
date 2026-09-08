@@ -3,9 +3,11 @@ import { redirect } from 'next/navigation';
 import { AltBilgi } from '@/bilesenler/arayuz/AltBilgi';
 import { TemaSecici } from '@/bilesenler/arayuz/TemaSecici';
 import { CikisDugmesi } from '@/bilesenler/panel/CikisDugmesi';
+import { FirmaSecici } from '@/bilesenler/panel/FirmaSecici';
 import { supabaseAyarli } from '@/lib/supabase/ayar';
 import { oturumdakiKullanici } from '@/lib/supabase/sunucu';
 import { superadminMi } from '@/lib/yetki';
+import { secilebilirFirmalar, seciliFirma } from '@/lib/yetki/firma';
 
 /* Panel kabuğu — oturum zorunlu.
 
@@ -28,12 +30,21 @@ export default async function PanelDuzeni({
 	   süperadminde görünür. */
 	const superadmin = await superadminMi();
 
+	/* Birden çok firma varsa süperadmin hangisi adına çalıştığını
+	   seçer. Seçici başlıkta duruyor: her ekran bu seçime bağlı,
+	   tek bir sayfaya koymak yetmezdi. */
+	const [firmalar, aktifFirma] = await Promise.all([
+		secilebilirFirmalar(),
+		seciliFirma(),
+	]);
+
 	return (
 		<div className="flex min-h-screen flex-col">
 			<header className="flex items-center justify-between gap-4 border-b border-kenarlik px-6 py-4">
 				<span className="etiket text-vurgu-metin">Takip Paneli</span>
 
 				<div className="flex items-center gap-4">
+					<FirmaSecici firmalar={firmalar} secili={aktifFirma} />
 					{superadmin && (
 						<>
 							<Link
