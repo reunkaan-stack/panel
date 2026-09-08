@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
+import { eksikBildir, gorevBildir } from '@/lib/ptp/bildirim';
 
 /* PTP kayıt eylemleri.
 
@@ -187,6 +188,20 @@ export async function kayitEkle(girdi: KayitGirdisi): Promise<Sonuc> {
 			);
 			if (eksikHatasi) throw eksikHatasi;
 			revalidatePath('/ptp/eksikler');
+		}
+
+		/* Bildirim en sonda: kayıt yazılmadan haber vermek yanlış
+		   olurdu. Hata fırlatmıyor, asıl işi engellemiyor. */
+		await gorevBildir(
+			firmaId,
+			gorev.baslik,
+			kullanici.ad,
+			gorev.tur === 'ciro' && girdi.tutar !== undefined
+				? undefined
+				: (girdi.metin?.trim() || undefined)
+		);
+		if (gorev.tur === 'eksik' && eksikler.length > 0) {
+			await eksikBildir(firmaId, eksikler, kullanici.ad);
 		}
 
 		revalidatePath('/ptp');
@@ -528,6 +543,17 @@ export async function gunuKapat(
 				if (eksikHatasi) throw eksikHatasi;
 				revalidatePath('/ptp/eksikler');
 			}
+		}
+
+		/* Gün kapanışında görev başına mesaj atmıyoruz: beş ayrı
+		   bildirim yerine tek satır. */
+		if (satirlar.length > 0 || ciroYazildi) {
+			await gorevBildir(
+				firmaId,
+				'Gün kapatıldı',
+				kullanici.ad,
+				`${satirlar.length} görev${ciroYazildi ? ' · ciro girildi' : ''}`
+			);
 		}
 
 		revalidatePath('/ptp');
