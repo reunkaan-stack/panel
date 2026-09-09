@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
-import { bugun, tarihiBicimle } from '@/lib/ortak/tarih';
+import { bugun, gunGecerli, tarihiBicimle } from '@/lib/ortak/tarih';
 import type { Bolge, GunlukGorev, Kayit } from '@/lib/tipler';
 import { GunListesi } from './bilesenler/GunListesi';
 import { GunuKapat } from './bilesenler/GunuKapat';
@@ -22,9 +22,7 @@ export default async function PtpSayfasi({
 }) {
 	const { kullanici, yonetici } = await yetkiDenetle('ptp', 'okuma');
 	const { tarih: istenenTarih } = await searchParams;
-	const tarih = /^\d{4}-\d{2}-\d{2}$/.test(istenenTarih ?? '')
-		? istenenTarih!
-		: bugun();
+	const tarih = gunGecerli(istenenTarih) ? istenenTarih : bugun();
 
 	let firmaId: string;
 	try {

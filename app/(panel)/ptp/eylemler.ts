@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
+import { gunGecerli } from '@/lib/ortak/tarih';
 import { eksikBildir, gorevBildir, gunKapandiBildir } from '@/lib/ptp/bildirim';
 
 /* PTP kayıt eylemleri.
@@ -345,7 +346,7 @@ export async function gunuKapat(
 	try {
 		const { kullanici, yonetici } = await yetkiDenetle('ptp', 'yazma');
 
-		if (!/^d{4}-d{2}-d{2}$/.test(girdi.tarih)) {
+		if (!gunGecerli(girdi.tarih)) {
 			return { tamam: false, mesaj: 'Tarih geçersiz.' };
 		}
 		if (girdi.gorevler.length === 0 && !girdi.ciro) {

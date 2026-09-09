@@ -13,6 +13,22 @@ export function bugun(): string {
 	return gunuBicimle(new Date());
 }
 
+/**
+ * Geçerli bir 'YYYY-MM-DD' mi?
+ *
+ * ⚠️ Bu denetim TEK YERDE durur. Önce aynı düzenli ifade üç ayrı
+ * dosyaya kopyalanmıştı; birinde ters bölüler düşüp `/^d{4}-d{2}-d{2}$/`
+ * hâline geldi ve "Günü kapat" hiçbir tarihi kabul etmez oldu. Diğer
+ * iki kopya doğru olduğu için hata günlerce görünmedi.
+ */
+export function gunGecerli(gun: string | undefined | null): gun is string {
+	if (!gun || !/^\d{4}-\d{2}-\d{2}$/.test(gun)) return false;
+
+	/* Biçim doğru ama tarih olmayabilir: 2026-02-31 gibi. Date'e
+	   çevirip geri okuyarak doğruluyoruz. */
+	return gunuBicimle(new Date(gun + 'T12:00:00Z')) === gun;
+}
+
 /** Bir anı İstanbul saatine göre 'YYYY-MM-DD' biçimine çevirir. */
 export function gunuBicimle(an: Date): string {
 	/* en-CA yerel biçimi zaten YYYY-MM-DD veriyor; elle parça birleştirmeye

@@ -5,6 +5,7 @@ import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
 import { paraCoz } from '@/lib/ortak/para';
+import { gunGecerli } from '@/lib/ortak/tarih';
 import type { Sonuc } from '../eylemler';
 
 /* Ciro eylemleri — yalnızca yönetici.
@@ -28,7 +29,7 @@ export async function ciroKaydet(
 	try {
 		const { kullanici } = await yetkiDenetle('ptp', 'yonetim');
 
-		if (!/^\d{4}-\d{2}-\d{2}$/.test(tarih)) {
+		if (!gunGecerli(tarih)) {
 			return { tamam: false, mesaj: 'Tarih geçersiz.' };
 		}
 

@@ -244,3 +244,39 @@ const [gorevler, sayim, kisiler] = await Promise.all([...]);
 - Fonksiyonları veri tabanından farklı bölgede çalıştırma
 - Aynı veriyi bir istekte tekrar tekrar sorgulama
 - Bağımsız sorguları ardışık `await` ile sıraya dizme
+
+---
+
+## Aynı kural iki yere yazılmaz
+
+Bir doğrulama, hesap ya da eşleme **tek yerde** durur ve oradan
+çağrılır. Kopyalanırsa kopyalar zamanla ayrışır; kötüsü, biri bozulunca
+diğerleri doğru çalışmaya devam ettiği için hata **görünmez**.
+
+Yaşanmış örnek: tarih doğrulaması üç dosyaya kopyalanmıştı. Birinde
+ters bölüler düşüp `/^d{4}-d{2}-d{2}$/` hâline geldi — yani "dddd-dd-dd"
+yazan bir metni arıyordu, gerçek tarih hiç geçmiyordu. O ekrandaki
+"Günü kapat" işlemi **hiç çalışmadı** ve diğer iki kopya doğru olduğu
+için sorun günlerce fark edilmedi.
+
+Doğrulama tek fonksiyona alınıp çalıştırılarak sınandı: geçerli
+tarihler, olmayan gün (`2026-02-31`), olmayan ay, biçimsiz metin, boş
+ve tanımsız değer.
+
+---
+
+## Betikle kod üretirken kaçış karakterleri
+
+Kod üretmek için kabuk betiği ya da şablon metni kullanıldığında
+**ters bölü karakterleri sessizce yenebilir**. `\d` `\n` `\s`
+gibi diziler düz harfe dönüşür; kod derlenir, tip denetiminden geçer,
+çalışır — ama yanlış çalışır.
+
+Üretilen kod **her zaman geri okunup doğrulanır**:
+
+- Düzenli ifade üretildiyse birkaç örnek girdiyle çalıştırılır
+- Metin içinde `\n` beklenen yerde gerçekten var mı bakılır
+- Şüphede kalınırsa dosya kaçış içermeyen bir yolla yazılır
+
+Derleme ve tip denetimi bu hatayı **yakalamaz**; ikisi de geçerken
+davranış bozuk olabilir.
