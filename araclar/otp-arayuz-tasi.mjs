@@ -134,6 +134,133 @@ if (s.includes(ayarDugmesi)) {
 	rapor.push('⚠ ayarlar düğmesi bulunamadı — kaynak değişmiş olabilir');
 }
 
+/* ---------- 6. Karas Panel teması ---------- */
+/* Renkler panelin paletine çekiliyor. Arayüzün YAPISI değişmiyor:
+   kartlar, tablolar, düzen aynı; değişen renk ve köşe.
+
+   Anlam taşıyan renkler korunuyor. Yeşil "gelen", kırmızı "giden",
+   amber "yaklaşan" demek; hepsini tek vurgu rengine indirmek
+   ekrandaki bilgiyi yok ederdi. Onun yerine aynı anlamlar panelin
+   toprak tonuna çekildi.
+
+   Yuvarlak köşe sıfırlanıyor: panelin temel biçim kuralı bu ve tek
+   değişkenle uygulanabiliyor.
+
+   Yazı tipi DEĞİŞMİYOR. Panelin yazı tipleri üst belgeye yüklenmiş;
+   font-face belge kapsamlı olduğu için çerçeve onları kullanamıyor.
+   Aynı dosyaları buraya ikinci kez yüklemek sayfayı ağırlaştırırdı. */
+
+const TEMA = `
+  /* ============ Karas Panel teması ============ */
+  :root{
+    --bg:#f2f0e9; --card:#faf9f6; --ink:#1a1a1a; --muted:#5c5952;
+    --line:#ddd9d0;
+    --blue:#b8420f;   /* ana eylem: panelin turuncusu */
+    --green:#2f6f4e; --red:#a32b1c; --amber:#9a6b12;
+    --teal:#356b62; --purple:#6d4b63;
+    --radius:0px;     /* panelde yuvarlak köşe yok */
+  }
+
+  body.dark{
+    --bg:#14140f; --card:#1c1c17; --ink:#ebe8e0; --muted:#a8a49a;
+    --line:#33332c;
+    --blue:#e9683a; --green:#5aa87d; --red:#e0705f; --amber:#d3a445;
+    --teal:#6aa79c; --purple:#a888b4;
+  }
+
+  /* Değişkene bağlı olmayan sabit renkler — soğuk gri tonlarıydı,
+     panelin sıcak paletiyle çakışıyordu. */
+  header{background:#1a1a1a;color:#faf9f6}
+  header .date{color:#a8a49a}
+  .btn-ghost{background:#33332c;color:#ebe8e0}
+  .btn-ghost:hover{background:#4a4a40}
+  th{background:#f2f0e9}
+  .mini-btn:hover{background:#f2f0e9}
+  .pbar{background:#e9e6dd;border-radius:0}
+  .dot.gr{background:#c9c4b8}
+  details.year-det>summary{background:#1a1a1a;color:#faf9f6}
+  details.year-det>summary .ok,
+  details.year-det>summary .ozet-txt{color:#a8a49a}
+  details.year-det.eski>summary{background:#e9e6dd;color:#5c5952;border-radius:0}
+  details.year-det.eski>summary .ok,
+  details.year-det.eski>summary .ozet-txt{color:#6e6a62}
+  details.year-det.eski>summary .tot{color:#5c5952}
+
+  /* Rozetler: aynı anlam, panelin tonunda */
+  .b-amber{background:#f5ecd8;color:#7a5410}
+  .b-gray,.b-slate{background:#e9e6dd;color:#5c5952}
+  .b-indigo{background:#e6e0ea;color:#5b3f6b}
+
+  body.dark header{background:#0f0f0b}
+  body.dark th,body.dark .tfoot td{background:#26261f}
+  body.dark .mini-btn:hover{background:#26261f}
+  body.dark .modal{background:#1c1c17}
+  body.dark .pbar,body.dark .bar-row .track{background:#33332c}
+  body.dark .btn-ghost{background:#26261f;color:#ebe8e0}
+  body.dark details.year-det>summary{background:#26261f}
+  body.dark details.year-det.eski>summary{background:#1c1c17;color:#a8a49a}
+  body.dark .b-amber{background:#33291a;color:#d3a445}
+  body.dark .b-gray,body.dark .b-slate{background:#26261f;color:#a8a49a}
+  body.dark .b-indigo{background:#2a2430;color:#a888b4}
+
+  /* Tema panelden yönetiliyor; arayüzün kendi düğmesi kapalı. */
+  #temaBtn{display:none !important}
+`;
+
+if (s.includes(stilSonu)) {
+	s = s.replace(stilSonu, TEMA + stilSonu);
+	rapor.push('panel teması uygulandı (renkler + köşe)');
+} else {
+	rapor.push('⚠ stil bloğu bulunamadı — tema uygulanamadı');
+}
+
+/* ---------- 7. Temayı panelden al ---------- */
+/* Çerçeve ayrı bir belge; panelin data-tema özniteliğini görmüyor.
+   Aynı kaynaktan gömüldüğümüz için üst belge okunabiliyor — hem
+   açılışta hem değiştiğinde. Tek başına açılırsa sistem tercihine
+   düşüyor. */
+
+const TEMA_BETIGI = `
+<script>
+(function () {
+  function uygula() {
+    var koyu;
+    try {
+      var t = window.parent.document.documentElement.getAttribute('data-tema');
+      koyu = t === 'karanlik' ||
+        (!t && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch (e) {
+      /* Üst belge okunamıyor: tek başına açılmış. */
+      koyu = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    if (document.body) document.body.classList.toggle('dark', koyu);
+  }
+
+  uygula();
+  document.addEventListener('DOMContentLoaded', uygula);
+  window.addEventListener('load', uygula);
+
+  try {
+    new MutationObserver(uygula).observe(
+      window.parent.document.documentElement,
+      { attributes: true, attributeFilter: ['data-tema'] }
+    );
+  } catch (e) {}
+
+  window.matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', uygula);
+})();
+</` + `script>
+`;
+
+const govdeSonu = '</' + 'body>';
+if (s.includes(govdeSonu)) {
+	s = s.replace(govdeSonu, TEMA_BETIGI + govdeSonu);
+	rapor.push('tema paneldeki seçimi izliyor');
+} else {
+	rapor.push('⚠ body sonu bulunamadı — tema izleyicisi eklenemedi');
+}
+
 /* ---------- Yaz ---------- */
 
 fs.mkdirSync(path.dirname(HEDEF), { recursive: true });
