@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { modulSeviyesi } from '@/lib/yetki';
+import { aktifOtpFirmasi } from '@/lib/otp/veri';
 
 export const metadata: Metadata = { title: 'Ödeme Takip — Karas Panel' };
 export const dynamic = 'force-dynamic';
@@ -8,57 +9,75 @@ export const dynamic = 'force-dynamic';
 /* Ödeme Takip.
 
    Arayüz yerel programdan olduğu gibi geldi: public/otp/uygulama.html.
-   Tasarım, düzen ve akış aynen korundu — tek satır yeniden yazılmadı.
-   Dönüşümler araclar/otp-arayuz-tasi.mjs içinde tanımlı.
+   Dönüşümler araclar/otp-arayuz-tasi.mjs içinde tanımlı; tasarım, düzen
+   ve akış aynen korundu.
 
    Çerçeve içinde açılıyor. React bileşenine çevirmek 1400 satırlık bir
    arayüzü yeniden yazmak demekti. Aynı kaynaktan servis edildiği için
    oturum çerezi sorunsuz geçiyor.
 
-   Sayfa BİLEREK sade: yetki dışında hiçbir sorgu yapmıyor. Önceki
-   hâlinde firma listesi de buradan okunuyordu ve o sorgu hata verince
-   bütün sayfa açılmıyordu — oysa listeyi arayüz zaten kendi ucundan
-   alıyor. Bir ekranın açılması, göstereceği şeyden fazlasına bağlı
-   olmamalı. */
-
-const ADRES = '/otp/uygulama.html';
+   FİRMA SEÇİMİ ÜST ÇUBUKTA. Arayüzün kendi seçicisi kapatıldı; hangi
+   firmanın verisi geleceğine sunucu karar veriyor. Çerçevenin adresine
+   firma kimliği ekleniyor: adres değişince tarayıcı çerçeveyi yeniden
+   yüklüyor. Olmasaydı üstten firma değiştirildiğinde dıştaki sayfa
+   yenilenir ama içerideki uygulama eski firmanın verisini göstermeye
+   devam ederdi — en sinsi hata türü. */
 
 export default async function OtpSayfasi() {
-	/* yetkiDenetle yerine seviye sorgusu: hata fırlatmıyor, yetkisizlik
-	   ekranda anlaşılır biçimde anlatılıyor. */
 	const seviye = await modulSeviyesi('otp');
 
 	if (!seviye) {
 		return (
-			<div className="mx-auto max-w-2xl px-6 py-16">
-				<span className="etiket text-uyari">Yetki yok</span>
-				<h1 className="mt-3 text-2xl font-semibold tracking-[-0.015em]">
-					Ödeme Takip açılamadı
-				</h1>
-				<p className="mt-4 text-sm leading-relaxed text-metin-2">
-					Bu modüle yetkiniz yok ya da firmanızda kapalı. Süperadmin,{' '}
-					<strong>Kişiler</strong> ekranından Ödeme Takip yetkisi verdikten
-					sonra burası açılır.
-				</p>
-				<Link href="/" className="dugme dugme-bos mt-6 inline-block">
-					← Panele dön
-				</Link>
-			</div>
+			<Uyari
+				etiket="Yetki yok"
+				baslik="Ödeme Takip açılamadı"
+				metin="Bu modüle yetkiniz yok ya da firmanızda kapalı. Süperadmin, Kişiler ekranından Ödeme Takip yetkisi verdikten sonra burası açılır."
+			/>
+		);
+	}
+
+	const firma = await aktifOtpFirmasi();
+
+	if (!firma) {
+		return (
+			<Uyari
+				etiket="Firma seçilmedi"
+				baslik="Hangi firma?"
+				metin="Sayfanın sağ üstündeki firma kutusundan seçim yapın. Seçtiğiniz firma hatırlanır ve panelin bütün ekranları o firmayı gösterir."
+			/>
 		);
 	}
 
 	return (
 		<div className="flex h-[calc(100vh-8.5rem)] flex-col">
 			<iframe
-				src={ADRES}
-				title="Ödeme Takip"
+				src={`/otp/uygulama.html?firma=${firma.id}`}
+				title={`Ödeme Takip — ${firma.ad}`}
 				className="min-h-0 flex-1 border-0"
 			/>
+		</div>
+	);
+}
 
-			{/* Çerçeve bir sebeple açılmazsa kullanıcı burada kalmasın. */}
-			<noscript>
-				<a href={ADRES}>Ödeme Takip’i aç</a>
-			</noscript>
+function Uyari({
+	etiket,
+	baslik,
+	metin,
+}: {
+	etiket: string;
+	baslik: string;
+	metin: string;
+}) {
+	return (
+		<div className="mx-auto max-w-2xl px-6 py-16">
+			<span className="etiket text-uyari">{etiket}</span>
+			<h1 className="mt-3 text-2xl font-semibold tracking-[-0.015em]">
+				{baslik}
+			</h1>
+			<p className="mt-4 text-sm leading-relaxed text-metin-2">{metin}</p>
+			<Link href="/" className="dugme dugme-bos mt-6 inline-block">
+				← Panele dön
+			</Link>
 		</div>
 	);
 }

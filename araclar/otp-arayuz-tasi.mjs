@@ -86,6 +86,27 @@ if (sifreDeseni.test(s)) {
 	rapor.push('⚠ şifre kutusu bulunamadı — kaynak değişmiş olabilir');
 }
 
+/* ---------- 4. Firma seçicisi ---------- */
+/* Seçim panelin üst çubuğunda. Arayüzün kendi seçicisi kalsaydı iki
+   ayrı seçim yolu olurdu ve hangisinin geçerli olduğu belirsizleşirdi.
+
+   Eleman SİLİNMİYOR, gizleniyor: arayüzün JavaScript'i onu adıyla
+   arıyor (innerHTML dolduruyor), silinseydi null üzerinde çalışıp
+   hata verirdi. */
+
+const stilSonu = '</' + 'style>';
+if (s.includes(stilSonu)) {
+	const kural = [
+		'  /* Firma seçimi panelin üst çubuğunda yapılıyor. */',
+		'  #sirketSec { display: none !important; }',
+		stilSonu,
+	].join('\n');
+	s = s.replace(stilSonu, kural);
+	rapor.push('firma seçicisi gizlendi (panelin üst çubuğuna devredildi)');
+} else {
+	rapor.push('⚠ stil bloğu bulunamadı — seçici gizlenemedi');
+}
+
 /* ---------- Yaz ---------- */
 
 fs.mkdirSync(path.dirname(HEDEF), { recursive: true });

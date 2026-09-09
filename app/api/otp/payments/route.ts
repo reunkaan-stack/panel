@@ -2,11 +2,10 @@ import { NextResponse } from 'next/server';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { aktifKullanici, modulSeviyesi } from '@/lib/yetki';
 import {
-	firmaCoz,
+	aktifOtpFirmasi,
 	gunlukYaz,
 	kolonlaraCevir,
 	odemeyeCevir,
-	otpFirmalari,
 	senkronOdendi,
 	yeniKimlik,
 } from '@/lib/otp/veri';
@@ -34,8 +33,7 @@ export async function GET(istek: Request) {
 		const seviye = await modulSeviyesi('otp');
 		if (!seviye) return yetkisiz();
 
-		const istenen = new URL(istek.url).searchParams.get('sirket') ?? '';
-		const firma = await firmaCoz(istenen);
+		const firma = await aktifOtpFirmasi();
 		if (!firma) return yetkisiz();
 
 		const supabase = await sunucuIstemcisi();
@@ -97,8 +95,6 @@ export async function GET(istek: Request) {
 				})),
 		}));
 
-		const firmalar = await otpFirmalari();
-
 		return NextResponse.json({
 			payments: (odemeSonuc.data ?? []).map(odemeyeCevir),
 			krediler,
@@ -108,7 +104,10 @@ export async function GET(istek: Request) {
 			},
 			surum: SURUM,
 			sirketAktif: firma.kod,
-			sirketler: firmalar.map((f) => ({ kod: f.kod, ad: f.ad })),
+			/* Tek firma dönüyor: seçim panelin üst çubuğunda, arayüzün
+			   kendi seçicisi kapatıldı. Liste dönseydi kapalı seçici
+			   yine dolar ve iki ayrı seçim yolu görünürdü. */
+			sirketler: [{ kod: firma.kod, ad: firma.ad }],
 		});
 	} catch (e) {
 		console.error('[otp/payments GET]', e);
@@ -122,7 +121,7 @@ export async function POST(istek: Request) {
 		if (seviye !== 'yazma' && seviye !== 'yonetim') return yetkisiz();
 
 		const govde = (await istek.json()) as Record<string, unknown>;
-		const firma = await firmaCoz(String(govde.sirket ?? ''));
+		const firma = await aktifOtpFirmasi();
 		if (!firma) return yetkisiz();
 
 		const kolonlar = kolonlaraCevir(govde);

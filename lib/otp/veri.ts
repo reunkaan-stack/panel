@@ -2,6 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { aktifKullanici, modulSeviyesi } from '@/lib/yetki';
+import { islemFirmasi } from '@/lib/yetki/firma';
 
 /* ÖTP veri katmanı.
 
@@ -9,13 +10,6 @@ import { aktifKullanici, modulSeviyesi } from '@/lib/yetki';
    bekliyor ve alan adları JSON'daki gibi (`seriNo`, `not`). Tabloda
    kolon adları Türkçe ve alt tireli (`seri_no`, `not_metni`); dönüşüm
    burada, tek yerde yapılıyor. Arayüz hiçbir şey bilmiyor. */
-
-/** Programın şirket kodu → panelin firma kısa adı. */
-const KOD_ESLEME: Record<string, string> = {
-	squalahome: 'squala',
-	squala: 'squala',
-	wellmop: 'wellmop',
-};
 
 export type OtpFirma = { id: string; kod: string; ad: string };
 
@@ -48,17 +42,25 @@ export const otpFirmalari = cache(async function otpFirmalari(): Promise<
 });
 
 /**
- * İstenen şirket kodunu firmaya çevirir; izinsizse null.
- * Boş gelirse ilk izinli firmaya düşer — programın davranışı buydu.
+ * İşlem yapılacak firma — PANELİN ÜST ÇUBUĞUNDAN seçilen firma.
+ *
+ * Önceden istemci her çağrıda `?sirket=` ile hangi firmayı istediğini
+ * söylüyordu ve ÖTP kendi seçicisini taşıyordu. İki ayrı gerçek vardı:
+ * panelin seçtiği firma başka, ÖTP'nin gösterdiği başka olabiliyordu.
+ *
+ * Artık seçim tek yerde ve kararı SUNUCU veriyor. İstemcinin
+ * gönderdiği şirket kodu okunmuyor bile.
  */
-export async function firmaCoz(istenen: string): Promise<OtpFirma | null> {
-	const firmalar = await otpFirmalari();
-	if (firmalar.length === 0) return null;
-
-	const kod = KOD_ESLEME[istenen] ?? istenen;
-	if (!kod) return firmalar[0];
-
-	return firmalar.find((f) => f.kod === kod) ?? null;
+export async function aktifOtpFirmasi(): Promise<OtpFirma | null> {
+	try {
+		const firmaId = await islemFirmasi();
+		const firmalar = await otpFirmalari();
+		return firmalar.find((f) => f.id === firmaId) ?? null;
+	} catch {
+		/* Firma seçilmemiş ya da hesap bir firmaya bağlı değil.
+		   Çağıran 403 basıyor; arayüz uyarıyı gösteriyor. */
+		return null;
+	}
 }
 
 /** Yazma yetkisi var mı. */

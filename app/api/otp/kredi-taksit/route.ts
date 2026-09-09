@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { modulSeviyesi } from '@/lib/yetki';
-import { firmaCoz, gunlukYaz } from '@/lib/otp/veri';
+import { aktifOtpFirmasi, gunlukYaz } from '@/lib/otp/veri';
 
 /* POST /api/otp/kredi-taksit — taksidi ödendi / geri al.
 
@@ -25,7 +25,7 @@ export async function POST(istek: Request) {
 			vade?: string;
 		};
 
-		const firma = await firmaCoz(String(govde.sirket ?? ''));
+		const firma = await aktifOtpFirmasi();
 		if (!firma) {
 			return NextResponse.json(
 				{ error: 'geçersiz veya yetkisiz şirket' },

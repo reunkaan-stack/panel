@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { modulSeviyesi } from '@/lib/yetki';
 import {
-	firmaCoz,
+	aktifOtpFirmasi,
 	gunlukYaz,
 	kolonlaraCevir,
 	odemeyeCevir,
@@ -35,7 +35,7 @@ export async function PUT(
 
 		const { id } = await params;
 		const govde = (await istek.json()) as Record<string, unknown>;
-		const firma = await firmaCoz(String(govde.sirket ?? ''));
+		const firma = await aktifOtpFirmasi();
 		if (!firma) return yetkisiz();
 
 		const supabase = await sunucuIstemcisi();
@@ -79,7 +79,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-	istek: Request,
+	_istek: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
@@ -87,8 +87,7 @@ export async function DELETE(
 		if (seviye !== 'yazma' && seviye !== 'yonetim') return yetkisiz();
 
 		const { id } = await params;
-		const istenen = new URL(istek.url).searchParams.get('sirket') ?? '';
-		const firma = await firmaCoz(istenen);
+		const firma = await aktifOtpFirmasi();
 		if (!firma) return yetkisiz();
 
 		const supabase = await sunucuIstemcisi();

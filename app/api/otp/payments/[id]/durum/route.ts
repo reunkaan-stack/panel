@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { modulSeviyesi } from '@/lib/yetki';
-import { firmaCoz, gunlukYaz, odemeyeCevir, senkronOdendi } from '@/lib/otp/veri';
+import { aktifOtpFirmasi, gunlukYaz, odemeyeCevir, senkronOdendi } from '@/lib/otp/veri';
 
 /* POST /api/otp/payments/<id>/durum — çek durumunu değiştirir.
 
@@ -32,7 +32,7 @@ export async function POST(
 			hedef?: string;
 		};
 
-		const firma = await firmaCoz(String(govde.sirket ?? ''));
+		const firma = await aktifOtpFirmasi();
 		if (!firma) {
 			return NextResponse.json(
 				{ error: 'geçersiz veya yetkisiz şirket' },

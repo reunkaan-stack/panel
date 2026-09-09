@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { modulSeviyesi } from '@/lib/yetki';
-import { firmaCoz, gunlukYaz, odemeyeCevir, senkronOdendi } from '@/lib/otp/veri';
+import { aktifOtpFirmasi, gunlukYaz, odemeyeCevir, senkronOdendi } from '@/lib/otp/veri';
 
 /* POST /api/otp/payments/<id>/toggle — ödendi işaretini çevirir.
 
@@ -22,7 +22,7 @@ export async function POST(
 
 		const { id } = await params;
 		const govde = (await istek.json().catch(() => ({}))) as { sirket?: string };
-		const firma = await firmaCoz(String(govde.sirket ?? ''));
+		const firma = await aktifOtpFirmasi();
 		if (!firma) {
 			return NextResponse.json(
 				{ error: 'geçersiz veya yetkisiz şirket' },
