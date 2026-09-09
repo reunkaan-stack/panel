@@ -280,3 +280,45 @@ gibi diziler düz harfe dönüşür; kod derlenir, tip denetiminden geçer,
 
 Derleme ve tip denetimi bu hatayı **yakalamaz**; ikisi de geçerken
 davranış bozuk olabilir.
+
+## Var olan bir sayfaya kod enjekte ederken
+
+Hazır bir HTML sayfasının üstüne betik eklendiğinde (çerçeveye alınmış
+eski bir uygulama, üçüncü taraf sayfa) **sayfanın kendi değişkenlerine
+`window` üzerinden erişilmez.**
+
+Klasik betikte üst seviyede:
+
+| Bildirim | `window`'a yazılır mı |
+|---|---|
+| `function ad(){}` | **evet** |
+| `var ad` | **evet** |
+| `let ad` / `const ad` | **hayır** |
+
+`let DB = {}` diye tanımlanmış bir değişkene `window.DB` diye bakmak
+her zaman `undefined` verir. Doğrusu bağlantıya doğrudan bakmak,
+varlığını `typeof` ile sınamak:
+
+```js
+// YANLIŞ — let ile tanımlanmışsa hep undefined
+var veri = (window.DB && DB.krediler) ? DB.krediler : [];
+
+// DOĞRU
+var veri = (typeof DB !== 'undefined' && DB && DB.krediler) ? DB.krediler : [];
+```
+
+**Neden tehlikeli:** hata vermez. Değer boş görünür, kod erken çıkar,
+konsol temiz kalır. "Kod yayında ama ekranda yok" tablosu doğar ve
+önce önbellek/deploy sanılır.
+
+## Yutulan hata olmaz
+
+`catch (e) {}` yazılmaz. Bir bölümün çökmesi sayfanın kalanını
+düşürmesin isteniyorsa yine yakalanır ama **mutlaka yazılır**:
+
+```js
+try { ozetiKoy(); } catch (e) { console.error('[kredi özeti]', e); }
+```
+
+Sessiz `catch`, hata ile "hiç çalışmadı" durumunu ayırt edilemez hale
+getirir; teşhis birkaç tur uzar.
