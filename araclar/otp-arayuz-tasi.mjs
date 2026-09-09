@@ -449,7 +449,10 @@ const KREDI_BETIGI = `
 
   window.renderKrediler = function () {
     asil.apply(this, arguments);
-    try { ozetiKoy(); } catch (e) {}
+    /* Özet çökerse kredi listesi ayakta kalsın; ama sessiz kalmasın —
+       "kod yayında ama ekranda yok" durumunu ayırt edebilmek için
+       konsola yazılıyor. */
+    try { ozetiKoy(); } catch (e) { console.error('[kredi özeti]', e); }
   };
 
   function taksitler() {
