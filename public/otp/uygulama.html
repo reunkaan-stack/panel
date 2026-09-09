@@ -233,6 +233,8 @@
   }
   /* Firma seçimi panelin üst çubuğunda yapılıyor. */
   #sirketSec { display: none !important; }
+  /* Ayarlar panelin kendi ekranlarında. */
+  #ayarDugmesi { display: none !important; }
 </style>
 </head>
 <body>
@@ -250,7 +252,7 @@
   <button class="btn btn-teal" onclick="document.getElementById('diaFile').click()">🔄 DIA Raporu Yükle</button>
   <input type="file" id="diaFile" accept=".xlsx" style="display:none" onchange="diaUpload(this)">
   <button class="btn btn-primary" onclick="openModal()">＋ Yeni Kayıt</button>
-  <button class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">⚙️</button>
+  <button id="ayarDugmesi" class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">⚙️</button>
   <span id="kullaniciChip" style="color:#94a3b8;font-size:13.5px;font-weight:600"></span>
   <button class="btn btn-ghost" title="Oturumu kapat" onclick="cikisYap()">⏻ Çıkış</button>
 </header>

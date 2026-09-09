@@ -94,17 +94,44 @@ if (sifreDeseni.test(s)) {
    arıyor (innerHTML dolduruyor), silinseydi null üzerinde çalışıp
    hata verirdi. */
 
+/* ---------- 5. Ayarlar sekmesi ---------- */
+/* Kaldırılıyor: içindeki beş uç (log, sifirla, sifre-degistir,
+   yedekler, yedek-yukle) panele taşınmadı ve 404 dönüyor. Karşılıkları
+   panelin kendi ekranlarında:
+
+     Şifre ve kullanıcı  → Kişiler
+     Bildirim ayarları   → Ayarlar › Bildirimler
+     Yedek               → veri tabanı yedeği
+     Log                 → denetim kayıtları
+
+   Çalışmayan bir düğme bırakmak, kullanıcıya "bozuk" dedirtir. */
+
 const stilSonu = '</' + 'style>';
 if (s.includes(stilSonu)) {
 	const kural = [
 		'  /* Firma seçimi panelin üst çubuğunda yapılıyor. */',
 		'  #sirketSec { display: none !important; }',
+		'  /* Ayarlar panelin kendi ekranlarında. */',
+		'  #ayarDugmesi { display: none !important; }',
 		stilSonu,
 	].join('\n');
 	s = s.replace(stilSonu, kural);
 	rapor.push('firma seçicisi gizlendi (panelin üst çubuğuna devredildi)');
 } else {
 	rapor.push('⚠ stil bloğu bulunamadı — seçici gizlenemedi');
+}
+
+/* Ayarlar düğmesine kimlik veriliyor ki yukarıdaki kural tutsun.
+   Düğme silinmiyor: ayarAc() ve ayarKapat() ona bakıyor. */
+const ayarDugmesi = '<button class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">';
+if (s.includes(ayarDugmesi)) {
+	s = s.replace(
+		ayarDugmesi,
+		'<button id="ayarDugmesi" class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">'
+	);
+	rapor.push('ayarlar sekmesi gizlendi (uçları panele taşınmadı)');
+} else {
+	rapor.push('⚠ ayarlar düğmesi bulunamadı — kaynak değişmiş olabilir');
 }
 
 /* ---------- Yaz ---------- */

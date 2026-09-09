@@ -45,28 +45,15 @@ export default async function PanelDuzeni({
 
 				<div className="flex items-center gap-4">
 					<FirmaSecici firmalar={firmalar} secili={aktifFirma} />
+					{/* Tek kapı: ayrı ayrı bağlantı koymak üst çubuğu
+					    şişiriyordu ve "bunu nereden yapıyordum" sorusunu
+					    her seferinde doğuruyordu. */}
 					<Link
-						href="/ayarlar/bildirimler"
+						href="/ayarlar"
 						className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-metin-3 hover:text-metin"
 					>
-						Bildirimler
+						Ayarlar
 					</Link>
-					{superadmin && (
-						<>
-							<Link
-								href="/teklifler"
-								className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-metin-3 hover:text-metin"
-							>
-								Teklifler
-							</Link>
-							<Link
-								href="/kisiler"
-								className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-metin-3 hover:text-metin"
-							>
-								Kişiler
-							</Link>
-						</>
-					)}
 					<span className="hidden font-mono text-[0.6875rem] tracking-[0.04em] text-metin-3 sm:inline">
 						{kullanici.email}
 					</span>

@@ -37,10 +37,7 @@ export function MudurBasligi({
 				<Link href="/ptp/prim" className="dugme dugme-bos">
 					Prim
 				</Link>
-				<Link href="/ayarlar/bildirimler" className="dugme dugme-bos">
-					Bildirimler
-				</Link>
-				<Link href={`/ptp/rapor?tarih=${tarih}`} className="dugme dugme-bos">
+								<Link href={`/ptp/rapor?tarih=${tarih}`} className="dugme dugme-bos">
 					Performans
 				</Link>
 			</div>
