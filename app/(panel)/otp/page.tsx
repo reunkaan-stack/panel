@@ -16,12 +16,27 @@ export const dynamic = 'force-dynamic';
    arayüzü yeniden yazmak demekti. Aynı kaynaktan servis edildiği için
    oturum çerezi sorunsuz geçiyor.
 
+   ADRESTE SÜRÜM VAR. Arayüz public/ altında duran sabit bir dosya;
+   tarayıcı onu önbelleğe alınca yeni sürüm yayına çıksa bile eskisi
+   görünüyordu — "değişikliği göremiyorum" şikâyetinin kaynağı bu.
+   Adrese yayın kimliği eklenince her yayında adres değişiyor ve
+   çerçeve kendiliğinden tazeleniyor. Kimlik yayın başına sabit
+   olduğu için önbellek yine çalışıyor, yalnızca yeni yayında
+   geçersizleşiyor.
+
    FİRMA SEÇİMİ ÜST ÇUBUKTA. Arayüzün kendi seçicisi kapatıldı; hangi
    firmanın verisi geleceğine sunucu karar veriyor. Çerçevenin adresine
    firma kimliği ekleniyor: adres değişince tarayıcı çerçeveyi yeniden
    yüklüyor. Olmasaydı üstten firma değiştirildiğinde dıştaki sayfa
    yenilenir ama içerideki uygulama eski firmanın verisini göstermeye
    devam ederdi — en sinsi hata türü. */
+
+/* Yayın kimliği. Vercel her yayında commit karmasını veriyor;
+   geliştirmede sunucu her açıldığında değişsin ki elle yenilemek
+   gerekmesin. */
+const SURUM =
+	process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) ??
+	(process.env.NODE_ENV === 'development' ? String(Date.now()) : 'yerel');
 
 export default async function OtpSayfasi() {
 	const seviye = await modulSeviyesi('otp');
@@ -51,7 +66,7 @@ export default async function OtpSayfasi() {
 	return (
 		<div className="flex h-[calc(100vh-8.5rem)] flex-col">
 			<iframe
-				src={`/otp/uygulama.html?firma=${firma.id}`}
+				src={`/otp/uygulama.html?firma=${firma.id}&s=${SURUM}`}
 				title={`Ödeme Takip — ${firma.ad}`}
 				className="min-h-0 flex-1 border-0"
 			/>
