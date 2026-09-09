@@ -121,17 +121,30 @@ if (s.includes(stilSonu)) {
 	rapor.push('⚠ stil bloğu bulunamadı — seçici gizlenemedi');
 }
 
-/* Ayarlar düğmesine kimlik veriliyor ki yukarıdaki kural tutsun.
-   Düğme silinmiyor: ayarAc() ve ayarKapat() ona bakıyor. */
-const ayarDugmesi = '<button class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">';
-if (s.includes(ayarDugmesi)) {
-	s = s.replace(
-		ayarDugmesi,
-		'<button id="ayarDugmesi" class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">'
-	);
-	rapor.push('ayarlar sekmesi gizlendi (uçları panele taşınmadı)');
-} else {
-	rapor.push('⚠ ayarlar düğmesi bulunamadı — kaynak değişmiş olabilir');
+/* Gizlenecek düğmelere kimlik veriliyor ki stil kuralları tutsun.
+   Düğmeler SİLİNMİYOR: arayüzün kendi kodu bazılarına adıyla bakıyor
+   (ayarAc, kullaniciChip'i dolduran kod), silinseydi null üzerinde
+   çalışıp hata verirdi. */
+const kimlikVer = [
+	{
+		bul: '<button class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">',
+		koy: '<button id="ayarDugmesi" class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">',
+		not: 'ayarlar sekmesi gizlendi (uçları panele taşınmadı)',
+	},
+	{
+		bul: '<button class="btn btn-ghost" title="Oturumu kapat" onclick="cikisYap()">',
+		koy: '<button id="cikisDugmesi" class="btn btn-ghost" title="Oturumu kapat" onclick="cikisYap()">',
+		not: 'çıkış düğmesi ve kullanıcı adı gizlendi (panelin üst çubuğunda var)',
+	},
+];
+
+for (const k of kimlikVer) {
+	if (s.includes(k.bul)) {
+		s = s.replace(k.bul, k.koy);
+		rapor.push(k.not);
+	} else {
+		rapor.push('⚠ bulunamadı: ' + k.not);
+	}
 }
 
 /* ---------- 6. Karas Panel teması ---------- */
@@ -203,8 +216,12 @@ const TEMA = `
   body.dark .b-gray,body.dark .b-slate{background:#26261f;color:#a8a49a}
   body.dark .b-indigo{background:#2a2430;color:#a888b4}
 
-  /* Tema panelden yönetiliyor; arayüzün kendi düğmesi kapalı. */
-  #temaBtn{display:none !important}
+  /* Panelin üst çubuğunda zaten var olanlar: tema, çıkış, kullanıcı
+     adı. Aynı şeyi iki kez göstermek yer kaplıyor ve hangisinin
+     geçerli olduğunu belirsizleştiriyor. */
+  #temaBtn,
+  #cikisDugmesi,
+  #kullaniciChip{display:none !important}
 `;
 
 if (s.includes(stilSonu)) {

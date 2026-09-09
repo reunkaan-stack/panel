@@ -288,8 +288,12 @@
   body.dark .b-gray,body.dark .b-slate{background:#26261f;color:#a8a49a}
   body.dark .b-indigo{background:#2a2430;color:#a888b4}
 
-  /* Tema panelden yönetiliyor; arayüzün kendi düğmesi kapalı. */
-  #temaBtn{display:none !important}
+  /* Panelin üst çubuğunda zaten var olanlar: tema, çıkış, kullanıcı
+     adı. Aynı şeyi iki kez göstermek yer kaplıyor ve hangisinin
+     geçerli olduğunu belirsizleştiriyor. */
+  #temaBtn,
+  #cikisDugmesi,
+  #kullaniciChip{display:none !important}
 </style>
 </head>
 <body>
@@ -309,7 +313,7 @@
   <button class="btn btn-primary" onclick="openModal()">＋ Yeni Kayıt</button>
   <button id="ayarDugmesi" class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">⚙️</button>
   <span id="kullaniciChip" style="color:#94a3b8;font-size:13.5px;font-weight:600"></span>
-  <button class="btn btn-ghost" title="Oturumu kapat" onclick="cikisYap()">⏻ Çıkış</button>
+  <button id="cikisDugmesi" class="btn btn-ghost" title="Oturumu kapat" onclick="cikisYap()">⏻ Çıkış</button>
 </header>
 <nav id="tabs">
   <button data-tab="ozet" class="active">Özet</button>
