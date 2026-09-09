@@ -308,7 +308,7 @@
   <button class="btn btn-ghost" onclick="window.print()">🖨️ Yazdır</button>
   <button class="btn btn-ghost" onclick="exportXlsx()">📊 Excel'e Aktar</button>
   <button class="btn btn-ghost" title="Açık/koyu tema" onclick="temaDegistir()" id="temaBtn">🌙</button>
-  <button class="btn btn-teal" onclick="document.getElementById('diaFile').click()">🔄 DIA Raporu Yükle</button>
+  <button class="btn btn-teal" onclick="window.parent.location.href = '/otp/aktarim'">🔄 DIA Raporu Yükle</button>
   <input type="file" id="diaFile" accept=".xlsx" style="display:none" onchange="diaUpload(this)">
   <button class="btn btn-primary" onclick="openModal()">＋ Yeni Kayıt</button>
   <button id="ayarDugmesi" class="btn btn-ghost" title="Ayarlar" onclick="ayarAc()">⚙️</button>

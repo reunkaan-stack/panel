@@ -278,6 +278,29 @@ if (s.includes(govdeSonu)) {
 	rapor.push('⚠ body sonu bulunamadı — tema izleyicisi eklenemedi');
 }
 
+
+/* ---------- 8. DIA yükleme düğmesi panele yönlendiriyor ---------- */
+/* İçe aktarma artık panelin kendi sayfasında: kolon eşleme arayüzü ve
+   önizleme listesi için gereken yer bu HTML'in içinde yoktu. Düğme
+   üst pencereyi oraya götürüyor. */
+
+const diaAktarimBaglantisi = [
+	{
+		bul: `onclick="document.getElementById('diaFile').click()"`,
+		koy: `onclick="window.parent.location.href = '/otp/aktarim'"`,
+		not: 'DIA yükleme düğmesi panel sayfasına yönlendiriyor',
+	},
+];
+
+for (const k of diaAktarimBaglantisi) {
+	if (s.includes(k.bul)) {
+		s = s.replace(k.bul, k.koy);
+		rapor.push(k.not);
+	} else {
+		rapor.push('⚠ bulunamadı: ' + k.not);
+	}
+}
+
 /* ---------- Yaz ---------- */
 
 fs.mkdirSync(path.dirname(HEDEF), { recursive: true });
