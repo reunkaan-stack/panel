@@ -107,8 +107,11 @@ export function kacir(metin: string): string {
 export type WebhookDurumu = {
 	kurulu: boolean;
 	adres: string;
-	/** Telegram'ın son teslim hatası — kurulu ama çalışmıyorsa buradan belli */
+	/** Telegram'ın son teslim hatası. GEÇMİŞ olabilir — aşağıya bak. */
 	sonHata: string | null;
+	/** Hatanın zamanı; ISO metin. Hata yoksa null. */
+	sonHataZamani: string | null;
+	/** Teslim edilememiş mesaj sayısı. Sıfırsa şu an sorun yok. */
 	bekleyen: number;
 };
 
@@ -131,16 +134,24 @@ export async function webhookDurumu(): Promise<WebhookDurumu | null> {
 			result?: {
 				url?: string;
 				last_error_message?: string;
+				last_error_date?: number;
 				pending_update_count?: number;
 			};
 		};
 
 		if (!sonuc.ok || !sonuc.result) return null;
 
+		/* ⚠️ Telegram last_error_message alanını BAŞARILI TESLİMDE
+		   TEMİZLEMİYOR. Sorun çözüldükten sonra da orada duruyor.
+		   "Şu an bozuk" sanılmasın diye zamanı da alınıyor; asıl
+		   gösterge bekleyen mesaj sayısı. */
 		return {
 			kurulu: !!sonuc.result.url,
 			adres: sonuc.result.url ?? '',
 			sonHata: sonuc.result.last_error_message ?? null,
+			sonHataZamani: sonuc.result.last_error_date
+				? new Date(sonuc.result.last_error_date * 1000).toISOString()
+				: null,
 			bekleyen: sonuc.result.pending_update_count ?? 0,
 		};
 	} catch (e) {

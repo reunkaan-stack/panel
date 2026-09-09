@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { KATALOG, type OlayTanimi } from '@/lib/bildirim/katalog';
+import { kisaTarih, saatiBicimle } from '@/lib/ortak/tarih';
 import type { WebhookDurumu } from '@/lib/telegram';
 import {
 	botKaydet,
@@ -110,9 +111,23 @@ export function BildirimAyarlari({
 					</p>
 				)}
 
-				{webhook?.sonHata && (
+				{/* Bekleyen mesaj varsa sorun ŞU AN sürüyor. Yoksa hata
+				    geçmişte kalmış: Telegram bu alanı başarılı teslimde
+				    temizlemiyor, "bozuk" sanılmasın diye soluk ve tarihli
+				    gösteriliyor. */}
+				{webhook?.sonHata && webhook.bekleyen > 0 && (
 					<p className="mt-2 text-sm text-hata">
-						Telegram teslim edemedi: {webhook.sonHata}
+						Telegram teslim edemiyor: {webhook.sonHata}
+					</p>
+				)}
+
+				{webhook?.sonHata && webhook.bekleyen === 0 && (
+					<p className="mt-2 font-mono text-[0.6875rem] tracking-[0.04em] text-metin-3">
+						geçmiş hata
+						{webhook.sonHataZamani &&
+							` · ${kisaTarih(webhook.sonHataZamani)} ${saatiBicimle(webhook.sonHataZamani)}`}
+						{' · '}
+						{webhook.sonHata} — şu an teslim edilemeyen mesaj yok
 					</p>
 				)}
 
