@@ -315,6 +315,33 @@
     border-left:3px solid var(--red);
     padding-left:11px;
   }
+
+  /* Kredi özeti */
+  .kredi-ozet-bas{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .kredi-ozet-baslik{
+    font-size:12px;font-weight:700;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .kredi-ozet-yil{
+    margin-left:auto;padding:5px 10px;font-family:inherit;font-size:13px;
+    font-weight:600;background:var(--card);color:var(--ink);
+    border:1px solid var(--line);border-radius:0;cursor:pointer;
+  }
+  .kredi-ozet-kutular{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:1px;background:var(--line);border:1px solid var(--line);
+  }
+  .kredi-ozet-kart{background:var(--card);padding:12px 14px}
+  .kredi-ozet-kart.vurgu .ko-deger{color:var(--amber)}
+  .ko-ad{
+    display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);
+  }
+  .ko-deger{display:block;margin-top:6px;font-size:17px;font-weight:700}
+  .ko-alt{display:block;margin-top:3px;font-size:11.5px;color:var(--muted)}
+  .kredi-ozet-not{
+    margin:12px 0 0;font-size:12px;line-height:1.6;color:var(--muted);
+  }
 </style>
 </head>
 <body>
@@ -1570,6 +1597,141 @@ loadData();
       toplanacak.forEach(function (ay) { kutu.appendChild(ay); });
       ic.appendChild(kutu);
     });
+  }
+})();
+</script>
+
+<script>
+(function () {
+  var asil = window.renderKrediler;
+  if (typeof asil !== 'function') return;
+
+  var secilenYil = null;
+
+  window.renderKrediler = function () {
+    asil.apply(this, arguments);
+    try { ozetiKoy(); } catch (e) {}
+  };
+
+  function taksitler() {
+    var hepsi = [];
+    (window.DB && DB.krediler ? DB.krediler : []).forEach(function (k) {
+      (k.taksitler || []).forEach(function (t) { hepsi.push(t); });
+    });
+    return hepsi;
+  }
+
+  function oran(t) {
+    if (!t.tutar || t.tutar <= 0) return 0;
+    var o = (t.odenen || 0) / t.tutar;
+    return o < 0 ? 0 : o > 1 ? 1 : o;
+  }
+
+  function hesapla(yil) {
+    var t = taksitler();
+    var o = {
+      yilFaiz: 0, yilBsmv: 0, yilAnapara: 0,
+      tumFaiz: 0,
+      kalan: 0, kalanAnapara: 0, kalanFaiz: 0, kalanBsmv: 0,
+      yillar: {},
+    };
+
+    t.forEach(function (x) {
+      var od = oran(x);
+      var kal = 1 - od;
+      var y = String(x.vade || '').slice(0, 4);
+
+      var faiz = x.faiz || 0, bsmv = x.bsmv || 0, ana = x.anapara || 0;
+
+      o.tumFaiz += faiz * od;
+      if (y) o.yillar[y] = (o.yillar[y] || 0) + faiz * od;
+
+      if (y === yil) {
+        o.yilFaiz += faiz * od;
+        o.yilBsmv += bsmv * od;
+        o.yilAnapara += ana * od;
+      }
+
+      o.kalan += x.kalan || 0;
+      o.kalanAnapara += ana * kal;
+      o.kalanFaiz += faiz * kal;
+      o.kalanBsmv += bsmv * kal;
+    });
+
+    /* Bazı taksitlerde tutar, anapara + faiz + BSMV toplamından
+       büyük çıkıyor: DIA'nın ayrı kolonda verdiği KKDF gibi bir kalem
+       yerel programa hiç alınmamış. Farkı yutmak yerine gösteriyoruz;
+       yoksa dört rakam toplanınca tutmuyor ve güven kayboluyor. */
+    o.kalanDiger = o.kalan - o.kalanAnapara - o.kalanFaiz - o.kalanBsmv;
+
+    return o;
+  }
+
+  function ozetiKoy() {
+    var bolum = document.getElementById('tab-krediler');
+    if (!bolum || !taksitler().length) return;
+
+    var eski = bolum.querySelector('.kredi-ozet');
+    if (eski) eski.remove();
+
+    var buYil = new Date().getFullYear().toString();
+    var h = hesapla(secilenYil || buYil);
+    var yillar = Object.keys(h.yillar).filter(function (y) {
+      return h.yillar[y] > 0.5;
+    }).sort().reverse();
+    if (yillar.indexOf(buYil) === -1) yillar.unshift(buYil);
+    var aktifYil = secilenYil || buYil;
+
+    var p = function (n) { return para(Math.round(n)); };
+
+    var kutu = document.createElement('div');
+    kutu.className = 'panel kredi-ozet';
+    kutu.innerHTML =
+      '<div class="kredi-ozet-bas">' +
+        '<span class="kredi-ozet-baslik">Kredi özeti</span>' +
+        '<select class="kredi-ozet-yil">' +
+          yillar.map(function (y) {
+            return '<option value="' + y + '"' +
+              (y === aktifYil ? ' selected' : '') + '>' + y + '</option>';
+          }).join('') +
+        '</select>' +
+      '</div>' +
+      '<div class="kredi-ozet-kutular">' +
+        kart(aktifYil + ' yılı ödenen faiz', p(h.yilFaiz),
+             h.yilBsmv > 0.5 ? '+ ' + p(h.yilBsmv) + ' BSMV' : '', true) +
+        kart('Kalan borç', p(h.kalan), '') +
+        kart('Kalanın anaparası', p(h.kalanAnapara), '') +
+        kart('Kalanın faizi', p(h.kalanFaiz),
+             h.kalanBsmv > 0.5 ? '+ ' + p(h.kalanBsmv) + ' BSMV' : '') +
+      '</div>' +
+      '<p class="kredi-ozet-not">' +
+        'Tüm yıllarda ödenen faiz: <b>' + p(h.tumFaiz) + '</b>' +
+        ' · ' + aktifYil + ' yılında ödenen anapara: <b>' + p(h.yilAnapara) + '</b>' +
+        (h.kalanBsmv > 0.5 || Math.abs(h.kalanDiger) > 0.5
+          ? '<br>Kalanın geri kalanı: ' +
+            (h.kalanBsmv > 0.5 ? p(h.kalanBsmv) + ' BSMV' : '') +
+            (h.kalanBsmv > 0.5 && Math.abs(h.kalanDiger) > 0.5 ? ' · ' : '') +
+            (Math.abs(h.kalanDiger) > 0.5
+              ? p(h.kalanDiger) + ' diğer (KKDF vb. — DIA raporunda ayrı kolonda)'
+              : '')
+          : '') +
+        '<br>Ödeme tarihi tutulmadığı için yıl ayrımı taksidin vadesine göre yapılır.' +
+      '</p>';
+
+    kutu.querySelector('.kredi-ozet-yil').addEventListener('change', function (e) {
+      secilenYil = e.target.value;
+      ozetiKoy();
+    });
+
+    bolum.insertBefore(kutu, bolum.firstChild);
+  }
+
+  function kart(ad, deger, alt, vurgu) {
+    return '<div class="kredi-ozet-kart' + (vurgu ? ' vurgu' : '') + '">' +
+      '<span class="ko-ad">' + ad + '</span>' +
+      '<span class="ko-deger">' + deger + '</span>' +
+      (alt ? '<span class="ko-alt">' + alt + '</span>' : '') +
+      '</div>';
   }
 })();
 </script>
