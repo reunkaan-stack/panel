@@ -103,3 +103,48 @@ export function kacir(metin: string): string {
 		.replace(/</g, '&lt;')
 		.replace(/>/g, '&gt;');
 }
+
+export type WebhookDurumu = {
+	kurulu: boolean;
+	adres: string;
+	/** Telegram'ın son teslim hatası — kurulu ama çalışmıyorsa buradan belli */
+	sonHata: string | null;
+	bekleyen: number;
+};
+
+/**
+ * Webhook gerçekten kurulu mu — Telegram'a sorar.
+ *
+ * Ekranda "kuruldu" yazan geçici bir mesaj yerine durumu göstermek
+ * için: kullanıcı düğmeye basıp basmadığını hatırlamak zorunda
+ * kalmasın. Kurulu ama teslim edilemiyorsa da buradan görünür.
+ */
+export async function webhookDurumu(): Promise<WebhookDurumu | null> {
+	if (!telegramAyarli()) return null;
+
+	try {
+		const yanit = await fetch(
+			`https://api.telegram.org/bot${JETON}/getWebhookInfo`
+		);
+		const sonuc = (await yanit.json()) as {
+			ok?: boolean;
+			result?: {
+				url?: string;
+				last_error_message?: string;
+				pending_update_count?: number;
+			};
+		};
+
+		if (!sonuc.ok || !sonuc.result) return null;
+
+		return {
+			kurulu: !!sonuc.result.url,
+			adres: sonuc.result.url ?? '',
+			sonHata: sonuc.result.last_error_message ?? null,
+			bekleyen: sonuc.result.pending_update_count ?? 0,
+		};
+	} catch (e) {
+		console.error('[telegram] webhook durumu', e);
+		return null;
+	}
+}

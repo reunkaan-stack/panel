@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { aktifKullanici } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
-import { telegramAyarli, WEBHOOK_GIZLI } from '@/lib/telegram';
+import { telegramAyarli, webhookDurumu, WEBHOOK_GIZLI } from '@/lib/telegram';
 import { BildirimAyarlari } from './bilesenler/BildirimAyarlari';
 
 export const metadata: Metadata = { title: 'Bildirimler — Karas Panel' };
@@ -52,7 +52,7 @@ export default async function BildirimlerSayfasi() {
 
 	const supabase = await sunucuIstemcisi();
 
-	const [botSonuc, tercihSonuc, modulSonuc] = await Promise.all([
+	const [botSonuc, tercihSonuc, modulSonuc, webhook] = await Promise.all([
 		supabase
 			.from('telegram_ayarlari')
 			.select('aktif, chat_id')
@@ -67,6 +67,9 @@ export default async function BildirimlerSayfasi() {
 			.select('modul')
 			.eq('firma_id', firmaId)
 			.eq('aktif', true),
+		/* Telegram'a soruluyor: "kuruldu" diye geçici bir mesaj
+		   göstermek yerine gerçek durum ekranda dursun. */
+		webhookDurumu(),
 	]);
 
 	const bot = botSonuc.data as { aktif: boolean; chat_id: string | null } | null;
@@ -108,6 +111,7 @@ export default async function BildirimlerSayfasi() {
 					bot={{ aktif: bot?.aktif ?? false, chatId: bot?.chat_id ?? '' }}
 					tercihler={tercihler}
 					acikModuller={acikModuller}
+					webhook={webhook}
 				/>
 			</div>
 		</div>
