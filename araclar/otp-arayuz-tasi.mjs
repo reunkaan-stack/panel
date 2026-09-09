@@ -236,6 +236,13 @@ const TEMA = `
   details.gecmis-kutu[open]>summary::before{content:"▾ "}
   details.gecmis-kutu>summary:hover{color:var(--ink)}
   details.gecmis-kutu>details.month-det{margin-top:8px}
+
+  /* Gecikmiş ödemesi olan geçmiş ay yerinde kalıyor ve göze çarpıyor:
+     vadesi geçmiş bir borç, bu ayın işlerinden daha acil. */
+  details.month-det.gecikmis-ay>summary{
+    border-left:3px solid var(--red);
+    padding-left:11px;
+  }
 `;
 
 if (s.includes(stilSonu)) {
@@ -348,14 +355,29 @@ const AYLIK_BETIGI = `
       var gecmisler = ic.querySelectorAll(':scope > details.month-det.gecmis');
       if (!gecmisler.length) return;
 
+      /* Gecikmiş ödemesi olan ay TOPLANMIYOR: vadesi geçmiş ve hâlâ
+         ödenmemiş bir borç, bu ayın işlerinden daha acil. Ölçüt ay
+         başlığındaki kırmızı "N geciken" rozeti. */
+      var toplanacak = [];
+      gecmisler.forEach(function (ay) {
+        var geciken = ay.querySelector(':scope > summary .badge.b-red');
+        if (geciken) {
+          ay.classList.add('gecikmis-ay');
+        } else {
+          toplanacak.push(ay);
+        }
+      });
+
+      if (!toplanacak.length) return;
+
       var kutu = document.createElement('details');
       kutu.className = 'gecmis-kutu';
 
       var baslik = document.createElement('summary');
-      baslik.textContent = 'Geçmiş aylar (' + gecmisler.length + ')';
+      baslik.textContent = 'Geçmiş aylar (' + toplanacak.length + ')';
       kutu.appendChild(baslik);
 
-      gecmisler.forEach(function (ay) { kutu.appendChild(ay); });
+      toplanacak.forEach(function (ay) { kutu.appendChild(ay); });
       ic.appendChild(kutu);
     });
   }
