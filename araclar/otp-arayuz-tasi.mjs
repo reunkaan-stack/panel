@@ -270,6 +270,12 @@ const TEMA = `
   .kredi-ozet-not{
     margin:12px 0 0;font-size:12px;line-height:1.6;color:var(--muted);
   }
+  .kredi-ozet-toplam{
+    margin-top:12px;padding:10px 14px;
+    border:1px solid var(--amber);
+    font-size:14px;color:var(--ink);
+  }
+  .kredi-ozet-toplam b{font-size:16px;color:var(--amber)}
 `;
 
 if (s.includes(stilSonu)) {
@@ -464,6 +470,7 @@ const KREDI_BETIGI = `
     var t = taksitler();
     var o = {
       yilFaiz: 0, yilBsmv: 0, yilAnapara: 0,
+      yilKalanFaiz: 0,
       tumFaiz: 0,
       kalan: 0, kalanAnapara: 0, kalanFaiz: 0, kalanBsmv: 0,
       yillar: {},
@@ -477,12 +484,17 @@ const KREDI_BETIGI = `
       var faiz = x.faiz || 0, bsmv = x.bsmv || 0, ana = x.anapara || 0;
 
       o.tumFaiz += faiz * od;
-      if (y) o.yillar[y] = (o.yillar[y] || 0) + faiz * od;
+      /* Her yıl listede görünsün: geçmiş yıllar ödenen faizle,
+         gelecek yıllar ödenecek faizle. Yalnızca ödenmiş yılları
+         listelemek "gelecek yıl ne ödeyeceğim" sorusunu cevapsız
+         bırakıyordu. */
+      if (y) o.yillar[y] = true;
 
       if (y === yil) {
         o.yilFaiz += faiz * od;
         o.yilBsmv += bsmv * od;
         o.yilAnapara += ana * od;
+        o.yilKalanFaiz += faiz * kal;
       }
 
       o.kalan += x.kalan || 0;
@@ -509,9 +521,7 @@ const KREDI_BETIGI = `
 
     var buYil = new Date().getFullYear().toString();
     var h = hesapla(secilenYil || buYil);
-    var yillar = Object.keys(h.yillar).filter(function (y) {
-      return h.yillar[y] > 0.5;
-    }).sort().reverse();
+    var yillar = Object.keys(h.yillar).sort().reverse();
     if (yillar.indexOf(buYil) === -1) yillar.unshift(buYil);
     var aktifYil = secilenYil || buYil;
 
@@ -530,12 +540,14 @@ const KREDI_BETIGI = `
         '</select>' +
       '</div>' +
       '<div class="kredi-ozet-kutular">' +
-        kart(aktifYil + ' yılı ödenen faiz', p(h.yilFaiz),
-             h.yilBsmv > 0.5 ? '+ ' + p(h.yilBsmv) + ' BSMV' : '', true) +
+        kart(aktifYil + ' ödenen faiz', p(h.yilFaiz),
+             h.yilBsmv > 0.5 ? '+ ' + p(h.yilBsmv) + ' BSMV' : '') +
+        kart(aktifYil + ' ödenecek faiz', p(h.yilKalanFaiz), '', true) +
         kart('Kalan borç', p(h.kalan), '') +
-        kart('Kalanın anaparası', p(h.kalanAnapara), '') +
-        kart('Kalanın faizi', p(h.kalanFaiz),
-             h.kalanBsmv > 0.5 ? '+ ' + p(h.kalanBsmv) + ' BSMV' : '') +
+        kart('Kalan anapara', p(h.kalanAnapara), '') +
+      '</div>' +
+      '<div class="kredi-ozet-toplam">' +
+        'Bugünden sonra ödenecek TOPLAM faiz: <b>' + p(h.kalanFaiz) + '</b>' +
       '</div>' +
       '<p class="kredi-ozet-not">' +
         'Tüm yıllarda ödenen faiz: <b>' + p(h.tumFaiz) + '</b>' +
