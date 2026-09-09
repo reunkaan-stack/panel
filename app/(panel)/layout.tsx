@@ -41,7 +41,16 @@ export default async function PanelDuzeni({
 	return (
 		<div className="flex min-h-screen flex-col">
 			<header className="flex items-center justify-between gap-4 border-b border-kenarlik px-6 py-4">
-				<span className="etiket text-vurgu-metin">Takip Paneli</span>
+				{/* Ana sayfaya dönüş. Modül içindeyken — özellikle ÖTP
+				    çerçevesinin içinde — panele dönecek bir yol yoktu;
+				    kullanıcı tarayıcının geri düğmesine kalıyordu. */}
+				<Link
+					href="/"
+					className="etiket text-vurgu-metin transition-colors hover:text-metin"
+					title="Panel ana sayfası"
+				>
+					Takip Paneli
+				</Link>
 
 				<div className="flex items-center gap-4">
 					<FirmaSecici firmalar={firmalar} secili={aktifFirma} />
