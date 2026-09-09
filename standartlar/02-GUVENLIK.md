@@ -250,3 +250,22 @@ bir uygulamanın dizine girmesi için hiçbir sebep yok.
 - "E-posta bulunamadı" gibi varlık sızdıran mesaj gösterme
 - Yüklenen dosyayı kullanıcının verdiği adla kaydetme
 - Denenmemiş yedeğe güvenme
+
+---
+
+## Dışarıdan çağrılan uçlar
+
+- **Dışarıdan çağrılan uçlar orta katmandan MUAF TUTULUR.** Webhook,
+  zamanlayıcı, ödeme sağlayıcısının geri dönüşü — bunlar oturum çerezi
+  taşımaz. Orta katman oturum arayıp giriş ekranına yönlendirirse
+  çağıran taraf **307** alır ve isteği başarısız sayar; üstelik hiçbir
+  yerde hata görünmez, uç sessizce hiç çalışmaz.
+
+  ```ts
+  const DIS_UCLAR = ['/api/telegram'];
+  if (DIS_UCLAR.some((u) => yol.startsWith(u))) return NextResponse.next();
+  ```
+
+  Muaf tutmak korumasız bırakmak değildir: her uç **kendi gizli
+  anahtarını** denetler (gizli başlık, imza, paylaşılan anahtar). Yeni
+  bir yol eklenirken o denetimin yazıldığından emin olunur.

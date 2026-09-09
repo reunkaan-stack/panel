@@ -13,8 +13,23 @@ import { SUPABASE_ANON, SUPABASE_URL, supabaseAyarli } from '@/lib/supabase/ayar
 
 const ACIK_YOLLAR = ['/giris', '/sifre-sifirlama'];
 
+/* Makineden makineye çağrılan uçlar. Oturum çerezi taşımazlar; orta
+   katman onları giriş ekranına yönlendirirse çağıran 307 alır ve
+   isteği başarısız sayar.
+
+   ⚠️ Telegram'ın webhook'u tam olarak buna takıldı: "Wrong response
+   from the webhook: 307 Temporary Redirect". Zamanlayıcı da sessizce
+   hiç çalışmıyordu.
+
+   Bu uçlar KORUMASIZ DEĞİL — her biri kendi gizli anahtarını
+   denetliyor (x-telegram-bot-api-secret-token, x-cron-anahtar).
+   Buraya yeni bir yol eklenirken o denetimin yazıldığından emin ol. */
+const DIS_UCLAR = ['/api/telegram'];
+
 export async function middleware(istek: NextRequest) {
 	const yol = istek.nextUrl.pathname;
+
+	if (DIS_UCLAR.some((u) => yol.startsWith(u))) return NextResponse.next();
 
 	/* Supabase bağlanmadan yönlendirme yapılmaz; yoksa yapılandırma
 	   eksikken kullanıcı sonsuz döngüye girer. */
