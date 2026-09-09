@@ -457,7 +457,14 @@ const KREDI_BETIGI = `
 
   function taksitler() {
     var hepsi = [];
-    (window.DB && DB.krediler ? DB.krediler : []).forEach(function (k) {
+    /* DB'ye window üzerinden BAKILMAZ. Uygulama onu "let DB = …" ile
+       tanımlıyor; klasik betikte üst seviye let/const global nesneye
+       yazılmaz, yalnızca var ve function yazılır. window.DB bu yüzden
+       hep undefined kalıyordu ve özet sessizce hiç çizilmiyordu —
+       hata da vermiyordu, çünkü çökme değil erken çıkıştı.
+       Doğrusu: bağlantıya doğrudan bak, varlığını typeof ile sına. */
+    var kokler = (typeof DB !== 'undefined' && DB && DB.krediler) ? DB.krediler : [];
+    kokler.forEach(function (k) {
       (k.taksitler || []).forEach(function (t) { hepsi.push(t); });
     });
     return hepsi;
