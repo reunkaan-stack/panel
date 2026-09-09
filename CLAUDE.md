@@ -144,10 +144,44 @@ standartlar/          projeden bağımsız kurallar
 4. `firma_modulleri` üzerinden satılabilir hale gelir
 5. Sekme, kullanıcının yetkisi varsa **kendiliğinden** görünür — panel
    düzenine elle sekme eklenmez
-6. `CLAUDE.md` ve `HARITA.md` aynı işlem içinde güncellenir
+6. **Bildirimleri katalog'a eklenir** (aşağıda)
+7. `CLAUDE.md` ve `HARITA.md` aynı işlem içinde güncellenir
 
 Modül planlarken `standartlar/05-EKRANLAR.md` sonundaki yedi soru
 cevaplanır.
+
+### Bildirim eklemek — her modülde sorulur
+
+> **Bu modülün hangi olayı Telegram'dan duyulmalı?**
+> Yeni bir modül yazıldığında bu soru cevaplanmadan bitmiş sayılmaz.
+
+Telegram panelin **altyapısı**, PTP'nin özelliği değil. Modül ne
+Telegram'ı ne ayar tablosunu bilir; yalnızca "şu olay oldu" der.
+
+| Dosya | Ne yapılır |
+|---|---|
+| `lib/bildirim/katalog.ts` | Olay tanımlanır: kod, ad, açıklama, tür, varsayılan |
+| Modülün eylemi | Anlık olaysa `bildir(firmaId, 'kod', mesaj)` çağrılır |
+| `lib/bildirim/zamanli.ts` | Zamanlıysa işleyicisi yazılır; mesajı ya da null döndürür |
+
+Bunun dışında **hiçbir yere dokunulmaz**: şema değişmez, ayarlar ekranı
+listeyi katalogdan üretir, zamanlayıcı yeni olayı kendiliğinden toplar.
+
+Olay kodu `modul.olay_adi` biçimindedir (`ptp.gunluk_ozet`,
+`otp.vade_ozeti`); veri tabanı kısıtı bu biçimi zorlar.
+
+**Olay listesi neden tabloda değil:** olayın adı, açıklaması ve nasıl
+üretildiği koda ait bilgi. Tabloda tutulsaydı kod ile tablo ayrışır ve
+"bu olay ne yapıyordu" sorusunun cevabı iki yere bölünürdü. Tabloda
+yalnızca kullanıcının kararı durur: açık mı, kaçta.
+
+**Zamanlı olayda damga:** işleyici mesaj döndürmese bile `son_gonderim`
+basılır. Sunucusuz ortamda bellekte hiçbir şey kalmıyor; damga olmasa
+mesaj beş dakikada bir tekrar giderdi.
+
+**Boşa bildirim gönderme.** Kapanış hatırlatması, kapatılmamış görev
+yoksa gitmiyor; vade özeti, ödeme yoksa gitmiyor. Boşa gelen bildirim
+bütün bildirimleri değersizleştirir.
 
 ---
 

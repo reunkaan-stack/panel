@@ -1,18 +1,23 @@
 import { NextResponse } from 'next/server';
 import { yonetimIstemcisi } from '@/lib/supabase/yonetim';
 import { bugun } from '@/lib/ortak/tarih';
-import { gunlukOzet } from '@/lib/ptp/ozet';
 import { mesajGonder, telegramAyarli } from '@/lib/telegram';
+import { ZAMANLI_ISLEYICILER } from '@/lib/bildirim/zamanli';
+import { olayTanimi } from '@/lib/bildirim/katalog';
 
-/* Zamanlanmış Telegram gönderimi.
+/* Zamanlı bildirim dağıtıcısı.
 
-   Supabase'in pg_cron'u bu adresi belirli aralıklarla çağırıyor.
-   Vercel'in ücretsiz planında sık çalışan zamanlanmış iş yok, o
-   yüzden tetik veri tabanı tarafında.
+   Modüle özel hiçbir şey bilmiyor: açık olan zamanlı tercihleri okur,
+   saati geldiyse ilgili işleyiciyi çağırır, dönen mesajı gönderir.
+   Yeni modül eklendiğinde bu dosyaya dokunulmuyor — katalog ve
+   işleyici yeterli.
 
-   "Bugün gönderildi mi" bilgisi TABLODA duruyor. Yerel programda
-   bellekteydi; sunucusuzda her çağrı yeni bir süreç, bellekte hiçbir
-   şey kalmıyor. Damga olmasa özet her tetikte tekrar giderdi. */
+   Supabase'in pg_cron'u beş dakikada bir çağırıyor. Vercel'in ücretsiz
+   planında sık çalışan zamanlanmış iş yok.
+
+   "Bugün gönderildi mi" bilgisi TABLODA. Sunucusuzda her çağrı yeni
+   bir süreç; bellekte tutulsaydı damga kaybolur ve özet beş dakikada
+   bir tekrar giderdi. */
 
 export const dynamic = 'force-dynamic';
 
@@ -27,13 +32,11 @@ function suan(): string {
 	});
 }
 
-type Ayar = {
+type Tercih = {
 	firma_id: string;
-	telegram_chat_id: string | null;
-	gunluk_ozet_saati: string;
-	kapanis_hatirlatma_saati: string;
-	ozet_gonderilen_gun: string | null;
-	hatirlatma_gonderilen_gun: string | null;
+	olay: string;
+	saat: string | null;
+	son_gonderim: string | null;
 };
 
 export async function POST(istek: Request) {
@@ -61,86 +64,75 @@ export async function POST(istek: Request) {
 		const gun = bugun();
 		const saat = suan();
 
-		const { data } = await supabase
-			.from('ptp_ayarlar')
-			.select(
-				'firma_id, telegram_chat_id, gunluk_ozet_saati, kapanis_hatirlatma_saati, ozet_gonderilen_gun, hatirlatma_gonderilen_gun'
-			)
-			.eq('telegram_aktif', true)
-			.not('telegram_chat_id', 'is', null);
+		/* Botu açık firmalar. Kapalıysa tercihlere hiç bakılmıyor. */
+		const { data: botlar } = await supabase
+			.from('telegram_ayarlari')
+			.select('firma_id, chat_id')
+			.eq('aktif', true)
+			.not('chat_id', 'is', null);
 
-		const ayarlar = (data ?? []) as Ayar[];
-		const yapilan: string[] = [];
+		const sohbet = new Map(
+			((botlar ?? []) as { firma_id: string; chat_id: string }[]).map((b) => [
+				b.firma_id,
+				b.chat_id,
+			])
+		);
 
-		for (const a of ayarlar) {
-			const chatId = a.telegram_chat_id!;
-
-			/* Saat karşılaştırması "geçti mi" biçiminde: tetik tam
-			   dakikayı ıskalarsa (ağ gecikmesi, cron kayması) özet hiç
-			   gitmesin istemiyoruz. Damga zaten tekrarı engelliyor. */
-			const ozetSaati = a.gunluk_ozet_saati.slice(0, 5);
-			if (saat >= ozetSaati && a.ozet_gonderilen_gun !== gun) {
-				const gonderildi = await mesajGonder(
-					chatId,
-					await gunlukOzet(a.firma_id, gun)
-				);
-				if (gonderildi) {
-					await supabase
-						.from('ptp_ayarlar')
-						.update({ ozet_gonderilen_gun: gun })
-						.eq('firma_id', a.firma_id);
-					yapilan.push(`ozet:${a.firma_id}`);
-				}
-			}
-
-			const hatirlatmaSaati = a.kapanis_hatirlatma_saati.slice(0, 5);
-			if (
-				saat >= hatirlatmaSaati &&
-				saat < ozetSaati &&
-				a.hatirlatma_gonderilen_gun !== gun
-			) {
-				const { data: gorevler } = await supabase.rpc('ptp_gunun_gorevleri', {
-					p_firma_id: a.firma_id,
-					p_tarih: gun,
-				});
-				const { data: kayitlar } = await supabase
-					.from('ptp_kayitlar')
-					.select('gorev_id')
-					.eq('firma_id', a.firma_id)
-					.eq('tarih', gun);
-
-				const kapali = new Set(
-					((kayitlar ?? []) as { gorev_id: string }[]).map((k) => k.gorev_id)
-				);
-				const acik = ((gorevler ?? []) as { id: string }[]).filter(
-					(g) => !kapali.has(g.id)
-				).length;
-
-				/* Her şey bitmişse hatırlatma göndermiyoruz: gereksiz
-				   bildirim, bildirimlerin tümünü değersizleştirir. */
-				if (acik > 0) {
-					const gonderildi = await mesajGonder(
-						chatId,
-						`🔔 Kapanışa az kaldı — <b>${acik} görev</b> henüz kapatılmadı.`
-					);
-					if (gonderildi) {
-						await supabase
-							.from('ptp_ayarlar')
-							.update({ hatirlatma_gonderilen_gun: gun })
-							.eq('firma_id', a.firma_id);
-						yapilan.push(`hatirlatma:${a.firma_id}`);
-					}
-				} else {
-					/* Damgayı yine de bas: bu gün için tekrar bakılmasın. */
-					await supabase
-						.from('ptp_ayarlar')
-						.update({ hatirlatma_gonderilen_gun: gun })
-						.eq('firma_id', a.firma_id);
-				}
-			}
+		if (sohbet.size === 0) {
+			return NextResponse.json({ saat, atlandi: 'açık bot yok' });
 		}
 
-		return NextResponse.json({ saat, firma: ayarlar.length, yapilan });
+		const { data } = await supabase
+			.from('bildirim_tercihleri')
+			.select('firma_id, olay, saat, son_gonderim')
+			.eq('acik', true)
+			.not('saat', 'is', null)
+			.in('firma_id', [...sohbet.keys()]);
+
+		const tercihler = (data ?? []) as Tercih[];
+		const gonderilen: string[] = [];
+
+		for (const t of tercihler) {
+			const chatId = sohbet.get(t.firma_id);
+			if (!chatId || !t.saat) continue;
+
+			const tanim = olayTanimi(t.olay);
+			const isleyici = ZAMANLI_ISLEYICILER[t.olay];
+			if (!tanim || !isleyici) {
+				/* Tabloda var, katalogda yok: kaldırılmış bir olay.
+				   Sessizce geçmek yerine görünür olsun. */
+				console.error('[zamanli] işleyicisi olmayan olay:', t.olay);
+				continue;
+			}
+
+			/* Saat karşılaştırması "geçti mi" biçiminde: tetik tam
+			   dakikayı ıskalarsa (ağ gecikmesi, cron kayması) mesaj hiç
+			   gitmesin istemiyoruz. Damga tekrarı zaten engelliyor. */
+			if (saat < t.saat.slice(0, 5)) continue;
+			if (t.son_gonderim === gun) continue;
+
+			const mesaj = await isleyici(t.firma_id, gun);
+
+			/* Mesaj yoksa da damga basılıyor: gün içinde tekrar tekrar
+			   hesaplanmasın. */
+			if (mesaj) {
+				const oldu = await mesajGonder(chatId, mesaj);
+				if (!oldu) continue; // damga basma, sonraki turda tekrar dene
+				gonderilen.push(t.olay);
+			}
+
+			await supabase
+				.from('bildirim_tercihleri')
+				.update({ son_gonderim: gun })
+				.eq('firma_id', t.firma_id)
+				.eq('olay', t.olay);
+		}
+
+		return NextResponse.json({
+			saat,
+			bakilan: tercihler.length,
+			gonderilen,
+		});
 	} catch (e) {
 		console.error('[telegram/zamanli]', e);
 		return NextResponse.json({ hata: 'işlenemedi' }, { status: 500 });

@@ -50,12 +50,12 @@ export async function POST(istek: Request) {
 		const supabase = yonetimIstemcisi();
 
 		const { data: ayar } = await supabase
-			.from('ptp_ayarlar')
-			.select('firma_id, telegram_aktif')
-			.eq('telegram_chat_id', chatId)
+			.from('telegram_ayarlari')
+			.select('firma_id, aktif')
+			.eq('chat_id', chatId)
 			.maybeSingle();
 
-		if (!ayar || !ayar.telegram_aktif) {
+		if (!ayar || !ayar.aktif) {
 			/* Tanımsız sohbet: ne olduğunu söyleyip bırak. Görev
 			   eklemesine izin verilmiyor. */
 			await mesajGonder(

@@ -1,17 +1,15 @@
 import 'server-only';
-import { yonetimIstemcisi } from '@/lib/supabase/yonetim';
 import { saatiBicimle } from '@/lib/ortak/tarih';
-import { kacir, mesajGonder, telegramAyarli } from '@/lib/telegram';
+import { kacir } from '@/lib/telegram';
+import { bildir } from '@/lib/bildirim';
 
-/* Anlık görev bildirimi.
+/* PTP'nin anlık bildirimleri.
 
-   ASLA HATA FIRLATMAZ. Bildirim asıl işi engellememeli: görev
-   kaydedildi ama Telegram ulaşılamadı diye kayıt geri alınmamalı.
-   Sorun günlüğe yazılıp geçiliyor.
+   Burada yalnızca MESAJ BİÇİMİ var. Gönderilip gönderilmeyeceğine
+   lib/bildirim karar veriyor: bot açık mı, bu olay açık mı. Modül
+   Telegram'ı bilmiyor, yalnızca "şu olay oldu" diyor.
 
-   Beklemeden dönmüyoruz (fire-and-forget değil): sunucusuz ortamda
-   yanıt döndükten sonra süreç dondurulabiliyor ve bekleyen istek
-   yarıda kalıyor. Birkaç yüz milisaniye, kaybolan bildirimden iyidir. */
+   Hiçbiri hata fırlatmaz — bildirim asıl işi engellememeli. */
 
 export async function gorevBildir(
 	firmaId: string,
@@ -19,60 +17,34 @@ export async function gorevBildir(
 	kisiAdi: string,
 	ayrinti?: string
 ): Promise<void> {
-	try {
-		if (!telegramAyarli()) return;
+	let metin = `✅ <b>${kacir(baslik)}</b>\n`;
+	metin += `${kacir(kisiAdi)} · ${saatiBicimle(new Date())}`;
+	if (ayrinti) metin += `\n${kacir(ayrinti)}`;
 
-		const supabase = yonetimIstemcisi();
-		const { data: ayar } = await supabase
-			.from('ptp_ayarlar')
-			.select('telegram_aktif, telegram_chat_id, telegram_gorev_bildir')
-			.eq('firma_id', firmaId)
-			.maybeSingle();
-
-		if (
-			!ayar?.telegram_aktif ||
-			!ayar.telegram_chat_id ||
-			!ayar.telegram_gorev_bildir
-		) {
-			return;
-		}
-
-		let metin = `✅ <b>${kacir(baslik)}</b>\n`;
-		metin += `${kacir(kisiAdi)} · ${saatiBicimle(new Date())}`;
-		if (ayrinti) metin += `\n${kacir(ayrinti)}`;
-
-		await mesajGonder(ayar.telegram_chat_id, metin);
-	} catch (e) {
-		console.error('[bildirim] gönderilemedi', e);
-	}
+	await bildir(firmaId, 'ptp.gorev_yapildi', metin);
 }
 
-/** Eksik bildirimi — tedarik edilecek bir şey eklendiğinde. */
+export async function gunKapandiBildir(
+	firmaId: string,
+	kisiAdi: string,
+	ayrinti: string
+): Promise<void> {
+	const metin =
+		`🌙 <b>Gün kapatıldı</b>\n` +
+		`${kacir(kisiAdi)} · ${saatiBicimle(new Date())}\n${kacir(ayrinti)}`;
+
+	await bildir(firmaId, 'ptp.gun_kapandi', metin);
+}
+
 export async function eksikBildir(
 	firmaId: string,
 	urunler: string[],
 	kisiAdi: string
 ): Promise<void> {
-	try {
-		if (!telegramAyarli() || urunler.length === 0) return;
+	if (urunler.length === 0) return;
 
-		const supabase = yonetimIstemcisi();
-		const { data: ayar } = await supabase
-			.from('ptp_ayarlar')
-			.select('telegram_aktif, telegram_chat_id')
-			.eq('firma_id', firmaId)
-			.maybeSingle();
+	let metin = `🛒 <b>Eksik bildirildi</b> — ${kacir(kisiAdi)}\n`;
+	for (const u of urunler) metin += `• ${kacir(u)}\n`;
 
-		if (!ayar?.telegram_aktif || !ayar.telegram_chat_id) return;
-
-		/* Eksik bildirimi `telegram_gorev_bildir` ayarına bakmıyor:
-		   görev kapanışı gürültü olabilir ama "şu ürün bitti" her
-		   zaman duyulmak istenen bir şey. */
-		let metin = `🛒 <b>Eksik bildirildi</b> — ${kacir(kisiAdi)}\n`;
-		for (const u of urunler) metin += `• ${kacir(u)}\n`;
-
-		await mesajGonder(ayar.telegram_chat_id, metin.trimEnd());
-	} catch (e) {
-		console.error('[bildirim] eksik gönderilemedi', e);
-	}
+	await bildir(firmaId, 'ptp.eksik_bildirildi', metin.trimEnd());
 }

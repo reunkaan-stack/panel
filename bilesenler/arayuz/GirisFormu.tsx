@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { tarayiciIstemcisi } from '@/lib/supabase/tarayici';
+import { girisKaydet } from './girisEylem';
 
 /* Giriş formu.
 
@@ -39,6 +40,10 @@ export function GirisFormu() {
 				setGonderiliyor(false);
 				return;
 			}
+
+			/* Son giriş damgası ve bildirim. Beklenmiyor: yönlendirmeyi
+			   geciktirmesin, hata verse bile giriş tamamlanmış olsun. */
+			void girisKaydet();
 
 			/* Oturum düştüğünde kullanıcı baktığı yere dönsün. Adres
 			   dışarıdan geldiği için yalnızca site içi yollara izin

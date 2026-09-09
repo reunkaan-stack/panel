@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
-import { eksikBildir, gorevBildir } from '@/lib/ptp/bildirim';
+import { eksikBildir, gorevBildir, gunKapandiBildir } from '@/lib/ptp/bildirim';
 
 /* PTP kayıt eylemleri.
 
@@ -548,9 +548,8 @@ export async function gunuKapat(
 		/* Gün kapanışında görev başına mesaj atmıyoruz: beş ayrı
 		   bildirim yerine tek satır. */
 		if (satirlar.length > 0 || ciroYazildi) {
-			await gorevBildir(
+			await gunKapandiBildir(
 				firmaId,
-				'Gün kapatıldı',
 				kullanici.ad,
 				`${satirlar.length} görev${ciroYazildi ? ' · ciro girildi' : ''}`
 			);

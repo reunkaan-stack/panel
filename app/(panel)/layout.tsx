@@ -45,6 +45,12 @@ export default async function PanelDuzeni({
 
 				<div className="flex items-center gap-4">
 					<FirmaSecici firmalar={firmalar} secili={aktifFirma} />
+					<Link
+						href="/ayarlar/bildirimler"
+						className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-metin-3 hover:text-metin"
+					>
+						Bildirimler
+					</Link>
 					{superadmin && (
 						<>
 							<Link
