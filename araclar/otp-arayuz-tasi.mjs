@@ -222,6 +222,20 @@ const TEMA = `
   #temaBtn,
   #cikisDugmesi,
   #kullaniciChip{display:none !important}
+
+  /* Geçmiş aylar: yıl bloğunun altında, tek satır. Açılınca içindeki
+     aylar normal görünümüne dönüyor. */
+  details.gecmis-kutu{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+  details.gecmis-kutu>summary{
+    cursor:pointer;list-style:none;
+    font-size:12px;font-weight:600;letter-spacing:.04em;
+    color:var(--muted);padding:4px 0;user-select:none;
+  }
+  details.gecmis-kutu>summary::-webkit-details-marker{display:none}
+  details.gecmis-kutu>summary::before{content:"▸ ";display:inline-block;transition:transform .15s}
+  details.gecmis-kutu[open]>summary::before{content:"▾ "}
+  details.gecmis-kutu>summary:hover{color:var(--ink)}
+  details.gecmis-kutu>details.month-det{margin-top:8px}
 `;
 
 if (s.includes(stilSonu)) {
@@ -299,6 +313,61 @@ for (const k of diaAktarimBaglantisi) {
 	} else {
 		rapor.push('⚠ bulunamadı: ' + k.not);
 	}
+}
+
+/* ---------- 9. Aylık görünüm bu aydan başlasın ---------- */
+/* Geçmiş aylar kapalı geliyordu ama LİSTENİN ÜSTÜNDE duruyordu:
+   eylüldeyken ocak, şubat, mart… hepsini geçip aşağı kaydırmak
+   gerekiyordu.
+
+   Geçmiş aylar yıl bloğunun altına, tek satırlık katlanmış bir
+   başlığın arkasına alınıyor. Silinmiyorlar — geçmişe bakmak
+   gerektiğinde bir tıkla açılıyor.
+
+   renderAylik veri her değiştiğinde içeriği baştan yazdığı için
+   fonksiyon sarmalanıyor; sonradan DOM'a müdahale eden bir izleyici
+   kurmaktan daha az kırılgan. */
+
+const AYLIK_BETIGI = `
+<script>
+(function () {
+  var asil = window.renderAylik;
+  if (typeof asil !== 'function') return;
+
+  window.renderAylik = function () {
+    asil.apply(this, arguments);
+    try { gecmisiAltaAl(); } catch (e) {}
+  };
+
+  function gecmisiAltaAl() {
+    var bolum = document.getElementById('tab-aylik');
+    if (!bolum) return;
+
+    bolum.querySelectorAll('details.year-det').forEach(function (yil) {
+      var ic = yil.querySelector('.yinner') || yil;
+      var gecmisler = ic.querySelectorAll(':scope > details.month-det.gecmis');
+      if (!gecmisler.length) return;
+
+      var kutu = document.createElement('details');
+      kutu.className = 'gecmis-kutu';
+
+      var baslik = document.createElement('summary');
+      baslik.textContent = 'Geçmiş aylar (' + gecmisler.length + ')';
+      kutu.appendChild(baslik);
+
+      gecmisler.forEach(function (ay) { kutu.appendChild(ay); });
+      ic.appendChild(kutu);
+    });
+  }
+})();
+</` + `script>
+`;
+
+if (s.includes(govdeSonu)) {
+	s = s.replace(govdeSonu, AYLIK_BETIGI + govdeSonu);
+	rapor.push('aylık görünümde geçmiş aylar alta toplandı');
+} else {
+	rapor.push('⚠ body sonu bulunamadı — aylık düzenleme eklenemedi');
 }
 
 /* ---------- Yaz ---------- */
