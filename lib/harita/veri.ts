@@ -621,6 +621,18 @@ export const DUGUMLER: Dugum[] = [
 		baglar: [],
 	},
 	{
+		kod: 'lib-tipler',
+		ad: 'lib/tipler',
+		tur: 'lib',
+		katman: 2,
+		modul: 'cekirdek',
+		yol: 'lib/tipler.ts',
+		ne: 'Alan türleri (Rol, GorevTuru, EksikKategori…) ve Türkçe arayüz etiketleri.',
+		neden:
+			'ÜRETİLMEZ, ELLE YAZILIR. İçindekilerin hiçbiri şemadan çıkmaz: alan türleri veritabanında metin+check olarak duruyor, etiketler ise hiç yok. Üretilen satır türleri ayrı dosyaya (lib/veritabani.ts) gider.',
+		baglar: [],
+	},
+	{
 		kod: 'harita-veri',
 		ad: 'lib/harita/veri',
 		tur: 'lib',
@@ -1432,12 +1444,13 @@ export const BEKLEYENLER: Bekleyen[] = [
 			'19 numara atlandı: kaan şeması sıkılaştırması panele ait olmadığı için yazılmadı. Numara boş kalması karışıklık yaratabilir.',
 	},
 	{
-		baslik: 'Türlerin şemadan üretilmesi',
+		baslik: 'Supabase istemcilerinin tiplenmesi',
 		oncelik: 'yarim',
 		modul: 'cekirdek',
 		neden:
-			'lib/tipler.ts elle yazılı ve şemadan sapabilir. supabase gen types ile üretilmeli.',
-		engel: 'SUPABASE_ACCESS_TOKEN kurulmadı.',
+			'İstemciler tipsiz: createServerClient(...) çağrısında <Database> yok. Bu yüzden .from("herhangibirsey") derleniyor ve her sorgu sonucu elle "as" ile dönüştürülüyor. Yol hazır: npm run tipler çıktıyı lib/veritabani.ts dosyasına yazıyor, sonra üç istemciye tür geçilecek.',
+		engel:
+			'Supabase kişisel erişim jetonu üretilip kabuğa verilmeli — jeton depoya ve sohbete yazılmaz. Ara çözüm çalışıyor: harita denetimi kodun sorguladığı her tablo adını migration dosyalarındaki canlı tablo kümesiyle karşılaştırıyor; ölü tabloya sorgu yazılırsa npm run kontrol düşüyor.',
 	},
 ];
 

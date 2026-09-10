@@ -8,7 +8,8 @@
 		"build": "next build",
 		"start": "next start",
 		"kontrol": "tsc --noEmit && node araclar/harita-kontrol.mjs",
-		"harita-kontrol": "node araclar/harita-kontrol.mjs"
+		"harita-kontrol": "node araclar/harita-kontrol.mjs",
+		"tipler": "node araclar/tipleri-uret.mjs"
 	},
 	"engines": {
 		"node": ">=20"

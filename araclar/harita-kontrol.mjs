@@ -110,6 +110,63 @@ for (const yol of haritadakiYollar) {
 	}
 }
 
+/* CANLI TABLO KÜMESİ.
+
+   Migration'lar sırayla işlenip "şu an hangi tablolar var" hesaplanıyor:
+   yaratılanlar eklenir, adı değişenler taşınır, düşürülenler çıkarılır.
+   Sonra kodun .from() ile sorguladığı her ad bu kümede aranıyor.
+
+   Neden: eski tasarımdan kalma adlar migration dosyalarında hâlâ
+   geçiyor (ptp_gorev_kayitlari, ptp_personeller…). Kod aramasında
+   çıkıyorlar, canlı sanılıyorlar ve yanlış tabloya sorgu yazılıyor.
+   Bir kez yaşandı; tip denetimi bunu yakalayamaz çünkü Supabase
+   istemcisi tiplenmemiş durumda — .from('herhangibirsey') derleniyor.
+
+   Bu denetim, türler şemadan üretilip istemciler tiplenene kadar
+   aynı işi görüyor. */
+const migrationDizini = path.join(KOK, 'supabase', 'migrations');
+const siraliMigrationlar = fs
+	.readdirSync(migrationDizini)
+	.filter((d) => d.endsWith('.sql'))
+	/* Tarih önekliler önce geldi, numaralılar sonra. */
+	.sort((a, b) => {
+		const sayi = (d) => (d.startsWith('20') ? Number(d.slice(0, 8)) : 1e9 + Number(d));
+		return sayi(a) - sayi(b);
+	});
+
+const canliTablolar = new Set();
+for (const dosya of siraliMigrationlar) {
+	const icerik = fs.readFileSync(path.join(migrationDizini, dosya), 'utf8');
+
+	/* TEK GEÇİŞ, DOSYA SIRASIYLA. Önce bütün create'ler sonra bütün
+	   drop'lar işlenirse yanlış sonuç çıkıyor: 5_ içinde eski tablolar
+	   ÖNCE düşürülüyor, sonra ptp_sablonlar onların adını alıyor.
+	   Türe göre gruplanınca rename'i drop siliyordu. */
+	const desen =
+		/(create|drop|alter) table (?:if not exists |if exists )?panel[.]([a-z_]+)([^;]*rename to ([a-z_]+))?/gi;
+
+	for (const m of icerik.matchAll(desen)) {
+		const eylem = m[1].toLowerCase();
+		const ad = m[2];
+		const yeniAd = m[4];
+
+		if (eylem === 'create') canliTablolar.add(ad);
+		else if (eylem === 'drop') canliTablolar.delete(ad);
+		else if (eylem === 'alter' && yeniAd) {
+			canliTablolar.delete(ad);
+			canliTablolar.add(yeniAd);
+		}
+	}
+}
+
+for (const t of tablolar) {
+	if (!canliTablolar.has(t)) {
+		eksikler.push(
+			`Kod olmayan tabloyu sorguluyor: ${t} — migration'larda yaratılmamış ya da düşürülmüş`
+		);
+	}
+}
+
 /* Migration numaralarında boşluk: sıra karışıklığı erken görünsün. */
 const migrationlar = fs
 	.readdirSync(path.join(KOK, 'supabase', 'migrations'))

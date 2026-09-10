@@ -1,9 +1,23 @@
-/* Veri tabanı satır türleri.
+/* Alan türleri ve arayüz etiketleri.
 
-   ⚠️ GEÇİCİ. Kural, türlerin şemadan üretilmesi:
-       npx supabase gen types typescript --project-id <ref> > lib/tipler.ts
-   Bunun için Supabase erişim anahtarı (SUPABASE_ACCESS_TOKEN) gerekiyor;
-   henüz kurulmadı. Bkz. standartlar/04-KOD.md */
+   ⚠️ BU DOSYA ÜRETİLMEZ, ELLE YAZILIR.
+
+   Burada iki şey var ve ikisi de şemadan çıkmaz:
+     · Alan türleri (GorevTuru, EksikKategori, Rol…) — veritabanında
+       metin kolonu + check kısıtı olarak duruyorlar; üretilen türde
+       yalnızca "string" görünürler.
+     · Arayüz etiketleri (GRUP_ADLARI, KATEGORI_ADLARI…) — Türkçe
+       karşılıklar, veritabanında hiç yoklar.
+
+   Satır türleri (Kullanici, Gorev, Kayit…) şemadan ÜRETİLEBİLİR ama
+   çıktı BU DOSYAYA YAZILMAZ; ayrı bir dosyaya gider:
+
+       npm run tipler        →  lib/veritabani.ts
+
+   Eskiden buraya "gen types ... > lib/tipler.ts" yazılıydı. O komut
+   dosyanın tamamını ezer ve yukarıdaki etiketlerin hepsi silinirdi;
+   panel onlarca yerden derlenmez hale gelirdi. Yazılı tarif olduğu
+   için er geç birinin çalıştırması an meselesiydi. */
 
 export type Rol = 'superadmin' | 'firma_yoneticisi' | 'kullanici';
 export type Seviye = 'okuma' | 'yazma' | 'yonetim';
