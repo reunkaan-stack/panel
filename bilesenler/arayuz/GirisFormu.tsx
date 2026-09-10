@@ -41,9 +41,28 @@ export function GirisFormu() {
 				return;
 			}
 
-			/* Son giriş damgası ve bildirim. Beklenmiyor: yönlendirmeyi
-			   geciktirmesin, hata verse bile giriş tamamlanmış olsun. */
-			void girisKaydet();
+			/* Son giriş damgası ve bildirim. BEKLENİYOR.
+
+			   Önce "void" ile ateşlenip bırakılıyordu, hemen ardından
+			   yönlendirme geliyordu; tarayıcı sayfayı değiştirirken
+			   sunucu eyleminin isteği iptal oluyordu. Sonuç: son_giris
+			   hiç yazılmadı, "giriş yaptı" bildirimi hiç düşmedi.
+			   İkisi de sessizce kayboldu çünkü eylem kendi içinde
+			   hata yutuyor.
+
+			   Beklemek yönlendirmeyi bir ağ gidiş-dönüşü geciktiriyor;
+			   düğme zaten "Giriş yapılıyor…" durumunda olduğu için
+			   kullanıcı açısından fark edilmiyor. */
+			try {
+				const damga = await girisKaydet();
+				if (!damga.tamam) console.warn('[giris] damga atılamadı:', damga.sebep);
+			} catch (e) {
+				/* Damga atılamadıysa giriş yine de tamamlanır: kullanıcı
+				   kimliğini doğrulamış durumda, onu kapıda tutmak yanlış
+				   olur. Dıştaki catch'e bırakılsaydı "Bağlantı kurulamadı"
+				   yazıp girişi engellerdi — oysa giriş başarılı. */
+				console.warn('[giris] damga atılamadı', e);
+			}
 
 			/* Oturum düştüğünde kullanıcı baktığı yere dönsün. Adres
 			   dışarıdan geldiği için yalnızca site içi yollara izin
