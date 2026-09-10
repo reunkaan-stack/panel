@@ -9,12 +9,12 @@
 -- Personel aylardır yazıyor, kimse göremiyor.
 --
 -- NEDEN BÖYLE OLMUŞ: bu görev 1_ numaralı dosyada tohumlandı; 'eksik'
--- görev türü ise 6_ ile geldi. Tohum güncellenmemiş. Aynı kusur
--- "Eksik urun tespiti" görevinde de var — o da 'metin'.
+-- görev türü ise 6_ ile geldi. 6_ yalnızca "Eksik urun tespiti"
+-- görevini çevirmiş, bu görev gözden kaçmış.
 --
 -- ÇÖZÜM ÜÇ PARÇALI:
 --   A. ptp_eksikler yeni bir kategori kabul etsin: 'musteri'
---   B. İki görev 'eksik' türüne çevrilsin, kategorileri atansın
+--   B. Görev 'eksik' türüne çevrilsin, kategorisi atansın
 --   C. GEÇMİŞTE YAZILMIŞ notlar eksikler listesine taşınsın
 --
 -- C ŞART: yalnızca A ve B yapılırsa bundan sonrası görünür ama
@@ -34,6 +34,23 @@ alter table panel.ptp_eksikler
 comment on column panel.ptp_eksikler.kategori is
   'urun = fuardan toplanir, temel = marketten alinir, musteri = musterinin isteyip bulamadigi urun.';
 
+/* İKİNCİ KISIT. Kategori iki ayrı tabloda geçiyor: ptp_eksikler'de
+   satırın kendisi, ptp_gorevler'de görevin hangi listeye yazacağı.
+   İkisi de listeyi ayrı ayrı sayıyor; yalnızca birini genişletmek
+   "violates check constraint gorev_eksik_kategori_tutarli" veriyor.
+
+   Aynı kural iki yere yazılmış — 04-KOD.md'deki kuralın veritabanı
+   karşılığı. Şimdilik ikisi birden güncelleniyor. */
+
+alter table panel.ptp_gorevler
+  drop constraint if exists gorev_eksik_kategori_tutarli;
+
+alter table panel.ptp_gorevler
+  add constraint gorev_eksik_kategori_tutarli check (
+    (tur = 'eksik' and eksik_kategori in ('urun','temel','musteri'))
+    or (tur <> 'eksik' and eksik_kategori is null)
+  );
+
 
 -- ---------- B. Görev tanımları ----------
 -- Başlığa göre eşleşiyor: görevler her firmaya ayrı satır olarak
@@ -48,12 +65,10 @@ update panel.ptp_gorevler
    and silindi is null
    and baslik ilike '%talep%';
 
-update panel.ptp_gorevler
-   set tur = 'eksik',
-       eksik_kategori = 'urun'
- where tur = 'metin'
-   and silindi is null
-   and (baslik ilike '%eksik urun tespiti%' or baslik ilike '%eksik ürün tespiti%');
+/* "Eksik urun tespiti" görevine DOKUNULMUYOR: 6_eksik_gorevi.sql
+   onu zaten 'eksik'/'urun' türüne çevirmiş. Burada tekrar denemek
+   gereksiz; bırakılırsa sonraki okuyan iki dosyanın çeliştiğini
+   sanır. */
 
 
 -- ---------- C. Geçmiş notların taşınması ----------
@@ -78,7 +93,15 @@ select k.firma_id,
   from panel.ptp_kayitlar k
   join panel.ptp_gorevler g on g.id = k.gorev_id
  where g.tur = 'eksik'
-   and g.eksik_kategori is not null
+   /* YALNIZCA MÜŞTERİ TALEPLERİ. Kısıt "eksik türündeki her görev"
+      olsaydı "Eksik urun tespiti"nin 6_'dan ÖNCEKİ metin kayıtları da
+      dolardı: aylar önce bildirilmiş, çoktan temin edilmiş ürünler
+      bugün "bekliyor" damgasıyla listeye düşerdi. Var olmayan iş
+      üretmek, işi görünmez bırakmaktan daha kötü.
+
+      O kayıtlar duruyor, silinmedi. İstenirse aşağıdaki satır
+      'musteri' yerine 'urun' yazılarak ayrıca çalıştırılabilir. */
+   and g.eksik_kategori = 'musteri'
    and k.deger_metin is not null
    and length(btrim(k.deger_metin)) > 0
    and not exists (
