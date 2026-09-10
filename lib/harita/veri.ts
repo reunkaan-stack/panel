@@ -1444,6 +1444,15 @@ export const BEKLEYENLER: Bekleyen[] = [
 			'19 numara atlandı: kaan şeması sıkılaştırması panele ait olmadığı için yazılmadı. Numara boş kalması karışıklık yaratabilir.',
 	},
 	{
+		baslik: 'Ölü kod temizliği',
+		oncelik: 'yeni',
+		modul: 'cekirdek',
+		neden:
+			'Taslak uçlar, kullanılmayan dışa aktarımlar ve ezilmiş SQL işlev tanımları birikti. ÖNCE RAPOR, sonra silme: liste onaylanmadan tek satır silinmez. Üç kovaya ayrılır — kanıtlanmış ölü (silinir), yarım kalmış (silinmez, bitirilir), ezilmiş migration (hiç dokunulmaz, sadece nota geçer). Kanıt elle okumayla değil araçla toplanır: noUnusedLocals, knip ve harita denetimi.',
+		engel:
+			'YEDEKLEMEDEN SONRA yapılır. Yedeği olmayan veritabanında silme işine girmek ters sıradır. Ayrıca bu oturumda iki kez görüldü: kullanılmayan görünen şey ölü değil BOZUK olabiliyor (son_giris kolonu, oturum_acildi olayı). Silmeden önce her aday için hangi kova olduğu kanıtlanmalı.',
+	},
+	{
 		baslik: 'Supabase istemcilerinin tiplenmesi',
 		oncelik: 'yarim',
 		modul: 'cekirdek',
