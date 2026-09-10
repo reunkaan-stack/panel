@@ -599,6 +599,46 @@ if (s.includes(govdeSonu)) {
 	rapor.push('⚠ body sonu bulunamadı — kredi özeti eklenemedi');
 }
 
+/* ---------- 11. Aylık ödeme planı ay sırasına göre ---------- */
+/* bars() her grafiği tutara göre büyükten küçüğe diziyor. Banka ya da
+   firma gibi kategorilerde doğru olan bu; ama "Aylık Ödeme PLANI" bir
+   zaman çizelgesi ve ay sırası dışında okunmuyor — ekranda temmuz,
+   haziran, eylül, mayıs diye gidiyordu.
+
+   Anahtar YYYY-MM biçiminde, o yüzden metin sıralaması zaten takvim
+   sıralaması. Yalnızca bu grafik için açılıyor; diğer çağrılar
+   dokunulmadan tutar sırasında kalıyor. */
+
+const AY_SIRASI = [
+	{
+		bul: 'const bars=(m,color,labelFn)=>{',
+		koy: 'const bars=(m,color,labelFn,kronolojik)=>{',
+		not: 'bars() kronolojik seçeneği aldı',
+	},
+	{
+		bul: 'const es=Object.entries(m).sort((x,y)=>y[1].tutar-x[1].tutar);',
+		koy:
+			'const es=Object.entries(m).sort(kronolojik' +
+			'?(x,y)=>x[0]<y[0]?-1:1' +
+			':(x,y)=>y[1].tutar-x[1].tutar);',
+		not: 'sıralama kronolojik/tutar arasında seçilebilir',
+	},
+	{
+		bul: 'bars(aylik,"#2563eb",k=>AYLAR[+k.slice(5)-1]+" "+k.slice(0,4))',
+		koy: 'bars(aylik,"#2563eb",k=>AYLAR[+k.slice(5)-1]+" "+k.slice(0,4),true)',
+		not: 'aylık ödeme planı ay sırasına alındı',
+	},
+];
+
+for (const k of AY_SIRASI) {
+	if (s.includes(k.bul)) {
+		s = s.replace(k.bul, k.koy);
+		rapor.push(k.not);
+	} else {
+		rapor.push('⚠ bulunamadı: ' + k.not);
+	}
+}
+
 /* ---------- Yaz ---------- */
 
 fs.mkdirSync(path.dirname(HEDEF), { recursive: true });
