@@ -1,5 +1,6 @@
 'use server';
 
+import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
@@ -12,10 +13,6 @@ import type { Sonuc } from '../eylemler';
    Personel eksik bildirir; yönetici giderdikçe kapatır.
    Kural: her eylemin ilk satırı yetkiDenetle(). */
 
-function hataya(e: unknown, varsayilan: string): Sonuc<never> {
-	console.error('[ptp/eksikler]', e);
-	return { tamam: false, mesaj: varsayilan };
-}
 
 /** Yeni eksik bildirir. Personel de yapabilir. */
 export async function eksikBildir(
@@ -48,7 +45,7 @@ export async function eksikBildir(
 		revalidatePath('/ptp/eksikler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Eksik kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Eksik kaydedilemedi. Tekrar deneyin.', 'ptp/eksikler');
 	}
 }
 
@@ -81,7 +78,7 @@ export async function eksikKapat(
 		revalidatePath('/ptp/eksikler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.', 'ptp/eksikler');
 	}
 }
 
@@ -106,6 +103,6 @@ export async function eksikGeriAl(eksikId: string): Promise<Sonuc> {
 		revalidatePath('/ptp/eksikler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Geri alınamadı. Tekrar deneyin.');
+		return hataya(e, 'Geri alınamadı. Tekrar deneyin.', 'ptp/eksikler');
 	}
 }

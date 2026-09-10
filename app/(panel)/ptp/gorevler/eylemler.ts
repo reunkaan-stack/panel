@@ -1,5 +1,6 @@
 'use server';
 
+import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
@@ -17,10 +18,6 @@ import type { Sonuc } from '../eylemler';
    Şablon, günlük görevlerin kalıbıdır. Her sabah bunlardan o güne ait
    görevler üretilir. Bkz. CLAUDE.md → PTP nasıl çalışır. */
 
-function hataya(e: unknown, varsayilan: string): Sonuc<never> {
-	console.error('[ptp/gorevler]', e);
-	return { tamam: false, mesaj: varsayilan };
-}
 
 export type GorevGirdisi = {
 	id?: string;
@@ -144,7 +141,7 @@ export async function gorevKaydet(girdi: GorevGirdisi): Promise<Sonuc> {
 		revalidatePath('/ptp');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Görev kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Görev kaydedilemedi. Tekrar deneyin.', 'ptp/gorevler');
 	}
 }
 
@@ -168,7 +165,7 @@ export async function gorevAktiflik(
 		revalidatePath('/ptp/gorevler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Değiştirilemedi. Tekrar deneyin.');
+		return hataya(e, 'Değiştirilemedi. Tekrar deneyin.', 'ptp/gorevler');
 	}
 }
 
@@ -185,6 +182,6 @@ export async function gorevSil(gorevId: string): Promise<Sonuc> {
 		revalidatePath('/ptp/gorevler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Silinemedi. Tekrar deneyin.');
+		return hataya(e, 'Silinemedi. Tekrar deneyin.', 'ptp/gorevler');
 	}
 }

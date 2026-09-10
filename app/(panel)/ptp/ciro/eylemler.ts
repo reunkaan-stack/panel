@@ -1,5 +1,7 @@
 'use server';
 
+import { denetimYaz } from '@/lib/denetim';
+import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
@@ -15,10 +17,6 @@ import type { Sonuc } from '../eylemler';
    denetim kaydına düşer: para rakamının kim tarafından, ne zaman, ne
    yapıldığı sonradan sorulacak bir sorudur. */
 
-function hataya(e: unknown, varsayilan: string): Sonuc<never> {
-	console.error('[ptp/ciro]', e);
-	return { tamam: false, mesaj: varsayilan };
-}
 
 export async function ciroKaydet(
 	tarih: string,
@@ -67,12 +65,11 @@ export async function ciroKaydet(
 			/* Eski değer denetim kaydında duruyor. Üzerine yazılan bir para
 			   rakamının izi kalmasaydı, sonradan "burada 40 bin yazıyordu"
 			   tartışmasını çözecek hiçbir kayıt olmazdı. */
-			await supabase.from('denetim_kayitlari').insert({
-				kullanici_id: kullanici.id,
-				firma_id: firmaId,
+			await denetimYaz(supabase, {
+				firmaId: firmaId,
 				eylem: 'ciro_degistirildi',
-				hedef_tablo: 'ptp_cirolar',
-				hedef_id: mevcut.id,
+				hedefTablo: 'ptp_cirolar',
+				hedefId: mevcut.id,
 				ayrinti: {
 					tarih,
 					eski_tutar: mevcut.tutar,
@@ -97,7 +94,7 @@ export async function ciroKaydet(
 		revalidatePath('/ptp');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.', 'ptp/ciro');
 	}
 }
 
@@ -120,17 +117,16 @@ export async function ciroSil(ciroId: string): Promise<Sonuc> {
 
 		if (error) throw error;
 
-		await supabase.from('denetim_kayitlari').insert({
-			kullanici_id: kullanici.id,
-			firma_id: firmaId,
+		await denetimYaz(supabase, {
+			firmaId: firmaId,
 			eylem: 'ciro_silindi',
-			hedef_tablo: 'ptp_cirolar',
-			hedef_id: ciroId,
+			hedefTablo: 'ptp_cirolar',
+			hedefId: ciroId,
 		});
 
 		revalidatePath('/ptp/ciro');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Silinemedi. Tekrar deneyin.');
+		return hataya(e, 'Silinemedi. Tekrar deneyin.', 'ptp/ciro');
 	}
 }

@@ -22,7 +22,8 @@ export default async function AyarlarSayfasi() {
 	const superadmin = kullanici.rol === 'superadmin';
 	const supabase = await sunucuIstemcisi();
 
-	const [firmaSonuc, kisiSonuc, teklifSonuc, botSonuc] = await Promise.all([
+	const [firmaSonuc, kisiSonuc, teklifSonuc, botSonuc, hataSonuc] =
+		await Promise.all([
 		supabase
 			.from('firmalar')
 			.select('id, aktif', { count: 'exact' })
@@ -37,11 +38,20 @@ export default async function AyarlarSayfasi() {
 			.eq('durum', 'taslak')
 			.is('silindi', null),
 		supabase.from('telegram_ayarlari').select('aktif'),
+		supabase
+			.from('denetim_kayitlari')
+			.select('id', { count: 'exact', head: true })
+			.eq('eylem', 'sistem_hatasi')
+			.gte(
+				'olusturuldu',
+				new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+			),
 	]);
 
 	const firmalar = (firmaSonuc.data ?? []) as { aktif: boolean }[];
 	const kisiler = (kisiSonuc.data ?? []) as { aktif: boolean }[];
 	const botlar = (botSonuc.data ?? []) as { aktif: boolean }[];
+	const hataSayisi = hataSonuc.count ?? 0;
 
 	const kartlar = [
 		{
@@ -80,6 +90,13 @@ export default async function AyarlarSayfasi() {
 			aciklama: 'Bütün firmaların durumu tek ekranda',
 			deger: `${firmalar.length} firma`,
 			superadminGerekir: true,
+		},
+		{
+			yol: '/ayarlar/denetim',
+			ad: 'Denetim kayıtları',
+			aciklama: 'Kim ne yaptı ve sunucuda ne patladı',
+			deger: hataSayisi > 0 ? `${hataSayisi} hata · 7 gün` : 'Hata yok',
+			superadminGerekir: false,
 		},
 		{
 			yol: '/ayarlar/harita',

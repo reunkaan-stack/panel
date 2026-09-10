@@ -1,5 +1,6 @@
 'use server';
 
+import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { superadminDenetle, YetkisizHata } from '@/lib/yetki';
@@ -8,11 +9,6 @@ import type { Sonuc } from '../ptp/eylemler';
 
 /* Teklif eylemleri — yalnızca süperadmin. */
 
-function hataya(e: unknown, varsayilan: string): Sonuc<never> {
-	if (e instanceof YetkisizHata) return { tamam: false, mesaj: e.message };
-	console.error('[teklifler]', e);
-	return { tamam: false, mesaj: varsayilan };
-}
 
 /* Yeni teklif, hazır kalemlerle açılıyor. Boş bir formun karşısında
    "ne yazacağım" diye durmak, aceleyle gönderilen eksik teklif
@@ -97,7 +93,7 @@ export async function teklifAc(): Promise<Sonuc<string>> {
 		revalidatePath('/teklifler');
 		return { tamam: true, veri: teklif.id };
 	} catch (e) {
-		return hataya(e, 'Teklif açılamadı. Tekrar deneyin.');
+		return hataya(e, 'Teklif açılamadı. Tekrar deneyin.', 'teklifler');
 	}
 }
 
@@ -154,7 +150,7 @@ export async function teklifKaydet(
 		revalidatePath(`/teklifler/${id}`);
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.', 'teklifler');
 	}
 }
 
@@ -211,7 +207,7 @@ export async function kalemleriKaydet(
 		revalidatePath(`/teklifler/${teklifId}`);
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Kalemler kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Kalemler kaydedilemedi. Tekrar deneyin.', 'teklifler');
 	}
 }
 
@@ -227,6 +223,6 @@ export async function teklifSil(id: string): Promise<Sonuc> {
 		revalidatePath('/teklifler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Silinemedi. Tekrar deneyin.');
+		return hataya(e, 'Silinemedi. Tekrar deneyin.', 'teklifler');
 	}
 }

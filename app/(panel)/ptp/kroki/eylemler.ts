@@ -1,5 +1,6 @@
 'use server';
 
+import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
@@ -14,10 +15,6 @@ import type { Sonuc } from '../eylemler';
 const EN = 1000;
 const BOY = 600;
 
-function hataya(e: unknown, varsayilan: string): Sonuc<never> {
-	console.error('[ptp/kroki]', e);
-	return { tamam: false, mesaj: varsayilan };
-}
 
 export type BolgeYerlesimi = {
 	id: string;
@@ -78,7 +75,7 @@ export async function bolgeEkle(
 		revalidatePath('/ptp/kroki');
 		return { tamam: true, veri: data.id };
 	} catch (e) {
-		return hataya(e, 'Bölge eklenemedi. Tekrar deneyin.');
+		return hataya(e, 'Bölge eklenemedi. Tekrar deneyin.', 'ptp/kroki');
 	}
 }
 
@@ -115,7 +112,7 @@ export async function yerlesimKaydet(
 		revalidatePath('/ptp/kroki');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Yerleşim kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Yerleşim kaydedilemedi. Tekrar deneyin.', 'ptp/kroki');
 	}
 }
 
@@ -142,7 +139,7 @@ export async function bolgeAdiDegistir(
 		revalidatePath('/ptp/kroki');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Ad değiştirilemedi. Tekrar deneyin.');
+		return hataya(e, 'Ad değiştirilemedi. Tekrar deneyin.', 'ptp/kroki');
 	}
 }
 
@@ -164,6 +161,6 @@ export async function bolgeSil(bolgeId: string): Promise<Sonuc> {
 		revalidatePath('/ptp/kroki');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Silinemedi. Tekrar deneyin.');
+		return hataya(e, 'Silinemedi. Tekrar deneyin.', 'ptp/kroki');
 	}
 }

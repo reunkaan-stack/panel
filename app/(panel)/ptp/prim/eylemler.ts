@@ -1,5 +1,7 @@
 'use server';
 
+import { denetimYaz } from '@/lib/denetim';
+import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle } from '@/lib/yetki';
@@ -14,10 +16,6 @@ import type { Sonuc } from '../eylemler';
    maaş ve prim, sonradan "ne zaman ne kadardı" diye sorulacak
    alanlar. */
 
-function hataya(e: unknown, varsayilan: string): Sonuc<never> {
-	console.error('[ptp/prim]', e);
-	return { tamam: false, mesaj: varsayilan };
-}
 
 /** Ayın hedefini yazar ya da günceller. */
 export async function hedefKaydet(
@@ -42,11 +40,10 @@ export async function hedefKaydet(
 		);
 		if (error) throw error;
 
-		await supabase.from('denetim_kayitlari').insert({
-			kullanici_id: kullanici.id,
-			firma_id: firmaId,
+		await denetimYaz(supabase, {
+			firmaId: firmaId,
 			eylem: 'hedef_degistirildi',
-			hedef_tablo: 'ptp_hedefler',
+			hedefTablo: 'ptp_hedefler',
 			ayrinti: { ay, hedef },
 		});
 
@@ -54,7 +51,7 @@ export async function hedefKaydet(
 		revalidatePath('/ptp/ciro');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Hedef kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Hedef kaydedilemedi. Tekrar deneyin.', 'ptp/prim');
 	}
 }
 
@@ -89,19 +86,18 @@ export async function maasKaydet(
 		);
 		if (error) throw error;
 
-		await supabase.from('denetim_kayitlari').insert({
-			kullanici_id: kullanici.id,
-			firma_id: firmaId,
+		await denetimYaz(supabase, {
+			firmaId: firmaId,
 			eylem: 'maas_yazildi',
-			hedef_tablo: 'ptp_maaslar',
-			hedef_id: kullaniciId,
+			hedefTablo: 'ptp_maaslar',
+			hedefId: kullaniciId,
 			ayrinti: { gecerli_ay: gecerliAy, tutar },
 		});
 
 		revalidatePath('/ptp/prim');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Maaş kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Maaş kaydedilemedi. Tekrar deneyin.', 'ptp/prim');
 	}
 }
 
@@ -149,7 +145,7 @@ export async function kademeKaydet(girdi: KademeGirdisi): Promise<Sonuc> {
 		revalidatePath('/ptp/prim');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Kademe kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Kademe kaydedilemedi. Tekrar deneyin.', 'ptp/prim');
 	}
 }
 
@@ -169,7 +165,7 @@ export async function kademeSil(kademeId: string): Promise<Sonuc> {
 		revalidatePath('/ptp/prim');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Silinemedi. Tekrar deneyin.');
+		return hataya(e, 'Silinemedi. Tekrar deneyin.', 'ptp/prim');
 	}
 }
 
@@ -205,11 +201,10 @@ export async function ayarKaydet(
 		);
 		if (error) throw error;
 
-		await supabase.from('denetim_kayitlari').insert({
-			kullanici_id: kullanici.id,
-			firma_id: firmaId,
+		await denetimYaz(supabase, {
+			firmaId: firmaId,
 			eylem: 'ptp_ayari_degistirildi',
-			hedef_tablo: 'ptp_ayarlar',
+			hedefTablo: 'ptp_ayarlar',
 			ayrinti: { kdv_orani: kdv, varsayilan_hedef: varsayilan },
 		});
 
@@ -217,6 +212,6 @@ export async function ayarKaydet(
 		revalidatePath('/ptp/ciro');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Ayar kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Ayar kaydedilemedi. Tekrar deneyin.', 'ptp/prim');
 	}
 }

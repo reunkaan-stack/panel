@@ -1,5 +1,6 @@
 'use server';
 
+import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { superadminDenetle, YetkisizHata } from '@/lib/yetki';
@@ -11,11 +12,6 @@ import type { Sonuc } from '../../ptp/eylemler';
    Firmalar şimdiye kadar elle SQL ile ekleniyordu. Yeni bir müşteri
    geldiğinde veri tabanına girmek gerekiyordu; ekran yoktu. */
 
-function hataya(e: unknown, varsayilan: string): Sonuc<never> {
-	if (e instanceof YetkisizHata) return { tamam: false, mesaj: e.message };
-	console.error('[ayarlar/firmalar]', e);
-	return { tamam: false, mesaj: varsayilan };
-}
 
 /* Kısa ad adres ve kod içinde geçiyor: küçük harf, Türkçe karakter
    yok, boşluk yok. Kullanıcının yazdığını düzeltiyoruz ki elle
@@ -87,7 +83,7 @@ export async function firmaEkle(
 		revalidatePath('/', 'layout');
 		return { tamam: true, veri: firma.id };
 	} catch (e) {
-		return hataya(e, 'Firma eklenemedi. Tekrar deneyin.');
+		return hataya(e, 'Firma eklenemedi. Tekrar deneyin.', 'ayarlar/firmalar');
 	}
 }
 
@@ -114,7 +110,7 @@ export async function firmaGuncelle(
 		revalidatePath('/', 'layout');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Güncellenemedi. Tekrar deneyin.');
+		return hataya(e, 'Güncellenemedi. Tekrar deneyin.', 'ayarlar/firmalar');
 	}
 }
 
@@ -150,6 +146,6 @@ export async function modulleriKaydet(
 		revalidatePath('/', 'layout');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Modüller kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Modüller kaydedilemedi. Tekrar deneyin.', 'ayarlar/firmalar');
 	}
 }

@@ -1,5 +1,7 @@
 'use server';
 
+import { denetimYaz } from '@/lib/denetim';
+import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yonetimAyarli, yonetimIstemcisi } from '@/lib/supabase/yonetim';
@@ -18,11 +20,6 @@ import type { Sonuc } from '../ptp/eylemler';
    hesabı GERİ ALINIYOR — yoksa giriş yapabilen ama hiçbir firmaya
    bağlı olmayan yetim bir hesap kalırdı. */
 
-function hataya(e: unknown, varsayilan: string): Sonuc<never> {
-	if (e instanceof YetkisizHata) return { tamam: false, mesaj: e.message };
-	console.error('[kisiler]', e);
-	return { tamam: false, mesaj: varsayilan };
-}
 
 const EPOSTA_DESENI = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -130,19 +127,18 @@ export async function kisiEkle(girdi: KisiGirdisi): Promise<Sonuc> {
 			if (yetkiHatasi) throw yetkiHatasi;
 		}
 
-		await supabase.from('denetim_kayitlari').insert({
-			kullanici_id: yonetici.id,
-			firma_id: girdi.firmaId,
+		await denetimYaz(supabase, {
+			firmaId: girdi.firmaId,
 			eylem: 'kisi_eklendi',
-			hedef_tablo: 'kullanicilar',
-			hedef_id: kisi.id,
+			hedefTablo: 'kullanicilar',
+			hedefId: kisi.id,
 			ayrinti: { eposta, rol: girdi.rol },
 		});
 
 		revalidatePath('/kisiler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Kişi eklenemedi. Tekrar deneyin.');
+		return hataya(e, 'Kişi eklenemedi. Tekrar deneyin.', 'kisiler');
 	}
 }
 
@@ -201,19 +197,18 @@ export async function kisiGuncelle(
 			if (yazmaHatasi) throw yazmaHatasi;
 		}
 
-		await supabase.from('denetim_kayitlari').insert({
-			kullanici_id: yonetici.id,
-			firma_id: firmaId,
+		await denetimYaz(supabase, {
+			firmaId: firmaId,
 			eylem: 'kisi_guncellendi',
-			hedef_tablo: 'kullanicilar',
-			hedef_id: kisiId,
+			hedefTablo: 'kullanicilar',
+			hedefId: kisiId,
 			ayrinti: { rol, yetkiler },
 		});
 
 		revalidatePath('/kisiler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Güncellenemedi. Tekrar deneyin.');
+		return hataya(e, 'Güncellenemedi. Tekrar deneyin.', 'kisiler');
 	}
 }
 
@@ -241,17 +236,16 @@ export async function kisiDurumDegistir(
 			.eq('id', kisiId);
 		if (error) throw error;
 
-		await supabase.from('denetim_kayitlari').insert({
-			kullanici_id: yonetici.id,
+		await denetimYaz(supabase, {
 			eylem: aktif ? 'kisi_acildi' : 'kisi_kapatildi',
-			hedef_tablo: 'kullanicilar',
-			hedef_id: kisiId,
+			hedefTablo: 'kullanicilar',
+			hedefId: kisiId,
 		});
 
 		revalidatePath('/kisiler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Değiştirilemedi. Tekrar deneyin.');
+		return hataya(e, 'Değiştirilemedi. Tekrar deneyin.', 'kisiler');
 	}
 }
 
@@ -318,18 +312,17 @@ export async function kisiSil(kisiId: string): Promise<Sonuc> {
 		const { error } = await admin.auth.admin.deleteUser(kisi.auth_id);
 		if (error) throw error;
 
-		await supabase.from('denetim_kayitlari').insert({
-			kullanici_id: yonetici.id,
+		await denetimYaz(supabase, {
 			eylem: 'kisi_silindi',
-			hedef_tablo: 'kullanicilar',
-			hedef_id: kisiId,
+			hedefTablo: 'kullanicilar',
+			hedefId: kisiId,
 			ayrinti: { ad: kisi.ad },
 		});
 
 		revalidatePath('/kisiler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Silinemedi. Tekrar deneyin.');
+		return hataya(e, 'Silinemedi. Tekrar deneyin.', 'kisiler');
 	}
 }
 
@@ -368,15 +361,14 @@ export async function sifreDegistir(
 
 		/* Şifrenin KENDİSİ hiçbir yere yazılmıyor; yalnızca değiştirildiği
 		   bilgisi kayda geçiyor. */
-		await supabase.from('denetim_kayitlari').insert({
-			kullanici_id: yonetici.id,
+		await denetimYaz(supabase, {
 			eylem: 'sifre_degistirildi',
-			hedef_tablo: 'kullanicilar',
-			hedef_id: kisiId,
+			hedefTablo: 'kullanicilar',
+			hedefId: kisiId,
 		});
 
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Şifre değiştirilemedi. Tekrar deneyin.');
+		return hataya(e, 'Şifre değiştirilemedi. Tekrar deneyin.', 'kisiler');
 	}
 }

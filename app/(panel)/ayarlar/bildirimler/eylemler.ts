@@ -1,5 +1,6 @@
 'use server';
 
+import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
@@ -19,11 +20,6 @@ async function yoneticiDenetle() {
 	return kullanici;
 }
 
-function hataya(e: unknown, varsayilan: string): Sonuc<never> {
-	if (e instanceof YetkisizHata) return { tamam: false, mesaj: e.message };
-	console.error('[ayarlar/bildirimler]', e);
-	return { tamam: false, mesaj: varsayilan };
-}
 
 /** Bot bağlantısı: açık mı, hangi sohbete. */
 export async function botKaydet(
@@ -57,7 +53,7 @@ export async function botKaydet(
 		revalidatePath('/ayarlar/bildirimler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.', 'ayarlar/bildirimler');
 	}
 }
 
@@ -105,7 +101,7 @@ export async function tercihleriKaydet(
 		revalidatePath('/ayarlar/bildirimler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Tercihler kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Tercihler kaydedilemedi. Tekrar deneyin.', 'ayarlar/bildirimler');
 	}
 }
 
@@ -146,7 +142,7 @@ export async function testGonder(): Promise<Sonuc> {
 					mesaj: 'Telegram kabul etmedi. Jeton ve sohbet kimliğini kontrol edin.',
 				};
 	} catch (e) {
-		return hataya(e, 'Test gönderilemedi.');
+		return hataya(e, 'Test gönderilemedi.', 'ayarlar/bildirimler');
 	}
 }
 
@@ -179,6 +175,6 @@ export async function webhookAyarla(): Promise<Sonuc<string>> {
 			? { tamam: true, veri: adres }
 			: { tamam: false, mesaj: sonuc.mesaj };
 	} catch (e) {
-		return hataya(e, 'Webhook kurulamadı.');
+		return hataya(e, 'Webhook kurulamadı.', 'ayarlar/bildirimler');
 	}
 }

@@ -705,7 +705,6 @@ export const DUGUMLER: Dugum[] = [
 		modul: 'cekirdek',
 		ne: 'Kim neyi değiştirdi.',
 		baglar: ['supabase'],
-		sorun: 'Yazılıyor ama HİÇBİR EKRANDA gösterilmiyor.',
 	},
 	{
 		kod: 't-ptp-gorevler',
@@ -965,6 +964,54 @@ export const DUGUMLER: Dugum[] = [
 		neden:
 			'18_ ile birlikte panel şemasındaki fonksiyonlarda EXECUTE public rolüne verilmiyor; YENİ işlevlere grant AÇIKÇA yazılmalı.',
 		baglar: ['t-ptp-kayitlar'],
+	},
+	{
+		kod: 'f-denetim-yaz',
+		ad: 'denetim_yaz()',
+		tur: 'islev',
+		katman: 3,
+		modul: 'cekirdek',
+		yol: 'supabase/migrations/22_denetim_ve_hata.sql',
+		ne: 'Denetim kaydi yazar. Tek yazma noktasi.',
+		neden:
+			'Tabloda INSERT politikasi YOK; dogrudan insert RLS tarafindan sessizce reddediliyordu ve tablo aylarca bos kaldi. Islev SECURITY DEFINER: yazma her zaman basarili, kimin yazdigi ise auth.uid() uzerinden turetiliyor — istemciden alinmiyor, yani kullanici baskasinin adina kayit dusemiyor.',
+		baglar: ['t-denetim'],
+	},
+	{
+		kod: 'lib-denetim',
+		ad: 'lib/denetim',
+		tur: 'lib',
+		katman: 2,
+		modul: 'cekirdek',
+		yol: 'lib/denetim.ts',
+		ne: 'denetimYaz(): denetim kaydini islev uzerinden yazar.',
+		neden:
+			'Istemci disaridan geliyor: cagiranlarin cogu oturumlu istemciyi kullaniyor ama Telegram ucu oturumsuz calisip yonetim istemcisini tasiyor.',
+		baglar: ['f-denetim-yaz'],
+	},
+	{
+		kod: 'lib-hata',
+		ad: 'lib/hata',
+		tur: 'lib',
+		katman: 2,
+		modul: 'cekirdek',
+		yol: 'lib/hata.ts',
+		ne: 'Sonuc turu, hataya() ve hatayiBildir(). Butun sunucu eylemlerinin hata yolu.',
+		neden:
+			'hataya() on ayri eylemler.ts dosyasina kopyalanmisti ve 48 yerden cagriliyordu; hicbiri hatayi bir yere BILDIRMIYORDU. Tek yere alininca 48 cagri yeri birden bildirim kazandi. Ayni hata 30 dakika icinde bir kez duyurulur, kaydi her seferinde tutulur.',
+		baglar: ['lib-denetim', 'bildirim-gonder'],
+	},
+	{
+		kod: 'sayfa-denetim',
+		ad: '/ayarlar/denetim',
+		tur: 'sayfa',
+		katman: 1,
+		modul: 'cekirdek',
+		yol: 'app/(panel)/ayarlar/denetim/page.tsx',
+		ne: 'Kim ne yapti ve sunucuda ne patladi. Iki sekme.',
+		neden:
+			'Islem kaydi ile sistem hatasi ayni tabloda ama ayri sekmede: biri kim ne yapti, digeri ne bozuldu. Ayni listede karisirlarsa ikisi de okunmaz olur.',
+		baglar: ['t-denetim'],
 	},
 	{
 		kod: 'f-teklif-no',
@@ -1403,11 +1450,11 @@ export const BEKLEYENLER: Bekleyen[] = [
 		neden: 'Uç var ama bilgi sayfası döndürüyor; rapor almak için hâlâ yerel program gerekiyor.',
 	},
 	{
-		baslik: 'Denetim kayıtları ekranı',
+		baslik: 'ÖTP günlük ekranı',
 		oncelik: 'yarim',
-		modul: 'cekirdek',
+		modul: 'otp',
 		neden:
-			'denetim_kayitlari ve otp_gunluk yazılıyor ama hiçbir yerde gösterilmiyor. Yazılan ve okunmayan kayıt, olmayan kayıttır.',
+			'denetim_kayitlari artık /ayarlar/denetim ekranında görünüyor ama otp_gunluk hâlâ yazılıp okunmuyor. Yazılan ve okunmayan kayıt, olmayan kayıttır.',
 	},
 	{
 		baslik: 'TTP — tahsilat takip taşınması',

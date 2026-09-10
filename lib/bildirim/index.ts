@@ -80,3 +80,34 @@ export async function bildir(
 		console.error('[bildirim] gönderilemedi', olay, e);
 	}
 }
+
+/* Firması olmayan olaylar — sistem hataları, altyapı uyarıları.
+
+   bildir() sohbeti FİRMA üzerinden çözüyor; sistem hatasının firması
+   yok. Yeni bir hedef kavramı uydurmak yerine (ayrı ortam değişkeni,
+   ayrı sohbet kimliği) mevcut yol kullanılıyor: Telegram bağlı her
+   firmaya teker teker soruluyor ve tercih kararı yine bildir()'de
+   veriliyor.
+
+   sistem.hata katalogda VARSAYILAN KAPALI. Yani müşteri firmalara
+   kendiliğinden gitmiyor; Kaan yalnızca kendi firmasında açıyor.
+   Ortam değişkeni yolu seçilseydi, değişken unutulduğunda hata
+   bildirimi sessizce hiç gitmezdi — kaçınmaya çalıştığımız durumun
+   ta kendisi. */
+export async function sistemBildir(olay: string, mesaj: string): Promise<void> {
+	try {
+		if (!telegramAyarli()) return;
+
+		const supabase = yonetimIstemcisi();
+		const { data } = await supabase
+			.from('telegram_ayarlari')
+			.select('firma_id')
+			.eq('aktif', true);
+
+		for (const satir of data ?? []) {
+			await bildir(satir.firma_id as string, olay, mesaj);
+		}
+	} catch (e) {
+		console.error('[bildirim] sistem bildirimi gönderilemedi', olay, e);
+	}
+}

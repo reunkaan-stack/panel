@@ -54,6 +54,20 @@ export const KATALOG: OlayGrubu[] = [
 				   ekipte bu bildirim hızla gürültüye dönüşüyor. */
 				varsayilanAcik: false,
 			},
+			{
+				kod: 'sistem.hata',
+				ad: 'Sistem hatası',
+				aciklama:
+					'Sunucuda bir şey patladığında haber verir. Aynı hata 30 dakika içinde tekrarlarsa bir kez duyurulur; kayıt her seferinde tutulur.',
+				tur: 'anlik',
+				/* Varsayılan KAPALI ve öyle kalmalı: bu bildirim
+				   panelin işletmecisine yarar, müşteri firmaya değil.
+				   Firması olmayan olay olduğu için Telegram bağlı her
+				   firmaya teker teker soruluyor; kapalı varsayılan
+				   olmasaydı altyapı hataları müşterinin sohbetine
+				   düşerdi. */
+				varsayilanAcik: false,
+			},
 		],
 	},
 	{

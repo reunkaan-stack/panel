@@ -1,5 +1,6 @@
 'use server';
 
+import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { yetkiDenetle, YetkisizHata } from '@/lib/yetki';
@@ -16,15 +17,12 @@ import { eksikBildir, gorevBildir, gunKapandiBildir } from '@/lib/ptp/bildirim';
    Kural: her eylemin ilk satırı yetkiDenetle(). İstisna yok.
    firma_id istemciden ALINMAZ — oturumdan türetilir. */
 
-export type Sonuc<T = void> =
-	| { tamam: true; veri: T }
-	| { tamam: false; mesaj: string };
+/* Sonuc ve hataya() lib/hata.ts içinde. Buradan yeniden dışa
+   aktarılıyor: dokuz dosya bu yoldan alıyor ve hepsini birden
+   değiştirmek gereksiz gürültü olurdu. */
+import type { Sonuc } from '@/lib/hata';
+export type { Sonuc };
 
-function hataya(e: unknown, varsayilan: string): Sonuc<never> {
-	if (e instanceof YetkisizHata) return { tamam: false, mesaj: e.message };
-	console.error('[ptp]', e);
-	return { tamam: false, mesaj: varsayilan };
-}
 
 export type KayitGirdisi = {
 	gorevId: string;
@@ -208,7 +206,7 @@ export async function kayitEkle(girdi: KayitGirdisi): Promise<Sonuc> {
 		revalidatePath('/ptp');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.', 'ptp');
 	}
 }
 
@@ -253,7 +251,7 @@ export async function atlamaEkle(
 		revalidatePath('/ptp');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.');
+		return hataya(e, 'Kaydedilemedi. Tekrar deneyin.', 'ptp');
 	}
 }
 
@@ -270,7 +268,7 @@ export async function kayitSil(kayitId: string): Promise<Sonuc> {
 		revalidatePath('/ptp');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Silinemedi. Tekrar deneyin.');
+		return hataya(e, 'Silinemedi. Tekrar deneyin.', 'ptp');
 	}
 }
 
@@ -300,7 +298,7 @@ export async function atamaDegistir(
 		revalidatePath('/ptp/gorevler');
 		return { tamam: true, veri: undefined };
 	} catch (e) {
-		return hataya(e, 'Atama yapılamadı. Tekrar deneyin.');
+		return hataya(e, 'Atama yapılamadı. Tekrar deneyin.', 'ptp');
 	}
 }
 
@@ -564,6 +562,6 @@ export async function gunuKapat(
 			veri: { kaydedilen: satirlar.length, ciroYazildi, atlananlar },
 		};
 	} catch (e) {
-		return hataya(e, 'Gün kapatılamadı. Tekrar deneyin.');
+		return hataya(e, 'Gün kapatılamadı. Tekrar deneyin.', 'ptp');
 	}
 }

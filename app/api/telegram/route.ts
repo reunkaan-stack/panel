@@ -1,3 +1,4 @@
+import { denetimYaz } from '@/lib/denetim';
 import { NextResponse } from 'next/server';
 import { yonetimIstemcisi } from '@/lib/supabase/yonetim';
 import { bugun } from '@/lib/ortak/tarih';
@@ -124,10 +125,10 @@ export async function POST(istek: Request) {
 			return TAMAM;
 		}
 
-		await supabase.from('denetim_kayitlari').insert({
-			firma_id: firmaId,
+		await denetimYaz(supabase, {
+			firmaId: firmaId,
 			eylem: 'telegram_gorev_eklendi',
-			hedef_tablo: 'ptp_gorevler',
+			hedefTablo: 'ptp_gorevler',
 			ayrinti: { baslik, chat_id: chatId },
 		});
 
