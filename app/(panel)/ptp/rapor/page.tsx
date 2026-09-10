@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
+import {
+	GorevTablosu,
+	type GorevSatiri,
+	type Yazilan,
+} from './bilesenler/GorevTablosu';
 import { yetkiDenetle } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
 import {
@@ -10,7 +15,6 @@ import {
 	bugun,
 	tarihiBicimle,
 } from '@/lib/ortak/tarih';
-import { GRUP_ADLARI, type GorevGrubu } from '@/lib/tipler';
 
 export const metadata: Metadata = { title: 'Performans — Karas Panel' };
 export const dynamic = 'force-dynamic';
@@ -22,17 +26,6 @@ type KisiSatiri = {
 	yapilan: number;
 	atlanan: number;
 	ort_saat: number | null;
-};
-
-type GorevSatiri = {
-	gorev_id: string;
-	baslik: string;
-	grup: GorevGrubu;
-	zorunlu: boolean;
-	gecerli_gun: number;
-	yapilan: number;
-	atlanan: number;
-	oran: number | null;
 };
 
 type GunSatiri = {
@@ -76,17 +69,20 @@ export default async function RaporSayfasi({
 	const firmaId = await islemFirmasi();
 	const p = { p_firma_id: firmaId, p_baslangic: baslangic, p_bitis: bitis };
 
-	const [kisiSonuc, gorevSonuc, gunSonuc, atlananSonuc] = await Promise.all([
-		supabase.rpc('ptp_kisi_performansi', p),
-		supabase.rpc('ptp_gorev_performansi', p),
-		supabase.rpc('ptp_gun_ozeti', p),
-		supabase.rpc('ptp_atlananlar', p),
-	]);
+	const [kisiSonuc, gorevSonuc, gunSonuc, atlananSonuc, yazilanSonuc] =
+		await Promise.all([
+			supabase.rpc('ptp_kisi_performansi', p),
+			supabase.rpc('ptp_gorev_performansi', p),
+			supabase.rpc('ptp_gun_ozeti', p),
+			supabase.rpc('ptp_atlananlar', p),
+			supabase.rpc('ptp_yazilanlar', p),
+		]);
 
 	const kisiler = (kisiSonuc.data ?? []) as KisiSatiri[];
 	const gorevler = (gorevSonuc.data ?? []) as GorevSatiri[];
 	const gunler = (gunSonuc.data ?? []) as GunSatiri[];
 	const atlananlar = (atlananSonuc.data ?? []) as AtlananSatiri[];
+	const yazilanlar = (yazilanSonuc.data ?? []) as Yazilan[];
 
 	const toplamGorev = gunler.reduce((t, g) => t + Number(g.toplam), 0);
 	const toplamTamam = gunler.reduce((t, g) => t + Number(g.yapilan), 0);
@@ -188,49 +184,7 @@ export default async function RaporSayfasi({
 							Hangi görev aksıyor
 						</h2>
 
-						<div className="mt-4 overflow-x-auto">
-							<table className="w-full min-w-[36rem] border-t border-kenarlik text-sm">
-								<thead>
-									<tr className="border-b border-kenarlik">
-										<Th>Görev</Th>
-										<Th sag>Geçerli gün</Th>
-										<Th sag>Yapıldı</Th>
-										<Th sag>Atlandı</Th>
-										<Th sag>Oran</Th>
-									</tr>
-								</thead>
-								<tbody>
-									{gorevler.map((g) => (
-										<tr key={g.gorev_id} className="border-b border-kenarlik-2">
-											<td className="py-3 pr-4">
-												<span className={g.zorunlu ? 'font-medium' : ''}>
-													{g.baslik}
-												</span>
-												<span className="ml-2 font-mono text-[0.625rem] uppercase tracking-[0.08em] text-metin-3">
-													{GRUP_ADLARI[g.grup] ?? g.grup}
-												</span>
-											</td>
-											<Td>{g.gecerli_gun}</Td>
-											<Td>{g.yapilan}</Td>
-											<Td renk={Number(g.atlanan) > 0 ? 'text-uyari' : undefined}>
-												{g.atlanan}
-											</Td>
-											<Td
-												renk={
-													Number(g.oran) < 60
-														? 'text-hata'
-														: Number(g.oran) < 90
-															? 'text-uyari'
-															: 'text-basarili'
-												}
-											>
-												%{g.oran ?? 0}
-											</Td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
+						<GorevTablosu gorevler={gorevler} yazilanlar={yazilanlar} />
 					</section>
 
 					{/* — Atlanma sebepleri — */}
