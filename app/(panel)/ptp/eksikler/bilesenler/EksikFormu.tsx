@@ -59,7 +59,7 @@ export function EksikFormu() {
 					<div className="mt-4">
 						<span className="etiket">Hangi listeye</span>
 						<div className="mt-2 flex flex-wrap gap-2">
-							{(['urun', 'temel'] as EksikKategori[]).map((k) => (
+							{(['urun', 'temel', 'musteri'] as EksikKategori[]).map((k) => (
 								<button
 									key={k}
 									type="button"

@@ -42,10 +42,15 @@ export default async function EksiklerSayfasi() {
 	const bekleyen = hepsi.filter((e) => e.durum === 'bekliyor');
 	const kapanan = hepsi.filter((e) => e.durum !== 'bekliyor');
 
-	/* İki liste ayrı okunuyor: ürünler fuarda, temel ihtiyaçlar
-	   markette toplanıyor. Tedarik yolu farklı olduğu için tek listede
-	   karışmaları işi zorlaştırırdı. */
-	const kategoriler: EksikKategori[] = ['urun', 'temel'];
+	/* Listeler ayrı okunuyor: ürünler fuarda, temel ihtiyaçlar
+	   markette toplanıyor, müşteri talepleri ise alınıp alınmayacağına
+	   karar verilecek isteklerdir. Tedarik yolu farklı olduğu için tek
+	   listede karışmaları işi zorlaştırırdı.
+
+	   BURAYA EKLEMEDEN kategori tanımlamak, satırların hiçbir yerde
+	   görünmemesine yol açar: sorgu hepsini getiriyor ama ekrana
+	   yalnızca bu dizidekiler basılıyor. */
+	const kategoriler: EksikKategori[] = ['urun', 'temel', 'musteri'];
 
 	return (
 		<div className="mx-auto max-w-3xl px-6 py-10">

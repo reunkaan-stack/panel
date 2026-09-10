@@ -19,7 +19,7 @@ export type GorevTuru =
 	| 'ciro';
 
 /** Eksikler tedarik yoluna göre ayrılır. */
-export type EksikKategori = 'urun' | 'temel';
+export type EksikKategori = 'urun' | 'temel' | 'musteri';
 export type Tekrar = 'gunluk' | 'haftalik' | 'tek_seferlik';
 export type KayitDurumu = 'yapildi' | 'atlandi';
 export type GorevGrubu =
@@ -52,11 +52,16 @@ export const TUR_ADLARI: Record<GorevTuru, string> = {
 export const KATEGORI_ADLARI: Record<EksikKategori, string> = {
 	urun: 'Ürün eksiği',
 	temel: 'Temel ihtiyaç',
+	musteri: 'Müşteri talebi',
 };
 
 export const KATEGORI_NOTU: Record<EksikKategori, string> = {
 	urun: 'Fuarlarda toplanır',
 	temel: 'Marketten alınır',
+	/* Müşterinin isteyip bulamadığı ürün. Ayrı duruyor çünkü bu bir
+	   eksik değil TALEP: alınıp alınmayacağı kararı yöneticinin ve
+	   aynı ürün birkaç kez istendiyse bu bilgi tek başına değerli. */
+	musteri: 'Müşteri istedi',
 };
 
 export const TEKRAR_ADLARI: Record<Tekrar, string> = {
