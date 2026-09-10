@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { aktifKullanici } from '@/lib/yetki';
+import { DUGUMLER } from '@/lib/harita/veri';
 
 export const metadata: Metadata = { title: 'Ayarlar — Karas Panel' };
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,8 @@ export const dynamic = 'force-dynamic';
    sorulurdu.
 
    Sayaçlar bilerek var: kapıyı açmadan içeride ne olduğu görünsün. */
+
+const DUGUM_SAYISI = DUGUMLER.length;
 
 export default async function AyarlarSayfasi() {
 	const kullanici = await aktifKullanici();
@@ -76,6 +79,13 @@ export default async function AyarlarSayfasi() {
 			ad: 'Genel bakış',
 			aciklama: 'Bütün firmaların durumu tek ekranda',
 			deger: `${firmalar.length} firma`,
+			superadminGerekir: true,
+		},
+		{
+			yol: '/ayarlar/harita',
+			ad: 'Site haritası',
+			aciklama: 'Ne nerede, ne neye bağlı, ne çalışmıyor, sırada ne var',
+			deger: `${DUGUM_SAYISI} düğüm`,
 			superadminGerekir: true,
 		},
 	].filter((k) => superadmin || !k.superadminGerekir);

@@ -1,32 +1,33 @@
 {
-  "name": "karas-panel",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Karas Panel — isletme yazilimlarini tek giriste toplayan cok firmali platform",
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "kontrol": "tsc --noEmit"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "dependencies": {
-    "@supabase/ssr": "^0.12.4",
-    "@supabase/supabase-js": "^2.112.3",
-    "next": "^16.3.4",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "read-excel-file": "^9.3.10",
-    "server-only": "^0.0.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^26.2.0",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2"
-  }
+	"name": "karas-panel",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Karas Panel — isletme yazilimlarini tek giriste toplayan cok firmali platform",
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"kontrol": "tsc --noEmit && node araclar/harita-kontrol.mjs",
+		"harita-kontrol": "node araclar/harita-kontrol.mjs"
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"dependencies": {
+		"@supabase/ssr": "^0.12.4",
+		"@supabase/supabase-js": "^2.112.3",
+		"next": "^16.3.4",
+		"react": "^19.2.8",
+		"react-dom": "^19.2.8",
+		"read-excel-file": "^9.3.10",
+		"server-only": "^0.0.1"
+	},
+	"devDependencies": {
+		"@tailwindcss/postcss": "^4.3.3",
+		"@types/node": "^26.2.0",
+		"@types/react": "^19.2.18",
+		"@types/react-dom": "^19.2.4",
+		"tailwindcss": "^4.3.3",
+		"typescript": "^7.0.2"
+	}
 }

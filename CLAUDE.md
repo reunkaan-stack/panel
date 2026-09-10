@@ -17,8 +17,19 @@ kurallar var; genel yazılım standartları `standartlar/` klasöründedir.
 | **`standartlar/04-KOD.md`** | Kod yazarken |
 | **`standartlar/05-EKRANLAR.md`** | Yeni ekran planlarken |
 | **`standartlar/06-TESLIM.md`** | Yayına çıkmadan önce |
-| **`HARITA.md`** | Bir şeyi değiştirmeden önce: ne nerede |
-| **`DURUM.md`** | Uzun aradan sonra: durum, kararlar, tuzaklar |
+| **`lib/harita/veri.ts`** | **HER İŞE BAŞLARKEN.** Ne nerede, ne neye bağlı, ne çalışmıyor, sırada ne var, hangi tuzağa düşüldü |
+
+> **Önce haritaya bak.** `lib/harita/veri.ts` panelin tek envanteridir:
+> düğümler, bağlantılar, "şunu yapmak istiyorum → şuraya bak" tablosu,
+> yaşanmış tuzaklar, bekleyen işler ve artık olmayan tablolar. Kodu tek
+> tek açıp aramadan önce oraya bakmak hem zaman hem jeton kazandırır.
+> Süperadmin aynı içeriği `/ayarlar/harita` adresinde görselleştirilmiş
+> olarak görüyor.
+>
+> Eskiden burada `HARITA.md` ve `DURUM.md` yazıyordu; ikisi de hiç
+> yazılmamıştı. Harita artık tek dosyada ve **denetleniyor**:
+> `npm run kontrol` haritada olmayan sayfa, uç, eylem, tablo ya da
+> işlev bulursa düşer.
 
 > `standartlar/` klasörü **projeden bağımsızdır.** Yeni bir yazılım
 > başlatırken olduğu gibi kopyalanır; oraya bu projeye özel bir şey
@@ -38,8 +49,10 @@ yeni program öğrenmez, sekme açılır.
 
 | Modül | Kod | Ne yapar | Durum |
 |---|---|---|---|
-| Personel Takip | `ptp` | Günlük iş emri, checklist | **Kuruluyor** |
-| Ödeme Takip | `otp` | Çek, kredi, ödeme planı | Sırada |
+| Personel Takip | `ptp` | Günlük iş emri, checklist, ciro, prim, eksikler | **Yayında** |
+| Ödeme Takip | `otp` | Çek, kredi, ödeme planı, DIA aktarımı | **Yayında** |
+| Teklif | — | Fiyat teklifi ve PDF çıktısı | **Yayında** |
+| Bildirim | — | Telegram altyapısı, olay kataloğu | **Yayında** |
 | Tahsilat Takip | `ttp` | Müşteri alacak takibi | Sırada |
 | Mağaza Takip | `mtp` | Ciro, stok, hedef, prim | Sırada |
 
@@ -145,7 +158,8 @@ standartlar/          projeden bağımsız kurallar
 5. Sekme, kullanıcının yetkisi varsa **kendiliğinden** görünür — panel
    düzenine elle sekme eklenmez
 6. **Bildirimleri katalog'a eklenir** (aşağıda)
-7. `CLAUDE.md` ve `HARITA.md` aynı işlem içinde güncellenir
+7. `lib/harita/veri.ts` aynı işlem içinde güncellenir — düğümler,
+   bağlantılar ve varsa yeni tuzak. `npm run kontrol` unutulursa düşer.
 
 Modül planlarken `standartlar/05-EKRANLAR.md` sonundaki yedi soru
 cevaplanır.
