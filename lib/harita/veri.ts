@@ -1286,6 +1286,30 @@ export const DUGUMLER: Dugum[] = [
 		baglar: ['t-firmalar'],
 	},
 	{
+		kod: 'uc-edp-urunler',
+		ad: 'POST/PUT /api/edp/urunler',
+		tur: 'uc',
+		katman: 1,
+		modul: 'edp',
+		yol: 'app/api/edp/urunler/route.ts',
+		ne: 'Ürün hafızası: barkod → öğrenilmiş ad ve ürün KDVsi.',
+		neden:
+			'POST ile SORULAN barkodlar dönüyor, tamamı değil: katalog binlere çıkacak ama bir listede birkaç yüz ürün var. Yazma yalnızca Excel indirildiğinde — indirmek onaylamak demek, ekranda oynanıp vazgeçilen değer hafızaya geçmemeli. Boş ad öğrenilmiş adı silmiyor.',
+		baglar: ['t-edp-urunler'],
+	},
+	{
+		kod: 't-edp-urunler',
+		ad: 'edp_urunler',
+		tur: 'tablo',
+		katman: 3,
+		modul: 'edp',
+		yol: 'supabase/migrations/24_edp_urun_hafizasi.sql',
+		ne: 'Barkod → öğrenilmiş ad, ürün KDVsi ve kaç kez görüldüğü.',
+		neden:
+			'Anahtar BARKOD: tedarikçi kodu ve adı değişebiliyor ama barkod ürünün kendisine ait. Ürünün KDVsi hiçbir belgede yazmadığı için tek öğrenme yolu bu. gorulme sayacı güvenilirlik göstergesi: bir kez düzeltilmiş ad ile otuz kez doğrulanmış ad aynı şey değil.',
+		baglar: ['t-firmalar'],
+	},
+	{
 		kod: 't-edp-tedarikciler',
 		ad: 'edp_tedarikciler',
 		tur: 'tablo',

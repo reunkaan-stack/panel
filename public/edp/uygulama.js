@@ -98,6 +98,18 @@ function fiyat1(r){ return odenen(r) / (1 + urunKdv(r)/100); }
 function fiyat3(r){ return fiyat2(r) * profitMultiplier(cfg.f3); }
 function fiyat5(r){ return fiyat3(r) * profitMultiplier(cfg.f5); }
 function fiyat4(r){ return (r.f4!=null && r.f4!=='') ? parseTL(r.f4) : fiyat5(r); }
+/** Dia'nın C kolonuna yazılacak ad.
+
+    SIRA: elle yazılan / hafızadan gelen ad  →  ham ad (otomatik
+    açıksa)  →  boş. Hafızadan gelen ad r.ad içine konuyor, yani
+    kullanıcı üzerine yazabiliyor; bir sonraki indirmede onun
+    yazdığı öğreniliyor. */
+function urunAdi(r){
+  const elle=(r.ad||'').trim();
+  if(elle) return elle;
+  return autoName ? r.aciklama : '';
+}
+
 function ekAlan5(r){ return (r.kod? r.kod+'-':'') + r.aciklama + (r.barkod? ' ('+r.barkod+')':''); }
 
 // ---------- PDF okuma ----------
@@ -202,9 +214,14 @@ function render(){
         ? `<td class="editcell"><input data-i="${i}" data-col="barkod" value="${String(r.barkod||'').replace(/"/g,'&quot;')}" placeholder="Barkod gir"></td>`
         : `<td class="ro">${r.barkod}</td>`)+
       `<td class="ro">${r.aciklama}</td>`+
-      (autoName
-        ? `<td class="ro">${r.aciklama}</td>`
-        : `<td class="editcell"><input data-i="${i}" data-col="ad" value="${(r.ad||'').replace(/"/g,'&quot;')}" placeholder="temiz ad"></td>`)+
+      /* Ad hücresi artık otomatik kipte de düzenlenebilir: hafızadan
+         gelen adı görüp değiştirebilmek gerekiyor. Hafızadan geldiyse
+         işaretleniyor ki kullanıcı nereden geldiğini bilsin. */
+      `<td class="editcell"${r.hafizadan?' title="Daha önce bu adı vermiştiniz"':''}>`+
+        `<input data-i="${i}" data-col="ad" value="${(r.ad||'').replace(/"/g,'&quot;')}" `+
+        `placeholder="${autoName?(r.aciklama||'').replace(/"/g,'&quot;'):'temiz ad'}">`+
+        (r.hafizadan?'<span class="hafiza-im" title="Hafızadan geldi">⟲</span>':'')+
+      `</td>`+
       `<td class="ro num">${r.miktar}</td>`+
       `<td class="editcell num"><select data-i="${i}" data-col="kdv">`+
         `<option value="20" ${urunKdv(r)===20?'selected':''}>%20</option>`+
@@ -349,7 +366,7 @@ function exportXlsx(){
     aoa.push([
       String(k+1),
       String(r.barkod),
-      autoName ? r.aciklama : (r.ad||'').trim(),   // C: oto ham ad / manuel temiz ad
+      urunAdi(r),                 // C: hafıza/elle → ham ad
       cfg.birim,                  // D
       fmt(fiyat2(r)),             // E Fiyat2
       String(urunKdv(r)),         // F  ürünün KDV'si
@@ -370,6 +387,7 @@ function exportXlsx(){
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Dia");
   XLSX.writeFile(wb, "Dia Yukleme "+tarih.replace(/\./g,'-')+".xlsx");
+  hafizayaYaz(dahil);
   toast("Excel indirildi ✓");
 }
 
@@ -417,6 +435,7 @@ async function handleFiles(files){
   }
   render();
   if(rows.length) toast(rows.length+" ürün okundu ✓");
+  hafizadanDoldur();
 }
 
 // ---------- Excel okuma + kolon eşleştirme ----------
@@ -482,6 +501,7 @@ function loadKarasExcel(){
   document.getElementById('xlmap').style.display='none';
   render();
   toast(out.length+' KARAS ürünü okundu ✓');
+  hafizadanDoldur();
   return true;
 }
 
@@ -551,6 +571,7 @@ function applyExcelMap(){
   render();
   document.getElementById('xlInfo').textContent='';
   toast(out.length+" ürün okundu ✓");
+  hafizadanDoldur();
 }
 
 // ---------- Dosyadaki fiyat KDV dahil mi ----------
@@ -702,4 +723,79 @@ function ayarlariKaydet() {
         toast('Ayarlar kaydedilemedi — bağlantı yok');
       });
   }, 600);
+}
+
+
+/* ================= ÜRÜN HAFIZASI =================
+
+   Barkod → daha önce verilen ad ve ürünün KDV'si.
+
+   OKUMA: dosya her yüklendikten sonra, barkodlar sunucuya sorulur
+   ve bilinenler satırlara işlenir.
+
+   YAZMA: yalnızca EXCEL İNDİRİLDİĞİNDE. "İndirdim" = "onayladım";
+   ekranda oynanıp vazgeçilen bir değer hafızaya geçmemeli.
+
+   Hafıza çalışmazsa program eskisi gibi çalışır — ama sessiz
+   kalmaz, kullanıcı neden tanımadığını bilsin. */
+
+async function hafizadanDoldur(){
+  const barkodlar=rows.map(r=>String(r.barkod||'').trim()).filter(Boolean);
+  if(!barkodlar.length) return;
+
+  try{
+    const cevap=await fetch('/api/edp/urunler',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({barkodlar:barkodlar})
+    });
+    if(!cevap.ok) throw new Error('sunucu '+cevap.status);
+
+    const veri=await cevap.json();
+    const bilinen=veri.urunler||{};
+    let adSayisi=0, kdvSayisi=0;
+
+    rows.forEach(function(r){
+      const kayit=bilinen[String(r.barkod||'').trim()];
+      if(!kayit) return;
+
+      /* Elle bir şey yazılmışsa ÜZERİNE YAZILMAZ: kullanıcının o
+         andaki kararı hafızadan önce gelir. */
+      if(kayit.ad && !(r.ad||'').trim()){
+        r.ad=kayit.ad; r.hafizadan=true; adSayisi++;
+      }
+      if((kayit.kdv===10||kayit.kdv===20) && r.kdv==null){
+        r.kdv=kayit.kdv; kdvSayisi++;
+      }
+    });
+
+    if(adSayisi||kdvSayisi){
+      render();
+      toast(adSayisi+' ürün adı, '+kdvSayisi+' KDV hafızadan geldi');
+    }
+  }catch(e){
+    console.error('[edp] ürün hafızası okunamadı', e);
+    toast('Ürün hafızası okunamadı — adlar boş gelecek');
+  }
+}
+
+async function hafizayaYaz(satirlar){
+  const urunler=satirlar
+    .filter(function(r){ return String(r.barkod||'').trim(); })
+    .map(function(r){
+      return { barkod:String(r.barkod).trim(), ad:urunAdi(r), kdv:urunKdv(r) };
+    });
+  if(!urunler.length) return;
+
+  try{
+    const cevap=await fetch('/api/edp/urunler',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({urunler:urunler})
+    });
+    if(!cevap.ok) throw new Error('sunucu '+cevap.status);
+  }catch(e){
+    console.error('[edp] ürün hafızası yazılamadı', e);
+    toast('Excel indi ama ürün hafızası güncellenemedi');
+  }
 }
