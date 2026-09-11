@@ -657,7 +657,14 @@ for (const k of AY_SIRASI) {
 
 const KREDI_BAR_STILI =
 	'  details.month-det summary .kredi-bar{flex:0 0 100%;margin-top:2px;height:5px}' +
-	'  details.month-det summary .kredi-yuzde{font-weight:600;min-width:44px;text-align:right}';
+	'  details.month-det summary .kredi-yuzde{font-weight:600;min-width:44px;text-align:right}' +
+	/* AÇIKKEN GİZLENİYOR. Açılan kredinin içinde zaten ödenen ve
+	   toplam rakamlarıyla birlikte aynı çubuk var; ikisi üst üste
+	   gelince tekrar oluyor ve hangisinin ne olduğu anlaşılmıyor.
+	   Özetteki çubuk KAPALIYKEN iş görüyor, açılınca rakamlı olana
+	   bırakıyor. Yüzde satırda kalıyor: o tekrar değil, çubuğun
+	   okunmasını kolaylaştıran sayı. */
+	'  details.month-det[open] summary .kredi-bar{display:none}';
 
 const krediBarDegisimi = [
 	{
