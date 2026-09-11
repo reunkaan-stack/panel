@@ -639,6 +639,56 @@ for (const k of AY_SIRASI) {
 	}
 }
 
+/* ---------- 12. Kredi ilerlemesi kapalıyken de görünsün ---------- */
+/* Ödenen oranı yalnızca kredi AÇILDIĞINDA görünüyordu: ilerleme
+   çubuğu .inner içindeydi. Krediler listesinde asıl sorulan soru
+   "hangisi ne kadar bitti" ve bunu görmek için her satırı tek tek
+   açmak gerekiyordu.
+
+   Çubuk özet satırına taşınmıyor, KOPYALANIYOR: açınca görünen
+   ayrıntılı hâli (ödenen/toplam rakamlarıyla) yerinde kalıyor.
+
+   Yeni renk ya da karanlık kip kuralı YAZILMADI: mevcut .pbar
+   sınıfı kullanılıyor, üstüne yalnızca yerleşim ekleniyor. Ayrı
+   sınıf yazılsaydı tema değiştiğinde ikisi ayrışırdı.
+
+   Özet satırı zaten flex-wrap; çubuğa flex-basis:100% verilince
+   kendi satırına iniyor ve mevcut düzeni hiç bozmuyor. */
+
+const KREDI_BAR_STILI =
+	'  details.month-det summary .kredi-bar{flex:0 0 100%;margin-top:2px;height:5px}' +
+	'  details.month-det summary .kredi-yuzde{font-weight:600;min-width:44px;text-align:right}';
+
+const krediBarDegisimi = [
+	{
+		bul:
+			'<span class="tot" style="color:${s.kal>0.01?"var(--purple)":"var(--green)"}">' +
+			'${s.kal>0.01?"kalan "+para(s.kal):"✓ bitti"}</span></summary>',
+		koy:
+			'<span class="ozet-txt kredi-yuzde">%${s.top?Math.round(s.od/s.top*100):0}</span>' +
+			'<span class="tot" style="color:${s.kal>0.01?"var(--purple)":"var(--green)"}">' +
+			'${s.kal>0.01?"kalan "+para(s.kal):"✓ bitti"}</span>' +
+			'<div class="pbar kredi-bar"><div style="width:${s.top?Math.min(100,s.od/s.top*100):0}%"></div></div>' +
+			'</summary>',
+		not: 'kredi ilerleme çubuğu özet satırına eklendi',
+	},
+];
+
+for (const k of krediBarDegisimi) {
+	if (s.includes(k.bul)) {
+		s = s.replace(k.bul, k.koy);
+		rapor.push(k.not);
+	} else {
+		rapor.push('⚠ bulunamadı: ' + k.not);
+	}
+}
+
+if (s.includes(stilSonu)) {
+	s = s.replace(stilSonu, KREDI_BAR_STILI + stilSonu);
+} else {
+	rapor.push('⚠ stil sonu bulunamadı — kredi çubuğu stili eklenemedi');
+}
+
 /* ---------- Yaz ---------- */
 
 fs.mkdirSync(path.dirname(HEDEF), { recursive: true });

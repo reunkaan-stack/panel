@@ -348,7 +348,7 @@
     font-size:14px;color:var(--ink);
   }
   .kredi-ozet-toplam b{font-size:16px;color:var(--amber)}
-</style>
+  details.month-det summary .kredi-bar{flex:0 0 100%;margin-top:2px;height:5px}  details.month-det summary .kredi-yuzde{font-weight:600;min-width:44px;text-align:right}</style>
 </head>
 <body>
 <!-- Modül çubuğu kaldırıldı: gezinme panelde. -->
@@ -842,7 +842,7 @@ function renderKrediler(){
       <span class="spacer"></span>
       ${oranTxt?`<span class="badge b-amber" title="Toplam faiz ÷ ana para ÷ taksit sayısı — yaklaşık ortalama aylık maliyet">~%${oranTxt}/ay</span>`:""}
       <span class="ozet-txt" title="Bu kredi boyunca toplam ödenen/ödenecek faiz ve BSMV">Faiz: ${para(s.faiz)} · BSMV: ${para(s.bsmv)}</span>
-      <span class="tot" style="color:${s.kal>0.01?"var(--purple)":"var(--green)"}">${s.kal>0.01?"kalan "+para(s.kal):"✓ bitti"}</span></summary>
+      <span class="ozet-txt kredi-yuzde">%${s.top?Math.round(s.od/s.top*100):0}</span><span class="tot" style="color:${s.kal>0.01?"var(--purple)":"var(--green)"}">${s.kal>0.01?"kalan "+para(s.kal):"✓ bitti"}</span><div class="pbar kredi-bar"><div style="width:${s.top?Math.min(100,s.od/s.top*100):0}%"></div></div></summary>
     <div class="inner">
       <div style="font-size:13px;color:var(--muted);margin-bottom:8px">${k.ad}</div>
       <div class="pbar"><div style="width:${s.top?Math.min(100,s.od/s.top*100):0}%"></div></div>

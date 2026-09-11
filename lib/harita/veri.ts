@@ -250,7 +250,7 @@ export const DUGUMLER: Dugum[] = [
 		katman: 2,
 		modul: 'otp',
 		yol: 'araclar/otp-arayuz-tasi.mjs',
-		ne: '11 adımlık dönüşüm: API adresleri, tema, gizlenen düğmeler, kredi özeti, ay sıralaması.',
+		ne: '12 adımlık dönüşüm: API adresleri, tema, gizlenen düğmeler, kredi özeti, ay sıralaması, kredi ilerleme çubuğu.',
 		neden:
 			'Betik olmasaydı her değişiklik 1400 satırda elle aranırdı ve kaynak program güncellenince hepsi kaybolurdu.',
 		baglar: [],
