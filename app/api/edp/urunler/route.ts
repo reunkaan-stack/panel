@@ -19,7 +19,15 @@ export const dynamic = 'force-dynamic';
    işlemek yerine durmak doğru. */
 const AZAMI = 2000;
 
-type Kayit = { barkod: string; ad: string; kdv: number | null };
+type Kayit = {
+	barkod: string;
+	ad: string;
+	kdv: number | null;
+	son_satis_fiyati: number | null;
+	son_alis_fiyati: number | null;
+	son_alis_tarihi: string | null;
+	son_tedarikci: string;
+};
 
 function barkodlariTemizle(veri: unknown): string[] {
 	if (!Array.isArray(veri)) return [];
@@ -51,15 +59,26 @@ export async function POST(istek: Request) {
 		const supabase = await sunucuIstemcisi();
 		const { data, error } = await supabase
 			.from('edp_urunler')
-			.select('barkod, ad, kdv')
+			.select('barkod, ad, kdv, son_satis_fiyati, son_alis_fiyati, son_alis_tarihi, son_tedarikci')
 			.eq('firma_id', firmaId)
 			.in('barkod', barkodlar);
 
 		if (error) throw error;
 
-		const urunler: Record<string, { ad: string; kdv: number | null }> = {};
+		const urunler: Record<string, unknown> = {};
 		for (const satir of (data ?? []) as Kayit[]) {
-			urunler[satir.barkod] = { ad: satir.ad, kdv: satir.kdv };
+			urunler[satir.barkod] = {
+				ad: satir.ad,
+				kdv: satir.kdv,
+				/* Öneri olarak gösterilecek; kutuyu kendiliğinden
+				   DOLDURMUYOR. Alış yükselmişse eski satış fiyatıyla
+				   devam etmek kâr marjını sessizce eritir. */
+				sonSatis: satir.son_satis_fiyati,
+				/* Zam uyarısı için: KDV hariç son alış. */
+				sonAlis: satir.son_alis_fiyati,
+				sonAlisTarihi: satir.son_alis_tarihi,
+				sonTedarikci: satir.son_tedarikci,
+			};
 		}
 
 		return NextResponse.json({ urunler });
@@ -95,17 +114,26 @@ export async function PUT(istek: Request) {
 		   upsert tek başına sayacı artıramaz; artırmadan yazarsak
 		   "kaç kez doğrulandı" bilgisi hep 1 kalır ve öğrenilmiş adın
 		   ne kadar güvenilir olduğu anlaşılmaz. */
-		const gelen = govde.urunler as {
-			barkod?: unknown;
-			ad?: unknown;
-			kdv?: unknown;
-		}[];
+		const gelen = govde.urunler as Record<string, unknown>[];
+
+		/* Sayı alanları: geçersiz değer yazılmaz, null bırakılır.
+		   Sıfır yazmak "bedava aldım" demek olurdu. */
+		const sayi = (v: unknown): number | null => {
+			const n = Number(v);
+			return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
+		};
+
+		const bugun = new Date().toISOString().slice(0, 10);
 
 		const satirlar = gelen
 			.map((u) => ({
 				barkod: String(u.barkod ?? '').trim().slice(0, 40),
 				ad: String(u.ad ?? '').trim().slice(0, 200),
 				kdv: Number(u.kdv),
+				kod: String(u.kod ?? '').trim().slice(0, 60),
+				son_tedarikci: String(u.tedarikci ?? '').trim().slice(0, 60),
+				son_satis_fiyati: sayi(u.satisFiyati),
+				son_alis_fiyati: sayi(u.alisFiyati),
 			}))
 			.filter((u) => u.barkod.length > 0 && (u.kdv === 10 || u.kdv === 20));
 
@@ -113,32 +141,42 @@ export async function PUT(istek: Request) {
 
 		const { data: mevcut } = await supabase
 			.from('edp_urunler')
-			.select('barkod, gorulme, ad')
+			.select('barkod, gorulme, ad, kod, son_tedarikci, son_satis_fiyati')
 			.eq('firma_id', firmaId)
 			.in(
 				'barkod',
 				satirlar.map((u) => u.barkod)
 			);
 
-		const oncekiler = new Map<string, { gorulme: number; ad: string }>();
-		for (const m of (mevcut ?? []) as {
+		type Onceki = {
 			barkod: string;
 			gorulme: number;
 			ad: string;
-		}[]) {
-			oncekiler.set(m.barkod, { gorulme: m.gorulme, ad: m.ad });
-		}
+			kod: string;
+			son_tedarikci: string;
+			son_satis_fiyati: number | null;
+		};
+		const oncekiler = new Map<string, Onceki>();
+		for (const m of (mevcut ?? []) as Onceki[]) oncekiler.set(m.barkod, m);
 
 		const yazilacak = satirlar.map((u) => {
 			const onceki = oncekiler.get(u.barkod);
 			return {
 				firma_id: firmaId,
 				barkod: u.barkod,
-				/* Boş ad öğrenilmiş adı SİLMEZ. Kullanıcı adı otomatik
-				   kullandığı bir listede indirme yaparsa, daha önce elle
-				   düzelttiği ad kaybolmamalı. */
+				/* Boş gelen alan öğrenilmişi SİLMEZ. Kullanıcı adı
+				   otomatik kullandığı bir listede indirme yaparsa daha
+				   önce elle düzelttiği ad kaybolmamalı; aynısı kod ve
+				   satış fiyatı için de geçerli. */
 				ad: u.ad || onceki?.ad || '',
 				kdv: u.kdv,
+				kod: u.kod || onceki?.kod || '',
+				son_tedarikci: u.son_tedarikci || onceki?.son_tedarikci || '',
+				son_satis_fiyati: u.son_satis_fiyati ?? onceki?.son_satis_fiyati ?? null,
+				/* Alış fiyatı ve tarihi HER İNDİRMEDE güncelleniyor:
+				   "en son kaça aldım" sorusunun cevabı bu. */
+				son_alis_fiyati: u.son_alis_fiyati,
+				son_alis_tarihi: u.son_alis_fiyati ? bugun : null,
 				gorulme: (onceki?.gorulme ?? 0) + 1,
 			};
 		});

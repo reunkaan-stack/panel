@@ -1306,7 +1306,7 @@ export const DUGUMLER: Dugum[] = [
 		yol: 'supabase/migrations/24_edp_urun_hafizasi.sql',
 		ne: 'Barkod → öğrenilmiş ad, ürün KDVsi ve kaç kez görüldüğü.',
 		neden:
-			'Anahtar BARKOD: tedarikçi kodu ve adı değişebiliyor ama barkod ürünün kendisine ait. Ürünün KDVsi hiçbir belgede yazmadığı için tek öğrenme yolu bu. gorulme sayacı güvenilirlik göstergesi: bir kez düzeltilmiş ad ile otuz kez doğrulanmış ad aynı şey değil.',
+			'Anahtar BARKOD: tedarikçi kodu ve adı değişebiliyor ama barkod ürünün kendisine ait. Ürünün KDVsi hiçbir belgede yazmadığı için tek öğrenme yolu bu. son_alis_fiyati KDV HARİÇ tutuluyor — KDV dahil karşılaştırma, fatura KDVsi değiştiğinde olmayan zam gösterirdi. son_satis_fiyati ÖNERİ olarak gösteriliyor, kutuyu doldurmuyor: alış yükselmişse eski satış fiyatı kâr marjını sessizce eritir. son_alis_* alanları ileride edp_alislar tablosunun ÖNBELLEĞİ olacak, asıl kaynak o.',
 		baglar: ['t-firmalar'],
 	},
 	{

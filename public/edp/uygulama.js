@@ -110,6 +110,18 @@ function urunAdi(r){
   return autoName ? r.aciklama : '';
 }
 
+/** Geçen alışa göre değişim yüzdesi. Karşılaştırma KDV HARİÇ
+    fiyatla yapılıyor: KDV dahil tutar üzerinden bakmak, fatura
+    KDV'si değiştiğinde olmayan bir zam gösterirdi. */
+function zamOrani(r){
+  if(!r.sonAlis || r.sonAlis<=0) return null;
+  return (fiyat1(r)-r.sonAlis)/r.sonAlis*100;
+}
+
+/* Bu eşiğin altındaki oynama gürültü sayılıyor; her kuruşluk
+   fark için uyarı çıkarsa uyarıya bakılmaz olur. */
+const ZAM_ESIGI = 5;
+
 function ekAlan5(r){ return (r.kod? r.kod+'-':'') + r.aciklama + (r.barkod? ' ('+r.barkod+')':''); }
 
 // ---------- PDF okuma ----------
@@ -227,11 +239,22 @@ function render(){
         `<option value="20" ${urunKdv(r)===20?'selected':''}>%20</option>`+
         `<option value="10" ${urunKdv(r)===10?'selected':''}>%10</option>`+
       `</select></td>`+
-      `<td class="ro num">${fmt(r.nfiyat)}</td>`+
+      `<td class="ro num">${fmt(r.nfiyat)}`+
+        (function(){
+          const z=zamOrani(r);
+          if(z===null || Math.abs(z)<ZAM_ESIGI) return '';
+          const yon = z>0 ? 'zam' : 'indirim';
+          return '<span class="zam '+(z>0?'arti':'eksi')+'" title="Geçen alış: '+
+                 fmt(r.sonAlis)+' ₺ ('+(r.sonAlisTarihi||'')+') — '+yon+'">'+
+                 (z>0?'▲':'▼')+Math.abs(Math.round(z))+'%</span>';
+        })()+
+      `</td>`+
       `<td class="num calc">${fmt(fiyat2(r))}</td>`+
       `<td class="num calc">${fmt(fiyat1(r))}</td>`+
       `<td class="num calc">${fmt(fiyat3(r))}</td>`+
-      `<td class="editcell num"><input data-i="${i}" data-col="f4" value="${r.f4!=null&&r.f4!==''?r.f4:''}" placeholder="${fmt(fiyat5(r))}"></td>`+
+      `<td class="editcell num"><input data-i="${i}" data-col="f4" value="${r.f4!=null&&r.f4!==''?r.f4:''}" placeholder="${fmt(fiyat5(r))}">`+
+        (r.sonSatis ? `<span class="oneri" title="Geçen sefer bu fiyatı yazmıştınız">${fmt(r.sonSatis)}</span>` : '')+
+      `</td>`+
       `<td class="num calc f5-${i}">${fmt(fiyat4(r))}</td>`+
       `<td class="ro">${ekAlan5(r)}</td>`;
     tb.appendChild(tr);
@@ -772,6 +795,13 @@ async function hafizadanDoldur(){
       if((kayit.kdv===10||kayit.kdv===20) && r.kdv==null){
         r.kdv=kayit.kdv; kdvSayisi++;
       }
+
+      /* Öneri olarak saklanıyor, kutuya YAZILMIYOR: alış fiyatı
+         değişmişse eski satış fiyatı yanlış olabilir. */
+      r.sonSatis=kayit.sonSatis;
+      r.sonAlis=kayit.sonAlis;
+      r.sonAlisTarihi=kayit.sonAlisTarihi;
+      r.sonTedarikci=kayit.sonTedarikci;
     });
 
     if(adSayisi||kdvSayisi){
@@ -788,7 +818,17 @@ async function hafizayaYaz(satirlar){
   const urunler=satirlar
     .filter(function(r){ return String(r.barkod||'').trim(); })
     .map(function(r){
-      return { barkod:String(r.barkod).trim(), ad:urunAdi(r), kdv:urunKdv(r) };
+      return {
+        barkod:String(r.barkod).trim(),
+        ad:urunAdi(r),
+        kdv:urunKdv(r),
+        kod:r.kod||'',
+        tedarikci:document.getElementById('grupKodu').value.trim(),
+        /* Elle yazılmışsa o; yazılmamışsa öğrenilecek bir şey yok. */
+        satisFiyati:(r.f4!=null&&r.f4!=='')?parseTL(r.f4):null,
+        /* KDV hariç alış — zam karşılaştırmasının tabanı. */
+        alisFiyati:fiyat1(r)
+      };
     });
   if(!urunler.length) return;
 
