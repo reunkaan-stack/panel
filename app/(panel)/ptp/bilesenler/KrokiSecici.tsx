@@ -13,8 +13,7 @@ import type { Bolge } from '@/lib/tipler';
    temizlenmiş" diye değil, gerçekten yaptığı yeri işaretlemeli. Sayı
    göstermek seçimi yönlendirirdi. */
 
-const EN = 1000;
-const BOY = 600;
+import { KROKI_EN as EN, KROKI_BOY as BOY } from '@/lib/ptp/kroki';
 
 export function KrokiSecici({
 	bolgeler,

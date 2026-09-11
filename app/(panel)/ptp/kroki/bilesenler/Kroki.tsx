@@ -20,8 +20,7 @@ import {
    ölçekleniyor. Izgaraya oturma (20 birim) hem hizalamayı kolaylaştırıyor
    hem blueprint diline uyuyor. */
 
-const EN = 1000;
-const BOY = 600;
+import { KROKI_EN as EN, KROKI_BOY as BOY } from '@/lib/ptp/kroki';
 const IZGARA = 20;
 
 type Yerlesim = { x: number; y: number; en: number; boy: number };

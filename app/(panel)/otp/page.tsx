@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { SURUM } from '@/lib/surum';
 import Link from 'next/link';
 import { modulSeviyesi } from '@/lib/yetki';
 import { aktifOtpFirmasi } from '@/lib/otp/veri';
@@ -34,9 +35,6 @@ export const dynamic = 'force-dynamic';
 /* Yayın kimliği. Vercel her yayında commit karmasını veriyor;
    geliştirmede sunucu her açıldığında değişsin ki elle yenilemek
    gerekmesin. */
-const SURUM =
-	process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) ??
-	(process.env.NODE_ENV === 'development' ? String(Date.now()) : 'yerel');
 
 export default async function OtpSayfasi() {
 	const seviye = await modulSeviyesi('otp');

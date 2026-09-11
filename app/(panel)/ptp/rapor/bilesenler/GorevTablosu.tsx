@@ -1,5 +1,6 @@
 'use client';
 
+import { Th, Td } from './Tablo';
 import { useState } from 'react';
 import { GRUP_ADLARI, type GorevGrubu } from '@/lib/tipler';
 import { kisaTarih } from '@/lib/ortak/tarih';
@@ -164,31 +165,5 @@ function Satir({
 				</tr>
 			)}
 		</>
-	);
-}
-
-function Th({ children, sag }: { children: React.ReactNode; sag?: boolean }) {
-	return (
-		<th
-			className={`py-2 font-mono text-[0.625rem] font-normal uppercase tracking-[0.08em] text-metin-3 ${
-				sag ? 'pl-4 text-right' : 'pr-4 text-left'
-			}`}
-		>
-			{children}
-		</th>
-	);
-}
-
-function Td({
-	children,
-	renk,
-}: {
-	children: React.ReactNode;
-	renk?: string;
-}) {
-	return (
-		<td className={`py-3 pl-4 text-right tabular-nums ${renk ?? ''}`}>
-			{children}
-		</td>
 	);
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { SURUM } from '@/lib/surum';
 import Link from 'next/link';
 import { modulSeviyesi } from '@/lib/yetki';
 import { islemFirmasi } from '@/lib/yetki/firma';
@@ -24,9 +25,6 @@ export const dynamic = 'force-dynamic';
    alındığında yeni sürüm yayına çıksa bile eskisi görünüyordu.
    Yayın kimliği eklenince her yayında adres değişiyor. */
 
-const SURUM =
-	process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) ??
-	(process.env.NODE_ENV === 'development' ? String(Date.now()) : 'yerel');
 
 export default async function EdpSayfasi() {
 	const seviye = await modulSeviyesi('edp');

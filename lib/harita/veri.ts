@@ -1446,6 +1446,13 @@ export const TUZAKLAR: Tuzak[] = [
 		kural: 'Doğrulama tek yerde yaşar, oradan çağrılır.',
 	},
 	{
+		baslik: 'Kopyalanan kural sessizce ayrışır',
+		olan:
+			'Modül listesi BEŞ yere kopyalanmıştı; sonuncusu bir sunucu eyleminde sabit dizi olarak duruyordu ve edp eklenince güncellenmedi. Kutu işaretleniyor, kaydedildi yazıyor, satır hiç yazılmıyordu. Ayrıca rapor tablosunun Th/Td hücreleri iki kopyaya ayrılmış ve biri erişilebilirlik niteliğini kaybetmişti — kimse bilerek yapmadı.',
+		kural:
+			'Tek kaynak yaz, kalanları oradan oku. Tür türetmesi yetmez: eksik bir alt küme de geçerli tiptir. npm run kontrol artık aynı satırda iki modül kodu geçen her yeri bildiriyor.',
+	},
+	{
 		baslik: 'Sessiz catch olmaz',
 		olan: 'Kredi özeti hiç çizilmedi; catch(e){} yüzünden konsolda iz yoktu. İki tur önbellek suçlandı.',
 		kural: 'Yakala ama MUTLAKA yaz. Konsolda hata yoksa çökme değil erken çıkıştır.',

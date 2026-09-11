@@ -12,8 +12,7 @@ import type { Sonuc } from '../eylemler';
    Çizilen her dikdörtgen bir bölgedir; ayrı bir "kroki nesnesi"
    kavramı yok. Bölge silinince krokiden de gider. */
 
-const EN = 1000;
-const BOY = 600;
+import { KROKI_EN as EN, KROKI_BOY as BOY } from '@/lib/ptp/kroki';
 
 
 export type BolgeYerlesimi = {

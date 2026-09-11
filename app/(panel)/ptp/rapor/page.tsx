@@ -1,3 +1,4 @@
+import { Th, Td } from './bilesenler/Tablo';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
@@ -265,33 +266,5 @@ function Kutu({ etiket, deger }: { etiket: string; deger: string }) {
 			<span className="etiket">{etiket}</span>
 			<p className="mt-2 text-3xl font-semibold tracking-[-0.02em]">{deger}</p>
 		</div>
-	);
-}
-
-function Th({ children, sag }: { children: React.ReactNode; sag?: boolean }) {
-	return (
-		<th
-			scope="col"
-			className={`py-2 font-mono text-[0.625rem] font-medium uppercase tracking-[0.08em] text-metin-3 ${
-				sag ? 'pl-4 text-right' : 'pr-4 text-left'
-			}`}
-		>
-			{children}
-		</th>
-	);
-}
-
-function Td({
-	children,
-	renk,
-}: {
-	children: React.ReactNode;
-	renk?: string;
-}) {
-	/* Sayılar font-mono: değişken genişlikli rakam sütunu hizasız görünür. */
-	return (
-		<td className={`py-3 pl-4 text-right font-mono ${renk ?? 'text-metin-2'}`}>
-			{children}
-		</td>
 	);
 }
