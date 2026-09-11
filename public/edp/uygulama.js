@@ -355,7 +355,9 @@ function bindCells(){
 }
 
 // ---------- Excel çıktı (Dia şablonu, kolonlar ayrık, metin) ----------
-function exportXlsx(){
+/* Sıfırlama son kontrol ekranından geliyor; kalıcı bir ayar DEĞİL.
+   Açık kalan görünmez bir seçim, sessizce yanlış Excel üretirdi. */
+function exportXlsx(sifirla34){
   const tarih = dmy(document.getElementById('tarih').value || todayStr());
   const grup = document.getElementById('grupKodu').value.trim();
   const header = ["S/N","Barkod","Açıklama","Birim","Fiyat2","KDV","Grup Kodu","EK ALAN 5","düzenleme tarihi","Sistem kdv","Fiyat1","fiyat3","fiyat4","fiyat5"];
@@ -375,9 +377,12 @@ function exportXlsx(){
       tarih,                      // I
       sistemKdv(r),               // J  20→1, 10→2
       fmt(fiyat1(r)),             // K Fiyat1
-      fmt(fiyat3(r)),             // L fiyat3
-      fmt(fiyat4(r)),             // M fiyat4
-      fmt(fiyat4(r))              // N fiyat5 = fiyat4 (elle girilen değer)
+      sifirla34 ? '0' : fmt(fiyat3(r)),   // L fiyat3
+      sifirla34 ? '0' : fmt(fiyat4(r)),   // M fiyat4
+      /* N HİÇ SIFIRLANMAZ: her zaman elle girilen değer, o boşsa
+         hesaplanan fiyat5. Sıfırlama yalnızca toptan (L) ve
+         perakende (M) kolonlarını kapatıyor. */
+      fmt(fiyat4(r))
     ]);
   });
   // her hücre metin olarak (barkod bilimsel gösterime düşmesin)
@@ -649,7 +654,7 @@ document.getElementById('xlSheet').onchange=loadSheet;
 document.getElementById('xlHeaderRow').onchange=buildMapUI;
 document.getElementById('xlApply').onclick=applyExcelMap;
 
-document.getElementById('exportBtn').onclick=exportXlsx;
+document.getElementById('exportBtn').onclick=sonKontroluAc;
 document.getElementById('tarih').value=todayStr();
 function bindLivePriceInput(id,key){
   const input=document.getElementById(id);
@@ -799,3 +804,87 @@ async function hafizayaYaz(satirlar){
     toast('Excel indi ama ürün hafızası güncellenemedi');
   }
 }
+
+
+/* ================= SON KONTROL =================
+
+   Excel indirmeden önceki tek durak. Veri buradan muhasebeye
+   gidiyor; kaç ürün yazılacağı, KDV dağılımı ve sıfırlanacak
+   kolonlar burada bir kez daha görünüyor.
+
+   Sıfırlama seçimi burada duruyor, üst barda değil: "kimi zaman"
+   yapılan bir şey için sürekli açık duran bir kutu unutulur ve
+   sessizce yanlış dosya üretir. */
+
+function sonKontroluAc(){
+  const dahil=rows.filter(r=>r.sec);
+  if(!dahil.length){ toast('Hiç satır seçili değil!'); return; }
+
+  const tarih=dmy(document.getElementById('tarih').value || todayStr());
+  const grup=document.getElementById('grupKodu').value.trim();
+  const yirmi=dahil.filter(r=>urunKdv(r)===20).length;
+  const on=dahil.filter(r=>urunKdv(r)===10).length;
+
+  document.getElementById('onayOzet').innerHTML=
+    '<b>'+dahil.length+' ürün</b> yazılacak · Grup kodu <b>'+(grup||'—')+'</b> · '+
+    'Tarih <b>'+tarih+'</b><br>Ürün KDV: <b>'+yirmi+' × %20</b>, <b>'+on+' × %10</b>';
+
+  const uyarilar=[];
+  if(yirmi>0 && on>0){
+    uyarilar.push('Listede iki farklı ürün KDV var. F ve J kolonları satır satır yazılacak — doğruluğundan emin olun.');
+  }
+  if(!grup){
+    uyarilar.push('Grup kodu boş. Dia G kolonu boş gidecek.');
+  }
+  const barkodsuz=dahil.filter(r=>!String(r.barkod||'').trim()).length;
+  if(barkodsuz){
+    uyarilar.push(barkodsuz+' satırda barkod yok.');
+  }
+  document.getElementById('onayUyari').innerHTML=
+    uyarilar.map(function(u){ return '<div>! '+u+'</div>'; }).join('');
+
+  onizlemeyiCiz();
+  document.getElementById('onayPerde').classList.add('acik');
+}
+
+/* İlk satırın çıktıdaki hâli: sıfırlama kutusu işaretlenince ne
+   değiştiği rakamla görünsün, tarifle değil. */
+function onizlemeyiCiz(){
+  const dahil=rows.filter(r=>r.sec);
+  const r=dahil[0];
+  const kutu=document.getElementById('onayOnizleme');
+  if(!r){ kutu.innerHTML=''; return; }
+
+  const sifir=document.getElementById('sifirla34').checked;
+  const satir=function(ad,deger){
+    return '<tr><td>'+ad+'</td><td class="num"><b>'+deger+'</b></td></tr>';
+  };
+
+  kutu.innerHTML='<div class="small">İlk satır (<b>'+
+    (urunAdi(r)||r.aciklama||'—')+'</b>) çıktıda şöyle görünecek:</div>'+
+    '<table>'+
+    satir('Fiyat1 (K) — KDV hariç', fmt(fiyat1(r))+' ₺')+
+    satir('Fiyat2 (E) — KDV dahil', fmt(fiyat2(r))+' ₺')+
+    satir('KDV (F) / Sistem kdv (J)', urunKdv(r)+' / '+sistemKdv(r))+
+    satir('fiyat3 (L)', sifir ? '0' : fmt(fiyat3(r))+' ₺')+
+    satir('fiyat4 (M)', sifir ? '0' : fmt(fiyat4(r))+' ₺')+
+    satir('fiyat5 (N)', fmt(fiyat4(r))+' ₺')+
+    '</table>';
+}
+
+document.getElementById('sifirla34').addEventListener('change', onizlemeyiCiz);
+
+document.getElementById('onayVazgec').onclick=function(){
+  document.getElementById('onayPerde').classList.remove('acik');
+};
+
+document.getElementById('onayIndir').onclick=function(){
+  const sifir=document.getElementById('sifirla34').checked;
+  document.getElementById('onayPerde').classList.remove('acik');
+  exportXlsx(sifir);
+};
+
+/* Perdeye tıklayınca kapansın; kutunun içine tıklayınca kapanmasın. */
+document.getElementById('onayPerde').addEventListener('click', function(e){
+  if(e.target.id==='onayPerde') e.currentTarget.classList.remove('acik');
+});

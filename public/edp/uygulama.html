@@ -101,6 +101,20 @@
   .hafiza-im{position:absolute;right:4px;top:50%;transform:translateY(-50%);
              font-size:11px;color:var(--accent);pointer-events:none;opacity:.7}
   td.editcell input{padding-right:18px}
+  /* ---- Son kontrol penceresi ---- */
+  #onayPerde{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+             z-index:50;align-items:center;justify-content:center;padding:20px}
+  #onayPerde.acik{display:flex}
+  #onayKutu{background:var(--panel);border:1px solid var(--line);padding:22px;
+            max-width:560px;width:100%;max-height:90vh;overflow:auto}
+  #onayKutu h2{margin:0 0 10px}
+  #onayUyari:not(:empty){border:1px solid var(--accent);padding:10px 12px;margin:12px 0}
+  .onay-secim{display:flex;gap:10px;align-items:flex-start;margin-top:16px;
+              padding:12px;border:1px solid var(--line);cursor:pointer}
+  .onay-secim span{display:flex;flex-direction:column;gap:3px}
+  .onay-onizleme{margin-top:14px;font-size:12.5px;color:var(--muted)}
+  .onay-onizleme table{width:100%}
+  .onay-onizleme td{padding:3px 6px}
 </style>
 </head>
 <body>
@@ -292,5 +306,28 @@
     .addEventListener('change', uygula);
 })();
 </script>
+<div id="onayPerde">
+  <div id="onayKutu">
+    <h2>Son kontrol</h2>
+    <p class="small" id="onayOzet"></p>
+
+    <div id="onayUyari"></div>
+
+    <label class="onay-secim">
+      <input type="checkbox" id="sifirla34">
+      <span>
+        <b>fiyat3 ve fiyat4 sıfır yazılsın</b>
+        <span class="small">Ekranda hesaplanmış hâli durur, Dia dosyasına 0 gider. fiyat5 (N) etkilenmez.</span>
+      </span>
+    </label>
+
+    <div class="onay-onizleme" id="onayOnizleme"></div>
+
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" id="onayIndir">⬇ Excel indir</button>
+      <button class="btn ghost" id="onayVazgec">Vazgeç</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
