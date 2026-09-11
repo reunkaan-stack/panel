@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { superadminDenetle } from '@/lib/yetki';
 import {
 	BEKLEYENLER,
+	BILESENLER,
 	DUGUMLER,
 	MODUL_ADLARI,
 	NEREYE_BAK,
@@ -200,6 +201,30 @@ export default async function HaritaSayfasi() {
 						</li>
 					))}
 				</ol>
+			</section>
+
+			{/* — Bileşenler — */}
+			<section className="mt-14">
+				<span className="etiket">Envanter</span>
+				<h2 className="mt-3 text-xl font-semibold tracking-[-0.015em]">
+					Bileşenler · {BILESENLER.length}
+				</h2>
+				<p className="mt-2 max-w-2xl text-sm leading-relaxed text-metin-3">
+					Diyagrama konmuyorlar — yirmi sekiz kutu daha ağı okunmaz yapardı.
+					Ama envanterden de düşmüyorlar: “bu ekranı kim çiziyor” sorusunun
+					cevabı burada.
+				</p>
+
+				<ul className="mt-4 space-y-px border border-kenarlik bg-kenarlik">
+					{BILESENLER.map((b) => (
+						<li key={b.yol} className="bg-zemin p-3">
+							<p className="font-mono text-[0.6875rem] tracking-[0.02em] text-metin-3">
+								{b.yol}
+							</p>
+							<p className="mt-0.5 text-sm text-metin-2">{b.ne}</p>
+						</li>
+					))}
+				</ul>
 			</section>
 
 			{/* — Ölü tablolar — */}

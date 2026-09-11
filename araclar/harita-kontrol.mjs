@@ -93,6 +93,20 @@ yolDenetle(sayfalar, 'Ekran haritada yok');
 yolDenetle(uclar, 'API ucu haritada yok');
 yolDenetle(eylemler, 'Sunucu eylemi haritada yok');
 
+/* Bileşenler de envanterde olmalı. Diyagrama konmuyorlar ama
+   listeden düşmemeliler: "bu ekranı kim çiziyor" sorusunun cevabı
+   kodu taramakla değil haritaya bakmakla bulunmalı. */
+const bilesenDosyalari = [
+	...dosyalariBul(path.join(KOK, 'app'), '.tsx'),
+	...dosyalariBul(path.join(KOK, 'bilesenler'), '.tsx'),
+].filter((d) => !d.endsWith('/page.tsx') && !d.endsWith('/layout.tsx'));
+
+for (const d of bilesenDosyalari) {
+	if (!harita.includes("'" + d + "'")) {
+		eksikler.push('Bileşen haritada yok: ' + d);
+	}
+}
+
 /* lib/ modülleri de haritada olmalı. Bunlar ortak mantığın durduğu
    yer; haritada yoksa bir sonraki oturum onları yeniden keşfeder.
    Üç tanesi tam böyle kaçmıştı: lib/surum.ts ve lib/ptp/kroki.ts
@@ -145,6 +159,7 @@ const siraliMigrationlar = fs
 	});
 
 const canliTablolar = new Set();
+const adDegisimi = new Map();
 for (const dosya of siraliMigrationlar) {
 	const icerik = fs.readFileSync(path.join(migrationDizini, dosya), 'utf8');
 
@@ -165,6 +180,9 @@ for (const dosya of siraliMigrationlar) {
 		else if (eylem === 'alter' && yeniAd) {
 			canliTablolar.delete(ad);
 			canliTablolar.add(yeniAd);
+			/* Politikalar tabloyla birlikte taşınır; eski ada yazılmış
+			   politikaları yeni ada devredebilmek için iz tutuluyor. */
+			adDegisimi.set(ad, yeniAd);
 		}
 	}
 }
@@ -224,6 +242,118 @@ for (const dosya of [
 			);
 		}
 	});
+}
+
+/* RLS KAPSAMI.
+
+   Bugün iki hata tam buradan çıktı:
+
+     · denetim_kayitlari'nda RLS açıktı ama INSERT politikası hiç
+       yazılmamıştı. On bir yerden yazılıyordu, hepsi sessizce
+       reddediliyordu ve tablo aylarca boş kaldı. Postgres hata
+       döndürmüyor, yalnızca sıfır satır etkiliyor.
+
+     · kullanicilar'da son_giris aynı sınıftan bir sessizlik yaşadı.
+
+   Burada aranan: RLS açık ama yazma yolu olmayan tablo. Okuma
+   politikası olup yazma politikası olmaması çoğu zaman kasıt
+   değil, unutmadır.
+
+   BİLEREK YAZMASIZ olanlar aşağıda gerekçesiyle listeleniyor. */
+const YAZMASIZ_TABLOLAR = {
+	denetim_kayitlari:
+		'Yazma panel.denetim_yaz() SECURITY DEFINER islevinden geciyor; ' +
+		'kullanici kendi adina kayit dusemesin diye politika bilerek yok.',
+};
+
+const rlsAcik = new Set();
+const politikalar = new Map(); // tablo -> Set(eylem)
+
+for (const dosya of siraliMigrationlar) {
+	const icerik = fs.readFileSync(path.join(migrationDizini, dosya), 'utf8');
+
+	for (const m of icerik.matchAll(
+		/alter table panel[.]([a-z_]+)[^;]*enable row level security/gi
+	)) {
+		rlsAcik.add(m[1]);
+	}
+
+	const ekle = (tablo, eylem) => {
+		if (!politikalar.has(tablo)) politikalar.set(tablo, new Set());
+		politikalar.get(tablo).add(eylem.toLowerCase());
+	};
+
+	/* Doğrudan yazılmış politikalar */
+	for (const m of icerik.matchAll(
+		/create policy [a-z_]+ on panel[.]([a-z_]+) for ([a-z]+)/gi
+	)) {
+		ekle(m[1], m[2]);
+	}
+
+	/* DÖNGÜYLE ÜRETİLENLER. Politikalar tek tek yazılmak yerine
+	   "foreach t in array array['a','b'] loop ... create policy
+	   %1$s_okuma on panel.%1$s for select" biçiminde üretiliyor.
+	   Tablo adı yerinde yer tutucu olduğu için düz metin taraması
+	   bunları göremiyor ve sekiz tablo politikasızmış gibi
+	   görünüyordu — dördü yanlış alarm olarak çıktı. */
+	const donguEylemleri = [
+		...icerik.matchAll(/create policy %1[$]s_[a-z_]+ on panel[.]%1[$]s for ([a-z]+)/gi),
+	].map((m) => m[1]);
+
+	if (donguEylemleri.length) {
+		for (const dizi of icerik.matchAll(/foreach [a-z]+ in array array[[](.+?)]/gis)) {
+			const tablolar = [...dizi[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]);
+			for (const t of tablolar) {
+				for (const e of donguEylemleri) ekle(t, e);
+			}
+		}
+	}
+}
+
+/* Eski ada yazılmış politikaları ve RLS bayrağını yeni ada devret. */
+for (const [eski, yeni] of adDegisimi) {
+	if (politikalar.has(eski)) {
+		const birlesik = politikalar.get(yeni) ?? new Set();
+		for (const e of politikalar.get(eski)) birlesik.add(e);
+		politikalar.set(yeni, birlesik);
+	}
+	if (rlsAcik.has(eski)) rlsAcik.add(yeni);
+}
+
+for (const tablo of canliTablolar) {
+	if (!rlsAcik.has(tablo)) {
+		eksikler.push('RLS KAPALI: ' + tablo + ' — firma verisi korumasiz.');
+		continue;
+	}
+	if (YAZMASIZ_TABLOLAR[tablo]) continue;
+
+	const eylemler2 = politikalar.get(tablo) ?? new Set();
+	const yazabilir =
+		eylemler2.has('all') || eylemler2.has('insert') || eylemler2.has('update');
+
+	if (!yazabilir) {
+		uyarilar.push(
+			'RLS acik ama YAZMA POLITIKASI YOK: ' +
+				tablo +
+				' — kod bu tabloya yaziyorsa sessizce sifir satir etkiler.'
+		);
+	}
+}
+
+/* Bildirim olayları haritada olmalı: yeni modül olay ekleyip
+   haritaya yazmazsa "bu bildirim nereden geliyor" sorusu kodda
+   aranır. */
+const olaylar = [
+	...fs
+		.readFileSync(path.join(KOK, 'lib', 'bildirim', 'katalog.ts'), 'utf8')
+		.matchAll(/kod: '([a-z]+[.][a-z_]+)'/g),
+].map((m) => m[1]);
+
+/* Katalogdaki ornek yorumu ayni kodu tekrar ediyor. */
+for (const olay of new Set(olaylar)) {
+	if (!harita.includes(olay)) {
+		eksikler.push('Bildirim olayi haritada yok: ' + olay);
+	}
 }
 
 /* Migration numaralarında boşluk: sıra karışıklığı erken görünsün. */

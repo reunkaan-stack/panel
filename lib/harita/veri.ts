@@ -485,7 +485,7 @@ export const DUGUMLER: Dugum[] = [
 		katman: 2,
 		modul: 'bildirim',
 		yol: 'lib/bildirim/katalog.ts',
-		ne: '7 olay: sistem.oturum_acildi, ptp.* (5), otp.vade_ozeti.',
+		ne: 'Olaylar: sistem.oturum_acildi, sistem.hata, ptp.gorev_yapildi, ptp.gun_kapandi, ptp.eksik_bildirildi, ptp.kapanis_hatirlatma, ptp.gunluk_ozet, otp.vade_ozeti.',
 		neden:
 			'YENİ MODÜLÜN GENİŞLEME NOKTASI. Modül eklenince olayları buraya yazılır; kod "modul.olay" biçimini veritabanı kısıtıyla zorlar.',
 		baglar: [],
@@ -1483,6 +1483,13 @@ export const TUZAKLAR: Tuzak[] = [
 		kural: 'Doğrulama tek yerde yaşar, oradan çağrılır.',
 	},
 	{
+		baslik: 'Denetlenmeyen kategori sessizce bayatlar',
+		olan:
+			'Harita denetimi yalnızca sayfa, uç, eylem, tablo ve işleve bakıyordu. lib modülleri, bileşenler ve bildirim olayları kapsam dışıydı; üç lib dosyası ve yedi olay haritaya hiç yazılmamıştı. lib/supabase/ayar.ts haritanın ilk gününden beri eksikti ve kimse fark etmedi.',
+		kural:
+			'Haritaya yeni bir kategori eklenince denetime de eklenir. Denetlenmeyen kategori, olmayan kategoridir.',
+	},
+	{
 		baslik: 'Kopyalanan kural sessizce ayrışır',
 		olan:
 			'Modül listesi BEŞ yere kopyalanmıştı; sonuncusu bir sunucu eyleminde sabit dizi olarak duruyordu ve edp eklenince güncellenmedi. Kutu işaretleniyor, kaydedildi yazıyor, satır hiç yazılmıyordu. Ayrıca rapor tablosunun Th/Td hücreleri iki kopyaya ayrılmış ve biri erişilebilirlik niteliğini kaybetmişti — kimse bilerek yapmadı.',
@@ -1666,4 +1673,46 @@ export const OLU_TABLOLAR: { ad: string; ne_oldu: string }[] = [
 	{ ad: 'ptp_personeller', ne_oldu: 'Personel kullanıcı oldu; kullanicilar tablosuna taşındı.' },
 	{ ad: 'ptp_giris_kayitlari', ne_oldu: 'Düşürüldü.' },
 	{ ad: 'ptp_gunluk_satis / ptp_gunluk_yemek', ne_oldu: 'İlk tasarımdan kalma; kullanılmıyor.' },
+];
+
+/* ============================================================
+   BİLEŞENLER
+
+   Diyagrama KONMUYORLAR: yirmi sekiz kutu daha eklemek ağı
+   okunmaz yapardı. Ama envanterden de düşmemeliler — biri
+   "bu ekranı kim çiziyor" diye sorduğunda cevap burada.
+
+   npm run kontrol bu listeyi de denetliyor: yeni bileşen
+   yazılıp buraya eklenmezse düşer.
+   ============================================================ */
+
+export const BILESENLER: { yol: string; ne: string }[] = [
+	{ yol: 'app/(panel)/ayarlar/bildirimler/bilesenler/BildirimAyarlari.tsx', ne: 'Telegram bağlantısı ve olay tercihleri' },
+	{ yol: 'app/(panel)/ayarlar/firmalar/bilesenler/FirmaYonetimi.tsx', ne: 'Firma ekleme, modül açma, pasife alma' },
+	{ yol: 'app/(panel)/ayarlar/harita/bilesenler/Diyagram.tsx', ne: 'Bu haritanın bağlantı ağı çizimi' },
+	{ yol: 'app/(panel)/kisiler/bilesenler/KisiYonetimi.tsx', ne: 'Hesap açma, rol ve modül yetkisi, şifre' },
+	{ yol: 'app/(panel)/otp/aktarim/bilesenler/DiaAktarim.tsx', ne: 'DIA raporu içe aktarma: eşleme, önizleme, uygulama' },
+	{ yol: 'app/(panel)/ptp/bilesenler/GorevSatir.tsx', ne: 'Tek görev satırı ve kayıt defteri' },
+	{ yol: 'app/(panel)/ptp/bilesenler/GunListesi.tsx', ne: 'Günün görev listesi, gruplar katlanabilir' },
+	{ yol: 'app/(panel)/ptp/bilesenler/GunuKapat.tsx', ne: 'Ciro ve kapanış görevlerini tek kayıtta kapatır' },
+	{ yol: 'app/(panel)/ptp/bilesenler/KrokiSecici.tsx', ne: 'Görev kapatırken bölüm seçmek için küçük kroki' },
+	{ yol: 'app/(panel)/ptp/bilesenler/MudurBasligi.tsx', ne: 'Müdür başlığı: özet ve yönetim bağlantıları' },
+	{ yol: 'app/(panel)/ptp/ciro/bilesenler/CiroTablosu.tsx', ne: 'Aylık ciro tablosu' },
+	{ yol: 'app/(panel)/ptp/eksikler/bilesenler/EksikFormu.tsx', ne: 'Elle eksik bildirme formu' },
+	{ yol: 'app/(panel)/ptp/eksikler/bilesenler/EksikListesi.tsx', ne: 'Eksik listesi ve kapatma' },
+	{ yol: 'app/(panel)/ptp/gorevler/bilesenler/GorevYonetimi.tsx', ne: 'Görev tanımı yönetimi' },
+	{ yol: 'app/(panel)/ptp/kroki/bilesenler/Kroki.tsx', ne: 'Mağaza krokisi — çizim ve ısı haritası' },
+	{ yol: 'app/(panel)/ptp/prim/bilesenler/PrimAyarlari.tsx', ne: 'Prim kademeleri ve maaş tanımı' },
+	{ yol: 'app/(panel)/ptp/rapor/bilesenler/GorevTablosu.tsx', ne: 'Hangi görev aksıyor tablosu; göreve yazılanlar burada açılıyor' },
+	{ yol: 'app/(panel)/ptp/rapor/bilesenler/Tablo.tsx', ne: 'Rapor tablolarının ortak hücreleri — iki kopyaydı, birleştirildi' },
+	{ yol: 'app/(panel)/teklifler/bilesenler/TeklifDuzenle.tsx', ne: 'Teklif düzenleme, kalem ekleme' },
+	{ yol: 'app/(panel)/teklifler/bilesenler/YeniTeklif.tsx', ne: 'Yeni teklif düğmesi' },
+	{ yol: 'app/yazdir/teklif/[id]/YazdirDugmesi.tsx', ne: 'Yazdırma çubuğu — kâğıda basılmaz' },
+	{ yol: 'bilesenler/arayuz/AltBilgi.tsx', ne: 'Karas Teknoloji imzası; her sayfanın altında, tek yerden' },
+	{ yol: 'bilesenler/arayuz/GirisFormu.tsx', ne: 'Giriş formu; son giriş damgasını da tetikliyor' },
+	{ yol: 'bilesenler/arayuz/Logo.tsx', ne: 'Karas Teknoloji logosu' },
+	{ yol: 'bilesenler/arayuz/SifreSifirlamaFormu.tsx', ne: 'Şifre sıfırlama isteği' },
+	{ yol: 'bilesenler/arayuz/TemaSecici.tsx', ne: 'Üç durumlu tema: sistem, açık, karanlık' },
+	{ yol: 'bilesenler/panel/CikisDugmesi.tsx', ne: 'Oturumu kapatır' },
+	{ yol: 'bilesenler/panel/FirmaSecici.tsx', ne: 'Firma seçici — yalnızca süperadminde ve birden çok firma varsa' },
 ];
