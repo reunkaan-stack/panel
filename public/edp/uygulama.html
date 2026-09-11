@@ -114,11 +114,24 @@
       <input type="text" id="grupKodu" value="CANSU" style="width:120px">
     </div>
     <div class="field">
-      <label>KDV oranı (Fiyat2)</label>
-      <div class="seg" id="rateSeg">
-        <button data-rate="1.10" class="on">%10</button>
-        <button data-rate="1.20">%20</button>
-        <button data-rate="1.00">KDV dahil</button>
+      <label>Dosyadaki fiyatlar</label>
+      <div class="seg" id="dosyaSeg">
+        <button data-dahil="0" class="on">KDV hariç</button>
+        <button data-dahil="1">KDV dahil</button>
+      </div>
+    </div>
+    <div class="field" id="faturaAlan">
+      <label>Fatura KDV'si</label>
+      <div class="seg" id="faturaSeg">
+        <button data-fkdv="10">%10</button>
+        <button data-fkdv="20" class="on">%20</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Ürünlerin KDV'si</label>
+      <div class="seg" id="urunKdvSeg">
+        <button data-ukdv="10">Seçilileri %10</button>
+        <button data-ukdv="20">Seçilileri %20</button>
       </div>
     </div>
     <div class="field">
@@ -166,8 +179,10 @@
   <h2>Ayarlar <span class="small">(tarayıcıda kayıtlı kalır, 1 kere tanımla)</span></h2>
   <div class="grid">
     <div class="field"><label>Birim (D)</label><input type="text" id="setBirim"></div>
-    <div class="field"><label>KDV (F)</label><input type="text" id="setKdv"></div>
-    <div class="field"><label>Sistem kdv (J)</label><input type="text" id="setSistemKdv"></div>
+    <p class="small" style="grid-column:1/-1;margin:0">
+      KDV (F) ve Sistem kdv (J) artık elle girilmiyor — her satırın kendi
+      KDV'sinden türetiliyor: %20 → F=20, J=1 · %10 → F=10, J=2.
+    </p>
   </div>
   <h2 style="margin-top:18px">Tedarikçi → Anlaşma oranı</h2>
   <p class="small">Grup kodu yazınca o tedarikçinin oranı otomatik seçilsin. Örn. CANSU → %10</p>
@@ -188,7 +203,7 @@
   <input type="file" id="fileInput" accept="application/pdf" multiple style="display:none">
 </div>
 
-<p class="hint" id="navHint" style="display:none">✏️ Sarı hücreler (<b>Açıklama</b> ve <b>fiyat4</b>) elle düzenlenir. <b>↑ ↓</b> ile aynı kolonda gez. 🧮 <b>fiyat4</b>'te hesap yapabilirsin: <b>100*1,1</b> yazıp <b>Enter</b> → 110 (+ − × ÷). Düz sayıda Enter alt satıra geçer.</p>
+<p class="hint" id="navHint" style="display:none">✏️ Sarı hücreler (<b>Açıklama</b>, <b>KDV</b> ve <b>fiyat4</b>) elle düzenlenir. Tekstil ürünlerini seçip üstteki <b>Seçilileri %10</b> ile topluca değiştirebilirsin. <b>↑ ↓</b> ile aynı kolonda gez. 🧮 <b>fiyat4</b>'te hesap yapabilirsin: <b>100*1,1</b> yazıp <b>Enter</b> → 110 (+ − × ÷). Düz sayıda Enter alt satıra geçer.</p>
 
 <div id="xlmap" style="display:none">
   <h2>Excel kolon eşleştirme <span class="small">(hangi kolon ne? bir kere ayarla, kaydedilir)</span></h2>
@@ -210,7 +225,7 @@
     <thead><tr>
       <th><input type="checkbox" id="selAll" checked title="Tümünü seç/kaldır"></th>
       <th>S/N</th><th>Barkod</th><th>PDF Açıklama</th><th>Açıklama ✏️ (C)</th>
-      <th>Adet</th><th>Fiyat1 (KDV hariç)</th><th>Fiyat2 (E)</th><th>Fiyat1 (K)</th><th>fiyat3 (L)</th>
+      <th>Adet</th><th>KDV ✏️</th><th>Dosya fiyatı</th><th>Fiyat2 (E)</th><th>Fiyat1 (K)</th><th>fiyat3 (L)</th>
       <th>fiyat4 ✏️ (M)</th><th>fiyat5 (N)</th><th>EK ALAN 5 (H)</th>
     </tr></thead>
     <tbody id="tbody"></tbody>

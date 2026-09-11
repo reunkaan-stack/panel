@@ -1,3 +1,16 @@
+/* ⛔ BU BETİK BİR DAHA ÇALIŞTIRILMAZ — ARŞİV.
+
+   Masaüstündeki tek dosyalık programı panele ilk taşıyan betik buydu.
+   Taşımadan SONRA panel sürümü kendi yoluna gitti: satır bazlı KDV,
+   iki ayrı KDV kavramı (fatura / ürün), F-J kuralı, ürün hafızası…
+   Bunların hiçbiri kaynak dosyada yok.
+
+   Yeniden çalıştırılırsa public/edp/uygulama.js üzerine yazar ve
+   bütün bu iş silinir. ASIL KAYNAK ARTIK public/edp/uygulama.js.
+
+   Dosya, ilk taşımanın nasıl yapıldığının kaydı olarak duruyor.
+   ================================================================ */
+
 /* EXCEL DOSYA YÜKLEME PROGRAMI (edp) — panele taşıma betiği.
 
    Kaynak, Kaan'ın masaüstündeki tek dosyalık program. O dosyaya

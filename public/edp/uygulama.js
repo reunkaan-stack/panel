@@ -15,7 +15,21 @@ ayarlariKaydet();
 cfg.f1Discount ??= DEF.f1Discount; cfg.f1Discount2 ??= DEF.f1Discount2; cfg.f3 ??= DEF.f3; cfg.f5 ??= DEF.f5;
 
 let rows = [];      // {no,kod,aciklama,barkod,miktar,fiyat,nfiyat, ad(manuel), f4(manuel|null)}
-let rate = 1.10;
+/* İKİ AYRI KDV VAR — karıştırılırsa her fiyat bozulur.
+
+   FATURA KDV'si: tedarikçinin faturayı kaç KDV ile keseceği. Ne kadar
+   ÖDEDİĞİMİZİ belirler. Belgede yazıyor (PDF dipnotu, KARAS kolonu).
+
+   ÜRÜN KDV'si: ürünün gerçek KDV'si. Dia'ya yazılacak KDV hariç
+   fiyatı ve F/J kolonlarını belirler. HİÇBİR BELGEDE YAZMIYOR.
+
+   İkisi genelde aynı ama "yarı fatura" durumunda ayrışıyor:
+     100 TL ürün, %10 fatura  →  ödenen 110 TL
+     ürünün KDV'si %20        →  KDV hariç 110/1,2 = 91,67 TL
+   Belgedeki %10'u ürün KDV'si sanmak muhasebede sessiz hata demek. */
+let dosyaKdvDahil = false;   // dosyadaki fiyat KDV içeriyor mu
+let faturaKdv = 20;          // yalnızca dosya KDV hariçken kullanılır
+const VARSAYILAN_URUN_KDV = 20;
 let pdfFtr = {ara:0, genel:0, kdv:0.10}; // PDF dipnotundan okunan toplamlar
 let mode = "pdf";
 let sourceKind = "";
@@ -54,12 +68,31 @@ function markBarcodeIssues(){
 }
 
 // ---------- Fiyat hesapları ----------
-function fiyat1(r){
+/** Ürünün KDV'si. Satırda yoksa varsayılan. */
+function urunKdv(r){
+  var k = Number(r.kdv);
+  return (k === 10 || k === 20) ? k : VARSAYILAN_URUN_KDV;
+}
+
+/** Dia'nın J kolonu: 20 → 1, 10 → 2. Kural sabittir, elle girilmez. */
+function sistemKdv(r){ return urunKdv(r) === 10 ? '2' : '1'; }
+
+/** İskontolar düşülmüş dosya fiyatı. */
+function indirimli(r){
   const ilk=1-percentValue(cfg.f1Discount)/100;
   const ikinci=cfg.f1Discount2==='' ? 1 : 1-percentValue(cfg.f1Discount2)/100;
   return r.nfiyat * ilk * ikinci;
 }
-function fiyat2(r){ return fiyat1(r) * rate; }
+
+/** ÖDENEN para — KDV dahil. fiyat2 budur. */
+function odenen(r){
+  return dosyaKdvDahil ? indirimli(r) : indirimli(r) * (1 + faturaKdv/100);
+}
+
+function fiyat2(r){ return odenen(r); }
+
+/** KDV hariç fiyat: ödenen ÷ ÜRÜNÜN kdv'si (faturanınki değil). */
+function fiyat1(r){ return odenen(r) / (1 + urunKdv(r)/100); }
 function fiyat3(r){ return fiyat2(r) * profitMultiplier(cfg.f3); }
 function fiyat5(r){ return fiyat3(r) * profitMultiplier(cfg.f5); }
 function fiyat4(r){ return (r.f4!=null && r.f4!=='') ? parseTL(r.f4) : fiyat5(r); }
@@ -171,6 +204,10 @@ function render(){
         ? `<td class="ro">${r.aciklama}</td>`
         : `<td class="editcell"><input data-i="${i}" data-col="ad" value="${(r.ad||'').replace(/"/g,'&quot;')}" placeholder="temiz ad"></td>`)+
       `<td class="ro num">${r.miktar}</td>`+
+      `<td class="editcell num"><select data-i="${i}" data-col="kdv">`+
+        `<option value="20" ${urunKdv(r)===20?'selected':''}>%20</option>`+
+        `<option value="10" ${urunKdv(r)===10?'selected':''}>%10</option>`+
+      `</select></td>`+
       `<td class="ro num">${fmt(r.nfiyat)}</td>`+
       `<td class="num calc">${fmt(fiyat2(r))}</td>`+
       `<td class="num calc">${fmt(fiyat1(r))}</td>`+
@@ -225,10 +262,20 @@ function renderVerify(){
   const adet=selected.reduce((sum,r)=>sum+(r.miktar||0),0);
   const araToplam=selected.reduce((sum,r)=>sum+fiyat1(r)*r.miktar,0);
   const genelToplam=selected.reduce((sum,r)=>sum+fiyat2(r)*r.miktar,0);
+  /* KDV dağılımı: karışık listede hangi satırın hangi orana
+     düştüğü gizlenmemeli — yanlış F/J Dia'da sessiz hata demek. */
+  const yirmi=selected.filter(r=>urunKdv(r)===20).length;
+  const on=selected.filter(r=>urunKdv(r)===10).length;
+  const karisik = yirmi>0 && on>0;
+
   box.innerHTML=
     `<div class="v"><span>Seçili Toplam Adet</span><b>${adet}</b></div>`+
     `<div class="v"><span>Ara Toplam (KDV hariç)</span><b>${fmt(araToplam)}</b></div>`+
-    `<div class="v"><span>Genel Toplam (KDV dahil)</span><b>${fmt(genelToplam)}</b></div>`;
+    `<div class="v"><span>Genel Toplam (KDV dahil)</span><b>${fmt(genelToplam)}</b></div>`+
+    `<div class="v"><span>Ürün KDV dağılımı</span><b>${yirmi} × %20 · ${on} × %10</b></div>`+
+    (karisik
+      ? `<div class="chk bad">! Karışık KDV — kontrol edin</div>`
+      : '');
   box.style.display='flex';
 }
 
@@ -243,6 +290,14 @@ function bindCells(){
       const sa=document.getElementById('selAll'); if(sa) sa.checked=rows.every(r=>r.sec);
     });
   });
+  /* KDV hücresi bir <select>; input döngüsüne girmiyor. */
+  document.querySelectorAll('#tbody select[data-col="kdv"]').forEach(sec=>{
+    sec.addEventListener('change',e=>{
+      rows[+e.target.dataset.i].kdv=parseInt(e.target.value,10);
+      render();
+    });
+  });
+
   document.querySelectorAll('#tbody input[data-i]').forEach(inp=>{
     inp.addEventListener('input',e=>{
       const i=+e.target.dataset.i, col=e.target.dataset.col;
@@ -295,11 +350,11 @@ function exportXlsx(){
       autoName ? r.aciklama : (r.ad||'').trim(),   // C: oto ham ad / manuel temiz ad
       cfg.birim,                  // D
       fmt(fiyat2(r)),             // E Fiyat2
-      cfg.kdv,                    // F
+      String(urunKdv(r)),         // F  ürünün KDV'si
       grup,                       // G
       ekAlan5(r),                 // H
       tarih,                      // I
-      cfg.sistemKdv,              // J
+      sistemKdv(r),               // J  20→1, 10→2
       fmt(fiyat1(r)),             // K Fiyat1
       fmt(fiyat3(r)),             // L fiyat3
       fmt(fiyat4(r)),             // M fiyat4
@@ -344,6 +399,15 @@ async function handleFiles(files){
   }
   all.forEach((r,i)=>r.no=i+1);
   rows=all; pdfFtr=ftr; sourceKind='pdf'; markBarcodeIssues();
+
+  /* Dipnottaki oran FATURA kdv'sidir — ödenen tutarı belirler.
+     Ürünün kendi KDV'si DEĞİLDİR; o belgede hiç yazmıyor ve
+     varsayılan %20 ile başlayıp satırdan düzeltiliyor. */
+  const okunan=Math.round((ftr.kdv||0)*100);
+  if(okunan===10||okunan===20){
+    setRate((1+okunan/100).toFixed(2));
+    toast('Fatura KDV oranı dosyadan okundu: %'+okunan);
+  }
   render();
   if(rows.length) toast(rows.length+" ürün okundu ✓");
 }
@@ -404,7 +468,9 @@ function loadKarasExcel(){
   if(!out.length) return false;
   rows=out; pdfFtr={ara:0,genel:0,kdv:sourceKdv?sourceKdv/100:0.10}; sourceKind='karas';
   autoName=true; document.getElementById('autoName').checked=true;
-  if(sourceKdv===10 || sourceKdv===20){ cfg.kdv=String(sourceKdv); setRate((1+sourceKdv/100).toFixed(2)); }
+  /* KARAS'ta KDV kolonu FATURA oranıdır. cfg.kdv artık yok:
+     çıktıdaki F kolonu satırın ÜRÜN kdv'sinden türetiliyor. */
+  if(sourceKdv===10 || sourceKdv===20) setRate((1+sourceKdv/100).toFixed(2));
   markBarcodeIssues();
   document.getElementById('xlmap').style.display='none';
   render();
@@ -480,21 +546,62 @@ function applyExcelMap(){
   toast(out.length+" ürün okundu ✓");
 }
 
-// rate segment
-document.querySelectorAll('#rateSeg button').forEach(b=>{
+// ---------- Dosyadaki fiyat KDV dahil mi ----------
+function faturaAlaniniGuncelle(){
+  /* Dosya zaten KDV dahilse fatura oranı sorulmaz: ödenen tutar
+     doğrudan dosyada yazıyor, çarpacak bir şey yok. */
+  const alan=document.getElementById('faturaAlan');
+  if(alan) alan.style.display = dosyaKdvDahil ? 'none' : '';
+}
+
+document.querySelectorAll('#dosyaSeg button').forEach(b=>{
   b.onclick=()=>{
-    document.querySelectorAll('#rateSeg button').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on'); rate=parseFloat(b.dataset.rate);
-    if(rate!==1) cfg.kdv=String(Math.round((rate-1)*100));
+    document.querySelectorAll('#dosyaSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    dosyaKdvDahil = b.dataset.dahil === '1';
+    faturaAlaniniGuncelle();
     render();
   };
 });
+
+document.querySelectorAll('#faturaSeg button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#faturaSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    faturaKdv = parseInt(b.dataset.fkdv,10);
+    render();
+  };
+});
+
+/* Seçili satırların ÜRÜN kdv'sini topluca değiştir. Tekstil satırlarını
+   tek tek düzeltmek yerine işaretleyip tek tıkla. */
+document.querySelectorAll('#urunKdvSeg button').forEach(b=>{
+  b.onclick=()=>{
+    const k=parseInt(b.dataset.ukdv,10);
+    const secili=rows.filter(r=>r.sec);
+    if(!secili.length){ toast('Önce satır seçin'); return; }
+    secili.forEach(r=>r.kdv=k);
+    render();
+    toast(secili.length+' satır %'+k+' yapıldı');
+  };
+});
+
+/* Eski çağrılar bu adı kullanıyordu: dosya KDV hariç kabul edilip
+   fatura oranı ayarlanıyor. '1.00' = dosya zaten KDV dahil. */
 function setRate(val){
-  document.querySelectorAll('#rateSeg button').forEach(x=>{
-    x.classList.toggle('on', x.dataset.rate===val);
+  if(val==='1.00'){
+    dosyaKdvDahil=true;
+  } else {
+    dosyaKdvDahil=false;
+    faturaKdv = Math.round((parseFloat(val)-1)*100);
+  }
+  document.querySelectorAll('#dosyaSeg button').forEach(x=>{
+    x.classList.toggle('on', (x.dataset.dahil==='1')===dosyaKdvDahil);
   });
-  rate=parseFloat(val);
-  if(rate!==1) cfg.kdv=String(Math.round((rate-1)*100));
+  document.querySelectorAll('#faturaSeg button').forEach(x=>{
+    x.classList.toggle('on', parseInt(x.dataset.fkdv,10)===faturaKdv);
+  });
+  faturaAlaniniGuncelle();
 }
 // grup kodu değişince tedarikçi oranını seç
 document.getElementById('grupKodu').addEventListener('input',e=>{
@@ -545,7 +652,10 @@ bindLivePriceInput('f5Profit','f5');
 // ---------- Ayarlar paneli ----------
 const sp=document.getElementById('settings');
 function fillSettings(){
-  setBirim.value=cfg.birim; setKdv.value=cfg.kdv; setSistemKdv.value=cfg.sistemKdv;
+  /* KDV ve Sistem kdv kutuları kaldırıldı: artık satırın kendi
+     KDV'sinden türetiliyor, elle girilmiyor. Kaldırılan kutuya
+     erişmek Ayarlar panelini açılır açılmaz çökertirdi. */
+  setBirim.value=cfg.birim;
   renderSup();
 }
 function renderSup(){
@@ -565,7 +675,7 @@ document.getElementById('addSup').onclick=()=>{
   cfg.suppliers[n]=newSupRate.value; newSupName.value=''; renderSup();
 };
 document.getElementById('saveSettings').onclick=()=>{
-  cfg.birim=setBirim.value; cfg.kdv=setKdv.value; cfg.sistemKdv=setSistemKdv.value;
+  cfg.birim=setBirim.value;
   ayarlariKaydet();
   sp.classList.remove('open'); render(); toast("Ayarlar kaydedildi ✓");
 };

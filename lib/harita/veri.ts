@@ -1244,21 +1244,21 @@ export const DUGUMLER: Dugum[] = [
 		katman: 0,
 		modul: 'edp',
 		yol: 'public/edp/uygulama.html',
-		ne: 'Programın kendisi — ÜRETİLMİŞ DOSYA. Kodu public/edp/uygulama.js içinde.',
+		ne: 'Programın kendisi. ASIL KAYNAK — elle geliştiriliyor. Kodu public/edp/uygulama.js içinde.',
 		neden:
-			'ELLE DÜZENLENMEZ. Kaynağı masaüstündeki tek dosyalık program; bütün değişiklikler araclar/edp-arayuz-tasi.mjs adımlarıyla tanımlı. pdf.js ve SheetJS panele GÖMÜLÜ (public/edp/kutuphane) — CDN kesintisinde program sessizce açılmasın diye.',
+			'İKİ AYRI KDV VAR ve karıştırılırsa her fiyat bozulur. FATURA kdv (belgede yazar, ne ödediğimizi belirler) ve ÜRÜN kdv (hiçbir belgede yazmaz, Dia F/J kolonlarını ve KDV hariç fiyatı belirler). Yarı fatura durumunda ayrışıyorlar: 100 TL ürün + %10 fatura = 110 ödenen; ürün %20 ise KDV hariç 110/1,2 = 91,67. F=20 ise J=1, F=10 ise J=2 — kural sabit, elle girilmez. pdf.js ve SheetJS panele gömülü.',
 		baglar: ['edp-tasi'],
 	},
 	{
 		kod: 'edp-tasi',
-		ad: 'edp-arayuz-tasi.mjs',
+		ad: 'edp-ilk-tasima.mjs (arşiv)',
 		tur: 'lib',
 		katman: 2,
 		modul: 'edp',
-		yol: 'araclar/edp-arayuz-tasi.mjs',
-		ne: '7 adımlık dönüşüm: kütüphaneler, kod ayırma, ayarların sunucuya taşınması, tema, başlık.',
+		yol: 'araclar/arsiv/edp-ilk-tasima.mjs',
+		ne: 'İlk taşımayı yapan betik. ⛔ BİR DAHA ÇALIŞTIRILMAZ.',
 		neden:
-			'Program kodu ayrı dosyaya alınıyor çünkü ayarlar sunucudan geliyor ve bu bekleme gerektiriyor; program ise açılır açılmaz ayarları okuyor. Ayrı dosya sayesinde programın kendi başlangıç mantığına hiç dokunulmadı.',
+			'Taşımadan sonra panel sürümü kendi yoluna gitti: satır bazlı KDV, iki ayrı KDV kavramı (fatura/ürün), F-J kuralı. Bunların hiçbiri kaynak dosyada yok. Betik yeniden çalışırsa hepsini siler.',
 		baglar: [],
 	},
 	{
