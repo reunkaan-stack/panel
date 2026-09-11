@@ -23,6 +23,35 @@ export type Rol = 'superadmin' | 'firma_yoneticisi' | 'kullanici';
 export type Seviye = 'okuma' | 'yazma' | 'yonetim';
 export type Modul = 'ptp' | 'otp' | 'ttp' | 'mtp' | 'edp';
 
+/** MODÜL LİSTESİ — TEK KAYNAK.
+
+    Aynı liste dört ayrı dosyaya kopyalanmıştı: panel ana sayfası,
+    genel bakış raporu, Kişiler ekranı ve Firmalar ekranı. Beşinci
+    modül eklenince ikisi güncellendi, ikisi unutuldu ve modül
+    arayüzden AÇILAMAZ hale geldi — yetki verilecek yerde
+    görünmüyordu. Artık hepsi buradan okuyor. */
+export const MODULLER: {
+	kod: Modul;
+	ad: string;
+	aciklama: string;
+	yol: string;
+}[] = [
+	{ kod: 'ptp', ad: 'Personel Takip', aciklama: 'Günlük iş emri ve checklist', yol: '/ptp' },
+	{ kod: 'otp', ad: 'Ödeme Takip', aciklama: 'Çek, kredi, ödeme planı', yol: '/otp' },
+	{
+		kod: 'edp',
+		ad: 'Excel Dosya Yükleme',
+		aciklama: 'Tedarikçi PDF/Excel → Dia yükleme dosyası',
+		yol: '/edp',
+	},
+	{ kod: 'ttp', ad: 'Tahsilat Takip', aciklama: 'Müşteri alacak takibi', yol: '/ttp' },
+	{ kod: 'mtp', ad: 'Mağaza Takip', aciklama: 'Ciro, stok, hedef, prim', yol: '/mtp' },
+];
+
+export const MODUL_ADLARI: Record<Modul, string> = Object.fromEntries(
+	MODULLER.map((m) => [m.kod, m.ad])
+) as Record<Modul, string>;
+
 export type GorevTuru =
 	| 'onay'
 	| 'kontrol'

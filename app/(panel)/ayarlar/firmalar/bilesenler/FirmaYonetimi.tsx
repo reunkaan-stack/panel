@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { kisaTarih } from '@/lib/ortak/tarih';
-import type { Modul } from '@/lib/tipler';
+import { MODULLER, type Modul } from '@/lib/tipler';
 import { firmaEkle, firmaGuncelle, modulleriKaydet } from '../eylemler';
 
 /* Firma yönetimi.
@@ -23,12 +23,6 @@ export type FirmaSatiri = {
 	sonGiris: string | null;
 };
 
-const MODULLER: { kod: Modul; ad: string }[] = [
-	{ kod: 'ptp', ad: 'Personel Takip' },
-	{ kod: 'otp', ad: 'Ödeme Takip' },
-	{ kod: 'ttp', ad: 'Tahsilat Takip' },
-	{ kod: 'mtp', ad: 'Mağaza Takip' },
-];
 
 export function FirmaYonetimi({ firmalar }: { firmalar: FirmaSatiri[] }) {
 	const [ekleAcik, setEkleAcik] = useState(false);

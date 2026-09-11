@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { aktifKullanici, modulSeviyesi } from '@/lib/yetki';
-import type { Modul, Seviye } from '@/lib/tipler';
+import { MODULLER, type Seviye } from '@/lib/tipler';
 
 /* Panel ana ekranı.
 
@@ -11,18 +11,7 @@ import type { Modul, Seviye } from '@/lib/tipler';
 
 export const dynamic = 'force-dynamic';
 
-const KATALOG: { kod: Modul; ad: string; aciklama: string; yol: string }[] = [
-	{ kod: 'ptp', ad: 'Personel Takip', aciklama: 'Günlük iş emri ve checklist', yol: '/ptp' },
-	{ kod: 'otp', ad: 'Ödeme Takip', aciklama: 'Çek, kredi, ödeme planı', yol: '/otp' },
-	{ kod: 'ttp', ad: 'Tahsilat Takip', aciklama: 'Müşteri alacak takibi', yol: '/ttp' },
-	{ kod: 'mtp', ad: 'Mağaza Takip', aciklama: 'Ciro, stok, hedef, prim', yol: '/mtp' },
-	{
-		kod: 'edp',
-		ad: 'Excel Dosya Yükleme',
-		aciklama: 'Tedarikçi PDF/Excel → Dia yükleme dosyası',
-		yol: '/edp',
-	},
-];
+const KATALOG = MODULLER;
 
 const SEVIYE_ADLARI: Record<Seviye, string> = {
 	okuma: 'görüntüleme',

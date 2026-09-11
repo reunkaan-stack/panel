@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { kisaTarih } from '@/lib/ortak/tarih';
-import type { Modul, Rol, Seviye } from '@/lib/tipler';
+import { MODULLER, type Modul, type Rol, type Seviye } from '@/lib/tipler';
 import type { Firma, KisiSatiri, YetkiSatiri } from '../page';
 import {
 	kisiDurumDegistir,
@@ -30,12 +30,6 @@ const ROL_NOTU: Record<Rol, string> = {
 	kullanici: 'Yalnızca verilen modül yetkileri',
 };
 
-const MODULLER: { kod: Modul; ad: string }[] = [
-	{ kod: 'ptp', ad: 'Personel Takip' },
-	{ kod: 'otp', ad: 'Ödeme Takip' },
-	{ kod: 'ttp', ad: 'Tahsilat Takip' },
-	{ kod: 'mtp', ad: 'Mağaza Takip' },
-];
 
 const SEVIYELER: { kod: Seviye; ad: string }[] = [
 	{ kod: 'okuma', ad: 'Görür' },

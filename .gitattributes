@@ -1,0 +1,7 @@
+# Gömülü kütüphaneler bayt bayt korunur.
+#
+# git satır sonlarını LF <-> CRLF çevirebiliyor. Küçültülmüş
+# kütüphanelerde satır sonu bir dize içine denk gelirse dosya
+# sessizce bozulur ve PDF okuma çalışmaz — sebebi de görünmez.
+# Bu dosyalar metin değil, varlık olarak işaretleniyor.
+public/edp/kutuphane/** -text -diff

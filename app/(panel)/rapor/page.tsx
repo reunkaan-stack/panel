@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { superadminDenetle } from '@/lib/yetki';
 import { kisaTarih, saatiBicimle } from '@/lib/ortak/tarih';
-import type { Modul } from '@/lib/tipler';
+import { MODUL_ADLARI, type Modul } from '@/lib/tipler';
 
 export const metadata: Metadata = { title: 'Genel bakış — Karas Panel' };
 export const dynamic = 'force-dynamic';
@@ -17,13 +17,6 @@ export const dynamic = 'force-dynamic';
    Operasyon ve para özetleri sonraki adımda eklenecek; her modül
    büyüdükçe buraya kendi bölümünü ekler. */
 
-const MODUL_ADLARI: Record<Modul, string> = {
-	ptp: 'Personel Takip',
-	otp: 'Ödeme Takip',
-	ttp: 'Tahsilat Takip',
-	mtp: 'Mağaza Takip',
-	edp: 'Excel Dosya Yükleme',
-};
 
 export default async function RaporSayfasi() {
 	await superadminDenetle();
