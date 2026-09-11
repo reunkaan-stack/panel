@@ -45,7 +45,9 @@ export default async function PanelDuzeni({
 				    çerçevesinin içinde — panele dönecek bir yol yoktu;
 				    kullanıcı tarayıcının geri düğmesine kalıyordu. */}
 				<Link
-					href="/"
+					/* ?menu=1 — tek modüllü kullanıcıda ana sayfa yine o
+					   modüle atıyordu; bu bağlantı listeyi zorluyor. */
+					href="/?menu=1"
 					className="etiket text-vurgu-metin transition-colors hover:text-metin"
 					title="Panel ana sayfası"
 				>

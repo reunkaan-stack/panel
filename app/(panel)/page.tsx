@@ -19,7 +19,11 @@ const SEVIYE_ADLARI: Record<Seviye, string> = {
 	yonetim: 'yönetici',
 };
 
-export default async function PanelAnaSayfa() {
+export default async function PanelAnaSayfa({
+	searchParams,
+}: {
+	searchParams: Promise<{ menu?: string }>;
+}) {
 	const kullanici = await aktifKullanici();
 
 	const seviyeler = await Promise.all(
@@ -27,8 +31,18 @@ export default async function PanelAnaSayfa() {
 	);
 	const acikOlanlar = seviyeler.filter((m) => m.seviye !== null);
 
-	/* Tek modüle yetkiliyse ara ekran gereksiz tıklamadır. */
-	if (acikOlanlar.length === 1) redirect(acikOlanlar[0].yol);
+	/* Tek modüle yetkiliyse ara ekran gereksiz tıklamadır: sabah
+	   panele giren personel doğrudan işine başlasın.
+
+	   AMA KAÇIŞ YOLU ŞART. Yönlendirme koşulsuz olduğunda tek modüllü
+	   kullanıcı ana sayfayı HİÇ göremiyordu: "panele dön" bağlantısı
+	   / adresine gidiyor, orası yine aynı modüle atıyordu. Kısır
+	   döngü ve "neden geçmiyor" sorusu.
+
+	   ?menu=1 ile gelindiğinde liste gösteriliyor; panele dönüş
+	   bağlantılarının hepsi bu adresi kullanıyor. */
+	const { menu } = await searchParams;
+	if (acikOlanlar.length === 1 && !menu) redirect(acikOlanlar[0].yol);
 
 	return (
 		<div className="mx-auto max-w-3xl px-6 py-12">

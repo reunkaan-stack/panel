@@ -90,7 +90,7 @@ function Uyari({
 				{baslik}
 			</h1>
 			<p className="mt-4 text-sm leading-relaxed text-metin-2">{metin}</p>
-			<Link href="/" className="dugme dugme-bos mt-6 inline-block">
+			<Link href="/?menu=1" className="dugme dugme-bos mt-6 inline-block">
 				← Panele dön
 			</Link>
 		</div>
