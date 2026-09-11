@@ -93,6 +93,16 @@ yolDenetle(sayfalar, 'Ekran haritada yok');
 yolDenetle(uclar, 'API ucu haritada yok');
 yolDenetle(eylemler, 'Sunucu eylemi haritada yok');
 
+/* lib/ modülleri de haritada olmalı. Bunlar ortak mantığın durduğu
+   yer; haritada yoksa bir sonraki oturum onları yeniden keşfeder.
+   Üç tanesi tam böyle kaçmıştı: lib/surum.ts ve lib/ptp/kroki.ts
+   kopya temizliğinde yeni yaratıldı, lib/supabase/ayar.ts ise
+   baştan beri haritada yoktu. */
+yolDenetle(
+	dosyalariBul(path.join(KOK, 'lib'), '.ts'),
+	'lib modülü haritada yok'
+);
+
 for (const t of tablolar) {
 	if (!haritadakiAdlar.has(t)) eksikler.push(`Tablo haritada yok: ${t}`);
 }

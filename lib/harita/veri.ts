@@ -634,6 +634,42 @@ export const DUGUMLER: Dugum[] = [
 		baglar: [],
 	},
 	{
+		kod: 'lib-surum',
+		ad: 'lib/surum',
+		tur: 'lib',
+		katman: 2,
+		modul: 'cekirdek',
+		yol: 'lib/surum.ts',
+		ne: 'Yayın kimliği — çerçeveli programların adresine eklenir.',
+		neden:
+			'public/ altındaki sabit dosyalar önbelleğe alınınca yeni sürüm yayına çıksa bile eskisi görünüyordu. Deploy başına sabit: önbellek çalışmaya devam ediyor, yalnızca yeni yayında geçersizleşiyor. ÖTP ve EDP sayfalarına birebir kopyalanmıştı.',
+		baglar: [],
+	},
+	{
+		kod: 'lib-kroki',
+		ad: 'lib/ptp/kroki',
+		tur: 'lib',
+		katman: 2,
+		modul: 'ptp',
+		yol: 'lib/ptp/kroki.ts',
+		ne: 'Kroki çizim alanının ölçüleri (1000×600).',
+		neden:
+			'ÜÇ dosyaya kopyalanmıştı: kroki eylemleri, düzenleme ekranı ve bölge seçici. Üçü aynı koordinat düzlemini tarif ediyor; biri değişse kutular sessizce yanlış yere düşerdi — hata vermez, sadece kroki bozulur.',
+		baglar: [],
+	},
+	{
+		kod: 'supabase-ayar',
+		ad: 'lib/supabase/ayar',
+		tur: 'lib',
+		katman: 2,
+		modul: 'cekirdek',
+		yol: 'lib/supabase/ayar.ts',
+		ne: 'Bağlantı adresi, anon anahtarı ve şema adı.',
+		neden:
+			'Panel kurumsal siteyle AYNI Supabase projesini kullanıyor ama panel şemasında duruyor. Ayrım güvenlik: sitenin anon anahtarı herkese açık bir sayfanın içinde ve bu şema anon rolüne kapatıldı. Supabase panelinde şemanın Exposed schemas listesinde olması gerekiyor.',
+		baglar: [],
+	},
+	{
 		kod: 'harita-veri',
 		ad: 'lib/harita/veri',
 		tur: 'lib',
@@ -1052,7 +1088,8 @@ export const DUGUMLER: Dugum[] = [
 		modul: 'cekirdek',
 		yol: 'app/(panel)/page.tsx',
 		ne: 'Kullanıcının yetkili olduğu modüllerin kapısı.',
-		neden: 'Modül kartları yetkiye göre süzülüyor; yetkisiz modül hiç görünmüyor.',
+		neden:
+			'Modül kartları yetkiye göre süzülüyor; yetkisiz modül hiç görünmüyor. TEK MODÜLÜ OLAN doğrudan o modüle yönlendiriliyor — sabah panele giren personel işine başlasın diye. Ama ?menu=1 ile gelindiğinde liste gösteriliyor: yönlendirme koşulsuzken tek modüllü kullanıcı ana sayfayı HİÇ göremiyordu, panele dön bağlantısı yine aynı modüle atıyordu. Bütün dönüş bağlantıları ?menu=1 kullanıyor.',
 		baglar: ['lib-yetki', 't-firma-modulleri', 'panel-eylemler'],
 	},
 	{
