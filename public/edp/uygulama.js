@@ -31,7 +31,9 @@ let dosyaKdvDahil = false;   // dosyadaki fiyat KDV içeriyor mu
 let faturaKdv = 20;          // yalnızca dosya KDV hariçken kullanılır
 const VARSAYILAN_URUN_KDV = 20;
 let pdfFtr = {ara:0, genel:0, kdv:0.10}; // PDF dipnotundan okunan toplamlar
-let mode = "pdf";
+/* Kaynak seçici kaldırıldı: dosya uzantısı zaten söylüyor ve iki
+   yerden yönetilen bir seçim, kullanıcının yanlış kutuyu işaretleyip
+   "neden okumuyor" demesine yol açıyordu. */
 let sourceKind = "";
 let autoName = false;   // ürün adını otomatik (ham) kullan
 let xlBook = null, xlAOA = [];          // yüklenen Excel verisi
@@ -382,10 +384,15 @@ fileInput.onchange=async e=>{await handleFiles(e.target.files);};
 async function handleFiles(files){
   const arr=[...files];
   const isXls=f=>/\.(xlsx|xls|csv)$/i.test(f.name);
-  if(mode==='xls' || (arr.length && isXls(arr[0]))){
+  if(arr.length && isXls(arr[0])){
     await loadExcel(arr.find(isXls)||arr[0]);
     return;
   }
+  /* PDF geldi: Excel kolon eşleme paneli açık kaldıysa kapansın.
+     Eskiden bunu kaynak seçicisi yapıyordu. */
+  const esleme=document.getElementById('xlmap');
+  if(esleme) esleme.style.display='none';
+
   let all=[]; let ftr={ara:0, genel:0, kdv:0.10};
   for(const f of arr){
     if(f.type!=='application/pdf' && !f.name.toLowerCase().endsWith('.pdf')) continue;
@@ -615,18 +622,6 @@ document.addEventListener('change',e=>{
     rows.forEach(r=>r.sec=on);
     render();
   }
-});
-// mod seçici (PDF / Excel)
-document.querySelectorAll('#modeSeg button').forEach(b=>{
-  b.onclick=()=>{
-    document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on'); mode=b.dataset.mode;
-    document.getElementById('fileInput').accept = mode==='xls' ? '.xlsx,.xls,.csv' : 'application/pdf';
-    document.getElementById('dropText').innerHTML = mode==='xls'
-      ? '📊 Excel dosyasını buraya <b>sürükle-bırak</b> ya da tıklayıp seç'
-      : '📄 PDF dosyasını buraya <b>sürükle-bırak</b> ya da tıklayıp seç';
-    if(mode!=='xls') document.getElementById('xlmap').style.display='none';
-  };
 });
 document.getElementById('autoName').onchange=e=>{ autoName=e.target.checked; render(); };
 document.getElementById('xlSheet').onchange=loadSheet;

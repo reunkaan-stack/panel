@@ -103,13 +103,6 @@
   <h1><a href="/" target="_top" title="Panele dön">Excel Dosya Yükleme Programı</a></h1>
   <div class="bar">
     <div class="field">
-      <label>Kaynak</label>
-      <div class="seg" id="modeSeg">
-        <button data-mode="pdf" class="on">📄 PDF</button>
-        <button data-mode="xls">📊 Excel</button>
-      </div>
-    </div>
-    <div class="field">
       <label>Grup Kodu</label>
       <input type="text" id="grupKodu" value="CANSU" style="width:120px">
     </div>
@@ -198,9 +191,9 @@
   </div>
 </div>
 
-<div id="drop"><span id="dropText">📄 PDF dosyasını buraya <b>sürükle-bırak</b> ya da tıklayıp seç</span><br>
-  <span class="small">Dia sipariş formu PDF'i — birden fazla seçebilirsin</span>
-  <input type="file" id="fileInput" accept="application/pdf" multiple style="display:none">
+<div id="drop"><span id="dropText">Dosyayı buraya <b>sürükle-bırak</b> ya da tıklayıp seç</span><br>
+  <span class="small">PDF ya da Excel — hangisi olduğunu program kendisi anlar. Birden fazla seçebilirsin.</span>
+  <input type="file" id="fileInput" accept=".pdf,.xlsx,.xls,.csv" multiple style="display:none">
 </div>
 
 <p class="hint" id="navHint" style="display:none">✏️ Sarı hücreler (<b>Açıklama</b>, <b>KDV</b> ve <b>fiyat4</b>) elle düzenlenir. Tekstil ürünlerini seçip üstteki <b>Seçilileri %10</b> ile topluca değiştirebilirsin. <b>↑ ↓</b> ile aynı kolonda gez. 🧮 <b>fiyat4</b>'te hesap yapabilirsin: <b>100*1,1</b> yazıp <b>Enter</b> → 110 (+ − × ÷). Düz sayıda Enter alt satıra geçer.</p>
