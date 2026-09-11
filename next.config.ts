@@ -12,7 +12,7 @@ const yapilandirma: NextConfig = {
 				   yerine aşağıdaki kuralla ezmeye güvenilebilirdi ama
 				   sıraya bağlı davranış sessizce değişebilir; burada
 				   eşleşme hiç olmuyor, belirsizlik kalmıyor. */
-				source: '/((?!otp/uygulama\\.html).*)',
+				source: '/((?!otp/uygulama\\.html|edp/uygulama\\.html).*)',
 				headers: [
 					{ key: 'X-Content-Type-Options', value: 'nosniff' },
 					{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -37,6 +37,19 @@ const yapilandirma: NextConfig = {
 			   bırakmak, korumasız bırakmak olmamalı. */
 			{
 				source: '/otp/uygulama.html',
+				headers: [
+					{ key: 'X-Content-Type-Options', value: 'nosniff' },
+					{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+					{ key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+					{ key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+					{ key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+				],
+			},
+
+			/* Excel Dosya Yükleme Programı da kendi çerçevesinde açılıyor;
+			   ÖTP ile aynı gerekçe ve aynı korumalar. */
+			{
+				source: '/edp/uygulama.html',
 				headers: [
 					{ key: 'X-Content-Type-Options', value: 'nosniff' },
 					{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

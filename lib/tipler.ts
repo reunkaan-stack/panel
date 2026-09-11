@@ -21,7 +21,7 @@
 
 export type Rol = 'superadmin' | 'firma_yoneticisi' | 'kullanici';
 export type Seviye = 'okuma' | 'yazma' | 'yonetim';
-export type Modul = 'ptp' | 'otp' | 'ttp' | 'mtp';
+export type Modul = 'ptp' | 'otp' | 'ttp' | 'mtp' | 'edp';
 
 export type GorevTuru =
 	| 'onay'

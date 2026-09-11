@@ -22,6 +22,7 @@ const MODUL_ADLARI: Record<Modul, string> = {
 	otp: 'Ödeme Takip',
 	ttp: 'Tahsilat Takip',
 	mtp: 'Mağaza Takip',
+	edp: 'Excel Dosya Yükleme',
 };
 
 export default async function RaporSayfasi() {

@@ -42,7 +42,7 @@ export const TUR_ADLARI: Record<DugumTuru, string> = {
 	dis: 'Dış servis',
 };
 
-export type ModulKodu = 'cekirdek' | 'ptp' | 'otp' | 'teklif' | 'bildirim';
+export type ModulKodu = 'cekirdek' | 'ptp' | 'otp' | 'teklif' | 'bildirim' | 'edp';
 
 export const MODUL_ADLARI: Record<ModulKodu, string> = {
 	cekirdek: 'Çekirdek',
@@ -50,6 +50,7 @@ export const MODUL_ADLARI: Record<ModulKodu, string> = {
 	otp: 'Ödeme Takip',
 	teklif: 'Teklif',
 	bildirim: 'Bildirim',
+	edp: 'Excel Dosya Yükleme',
 };
 
 export type Dugum = {
@@ -1224,6 +1225,76 @@ export const DUGUMLER: Dugum[] = [
 		baglar: ['t-ptp-kayitlar', 't-ptp-bolumler'],
 	},
 
+	{
+		kod: 'sayfa-edp',
+		ad: '/edp — Excel Dosya Yükleme',
+		tur: 'sayfa',
+		katman: 1,
+		modul: 'edp',
+		yol: 'app/(panel)/edp/page.tsx',
+		ne: 'Tedarikçi PDF/Excel dosyasını okuyup Diaya yüklenecek Excel üretir.',
+		neden:
+			'ÖTPdeki "DIA raporu yükle" ile KARIŞTIRILMAMALI: o DIAdan veri ÇEKER, bu DIAya YÜKLENECEK dosyayı ÜRETİR. Yönleri ters. Modül kodu bu yüzden dia değil edp.',
+		baglar: ['edp-arayuz', 'uc-edp-ayarlar'],
+	},
+	{
+		kod: 'edp-arayuz',
+		ad: 'public/edp/uygulama.html',
+		tur: 'sayfa',
+		katman: 0,
+		modul: 'edp',
+		yol: 'public/edp/uygulama.html',
+		ne: 'Programın kendisi — ÜRETİLMİŞ DOSYA. Kodu public/edp/uygulama.js içinde.',
+		neden:
+			'ELLE DÜZENLENMEZ. Kaynağı masaüstündeki tek dosyalık program; bütün değişiklikler araclar/edp-arayuz-tasi.mjs adımlarıyla tanımlı. pdf.js ve SheetJS panele GÖMÜLÜ (public/edp/kutuphane) — CDN kesintisinde program sessizce açılmasın diye.',
+		baglar: ['edp-tasi'],
+	},
+	{
+		kod: 'edp-tasi',
+		ad: 'edp-arayuz-tasi.mjs',
+		tur: 'lib',
+		katman: 2,
+		modul: 'edp',
+		yol: 'araclar/edp-arayuz-tasi.mjs',
+		ne: '7 adımlık dönüşüm: kütüphaneler, kod ayırma, ayarların sunucuya taşınması, tema, başlık.',
+		neden:
+			'Program kodu ayrı dosyaya alınıyor çünkü ayarlar sunucudan geliyor ve bu bekleme gerektiriyor; program ise açılır açılmaz ayarları okuyor. Ayrı dosya sayesinde programın kendi başlangıç mantığına hiç dokunulmadı.',
+		baglar: [],
+	},
+	{
+		kod: 'uc-edp-ayarlar',
+		ad: 'GET/PUT /api/edp/ayarlar',
+		tur: 'uc',
+		katman: 1,
+		modul: 'edp',
+		yol: 'app/api/edp/ayarlar/route.ts',
+		ne: 'Tedarikçi oranları, Dia sabitleri, fiyat yüzdeleri ve kolon eşlemesi.',
+		neden:
+			'Yanıt biçimi programın localStorageda tuttuğu cfg nesnesiyle BİREBİR aynı; böylece arayüz kodu hiç değişmedi, yalnızca okuma/yazmanın yeri değişti. Kaydetme geciktirmeli: canlı fiyat kutuları her tuşta kaydediyor.',
+		baglar: ['t-edp-ayarlar', 't-edp-tedarikciler'],
+	},
+	{
+		kod: 't-edp-ayarlar',
+		ad: 'edp_ayarlar',
+		tur: 'tablo',
+		katman: 3,
+		modul: 'edp',
+		yol: 'supabase/migrations/23_edp.sql',
+		ne: 'Firma başına tek satır: Dia sabitleri, fiyat yüzdeleri, öğrenilmiş kolon eşlemesi.',
+		neden:
+			'Yereldeki program hepsini tarayıcıda tutuyordu; ikinci bilgisayardan girince yok oluyordu. Anlaşma oranları ve kolon eşlemesi iş bilgisidir.',
+		baglar: ['t-firmalar'],
+	},
+	{
+		kod: 't-edp-tedarikciler',
+		ad: 'edp_tedarikciler',
+		tur: 'tablo',
+		katman: 3,
+		modul: 'edp',
+		yol: 'supabase/migrations/23_edp.sql',
+		ne: 'Grup kodu → KDV çarpanı. Tedarikçi anlaşması.',
+		baglar: ['t-firmalar'],
+	},
 	/* ---------- Katman 4: dış ---------- */
 	{
 		kod: 'telegram',

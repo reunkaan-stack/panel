@@ -1,0 +1,283 @@
+<!-- Karas Panel'e taşındı — ELLE DÜZENLEME.
+     Kaynak: masaüstündeki PDF-Dia-Donusturucu HTML dosyası.
+     Üreten: araclar/edp-arayuz-tasi.mjs -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel Dosya Yükleme Programı — Karas Panel</title>
+<script src="/edp/kutuphane/pdf.min.js"></script>
+<script src="/edp/kutuphane/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#273549; --line:#334155;
+    --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --accent2:#0ea5e9;
+    --edit:#fde68a; --editbg:#3f3a1a; --ok:#22c55e; --ro:#0b1220;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+  header{background:var(--panel);border-bottom:1px solid var(--line);padding:12px 18px;position:sticky;top:0;z-index:10}
+  h1{font-size:18px;margin:0 0 10px}
+  .bar{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  input,select,button{font-family:inherit;font-size:14px}
+  input[type=text],input[type=date],select{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:6px 8px}
+  .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .seg button{background:var(--panel2);color:var(--muted);border:0;padding:6px 12px;cursor:pointer}
+  .seg button.on{background:var(--accent2);color:#001018;font-weight:600}
+  .btn{background:var(--accent2);color:#001018;border:0;border-radius:6px;padding:8px 16px;font-weight:600;cursor:pointer}
+  .btn:hover{background:var(--accent)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+  #drop{margin:14px 18px;border:2px dashed var(--line);border-radius:10px;padding:26px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s}
+  #drop.hover{border-color:var(--accent);color:var(--text);background:var(--panel)}
+  #drop b{color:var(--accent)}
+  .wrap{padding:0 18px 60px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{border:1px solid var(--line);padding:4px 7px;text-align:left;white-space:nowrap}
+  th{background:var(--panel2);position:sticky;top:0;font-size:11px;color:var(--muted);text-transform:uppercase}
+  td.ro{background:var(--ro);color:var(--muted)}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  td.calc{color:var(--accent)}
+  td.editcell{background:var(--editbg);padding:0}
+  td.editcell input{width:100%;background:transparent;border:0;color:var(--edit);padding:5px 7px;font-size:13px;outline:none}
+  td.editcell input:focus{background:#4a4320;outline:2px solid var(--accent)}
+  td.num.editcell input{text-align:right}
+  .hint{color:var(--muted);font-size:12px;margin:8px 18px}
+  .count{color:var(--muted);font-size:12px}
+  /* Settings */
+  #settings{display:none;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin:14px 18px;padding:16px}
+  #settings.open{display:block}
+  #settings h2,#xlmap h2{font-size:15px;margin:0 0 12px}
+  #xlmap{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin:14px 18px;padding:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+  .small{font-size:12px;color:var(--muted)}
+  .sup-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+  .sup-row input{flex:1}
+  .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:3px 10px;font-size:12px}
+  #verify{margin:14px 18px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;display:flex;flex-wrap:wrap;gap:26px;align-items:center}
+  #verify .v{display:flex;flex-direction:column;gap:2px}
+  #verify .v b{font-size:18px;font-variant-numeric:tabular-nums}
+  #verify .v span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  #verify .chk{font-size:14px;padding:6px 12px;border-radius:8px;font-weight:600}
+  #verify .chk.ok{background:#052e16;color:#4ade80;border:1px solid #166534}
+  #verify .chk.bad{background:#3f0d0d;color:#f87171;border:1px solid #991b1b}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ok);color:#012;padding:10px 18px;border-radius:8px;font-weight:600;opacity:0;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1}
+
+  /* ============ Karas Panel teması ============ */
+  :root{
+    --bg:#f2f0e9; --panel:#faf9f6; --panel2:#efece4; --line:#ddd9d0;
+    --text:#1a1a1a; --muted:#5c5952;
+    --accent:#b8420f; --accent2:#b8420f;
+    --edit:#6b4c00; --editbg:#f7efd6;
+    --ok:#2f6f4e; --ro:#f2f0e9;
+  }
+  body.dark{
+    --bg:#14140f; --panel:#1c1c17; --panel2:#232320; --line:#33332c;
+    --text:#ebe8e0; --muted:#a8a49a;
+    --accent:#e9683a; --accent2:#c2551f;
+    --edit:#f0d49a; --editbg:#332b14;
+    --ok:#5aa87d; --ro:#191915;
+  }
+
+  /* Köşeler: panelin tamamında yuvarlak köşe yok. Değişkene bağlı
+     olmadıkları için tek tek sıfırlanıyor. */
+  input[type=text],input[type=date],input[type=number],select,
+  .seg,.btn,#drop,#settings,#xlmap,#verify,.pill,.toast,
+  #verify .chk,td.editcell input{border-radius:0}
+
+  /* Düğme metni: turuncu zeminde koyu metin okunmuyordu. */
+  .btn{color:#faf9f6}
+  .seg button.on{color:#faf9f6}
+  .toast{background:var(--ok);color:#faf9f6}
+
+  /* Başlık panele dönüş bağlantısı */
+  header h1 a{color:inherit;text-decoration:none}
+  header h1 a:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/" target="_top" title="Panele dön">Excel Dosya Yükleme Programı</a></h1>
+  <div class="bar">
+    <div class="field">
+      <label>Kaynak</label>
+      <div class="seg" id="modeSeg">
+        <button data-mode="pdf" class="on">📄 PDF</button>
+        <button data-mode="xls">📊 Excel</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Grup Kodu</label>
+      <input type="text" id="grupKodu" value="CANSU" style="width:120px">
+    </div>
+    <div class="field">
+      <label>KDV oranı (Fiyat2)</label>
+      <div class="seg" id="rateSeg">
+        <button data-rate="1.10" class="on">%10</button>
+        <button data-rate="1.20">%20</button>
+        <button data-rate="1.00">KDV dahil</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Ürün adı</label>
+      <label style="flex-direction:row;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);text-transform:none;cursor:pointer;padding:6px 0">
+        <input type="checkbox" id="autoName"> PDF/Excel adını otomatik kullan
+      </label>
+    </div>
+    <div class="field">
+      <label>Düzenleme tarihi</label>
+      <input type="date" id="tarih">
+    </div>
+    <div class="field">
+      <label>Fiyat1 iskonto (%)</label>
+      <input type="text" id="f1Discount" value="0" style="width:115px" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>2. iskonto (%)</label>
+      <input type="text" id="f1Discount2" value="" placeholder="Boş = uygulanmaz" style="width:115px" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>Fiyat3 kârlılık (%)</label>
+      <input type="text" id="f3Profit" value="100" style="width:115px" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>Fiyat5 kârlılık (%)</label>
+      <input type="text" id="f5Profit" value="100" style="width:115px" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn" id="exportBtn" disabled>⬇ Excel İndir</button>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn ghost" id="settingsBtn">⚙ Ayarlar</button>
+    </div>
+    <div class="field" style="margin-left:auto">
+      <label>&nbsp;</label>
+      <span class="count" id="count">Henüz PDF yüklenmedi</span>
+    </div>
+  </div>
+</header>
+
+<div id="settings">
+  <h2>Ayarlar <span class="small">(tarayıcıda kayıtlı kalır, 1 kere tanımla)</span></h2>
+  <div class="grid">
+    <div class="field"><label>Birim (D)</label><input type="text" id="setBirim"></div>
+    <div class="field"><label>KDV (F)</label><input type="text" id="setKdv"></div>
+    <div class="field"><label>Sistem kdv (J)</label><input type="text" id="setSistemKdv"></div>
+  </div>
+  <h2 style="margin-top:18px">Tedarikçi → Anlaşma oranı</h2>
+  <p class="small">Grup kodu yazınca o tedarikçinin oranı otomatik seçilsin. Örn. CANSU → %10</p>
+  <div id="supList"></div>
+  <div class="sup-row">
+    <input type="text" id="newSupName" placeholder="Grup kodu (örn. SELMA)">
+    <select id="newSupRate"><option value="1.10">%10</option><option value="1.20">%20</option><option value="1.00">KDV dahil</option></select>
+    <button class="btn ghost" id="addSup">+ Ekle</button>
+  </div>
+  <div style="margin-top:14px">
+    <button class="btn" id="saveSettings">Kaydet</button>
+    <button class="btn ghost" id="closeSettings">Kapat</button>
+  </div>
+</div>
+
+<div id="drop"><span id="dropText">📄 PDF dosyasını buraya <b>sürükle-bırak</b> ya da tıklayıp seç</span><br>
+  <span class="small">Dia sipariş formu PDF'i — birden fazla seçebilirsin</span>
+  <input type="file" id="fileInput" accept="application/pdf" multiple style="display:none">
+</div>
+
+<p class="hint" id="navHint" style="display:none">✏️ Sarı hücreler (<b>Açıklama</b> ve <b>fiyat4</b>) elle düzenlenir. <b>↑ ↓</b> ile aynı kolonda gez. 🧮 <b>fiyat4</b>'te hesap yapabilirsin: <b>100*1,1</b> yazıp <b>Enter</b> → 110 (+ − × ÷). Düz sayıda Enter alt satıra geçer.</p>
+
+<div id="xlmap" style="display:none">
+  <h2>Excel kolon eşleştirme <span class="small">(hangi kolon ne? bir kere ayarla, kaydedilir)</span></h2>
+  <div class="bar" style="margin-bottom:12px">
+    <div class="field"><label>Sayfa</label><select id="xlSheet"></select></div>
+    <div class="field"><label>Başlık satırı no</label><input type="number" id="xlHeaderRow" min="1" value="1" style="width:90px"></div>
+  </div>
+  <div class="grid" id="xlFields"></div>
+  <div style="margin-top:14px">
+    <button class="btn" id="xlApply">Uygula → Tabloyu oluştur</button>
+    <span class="small" id="xlInfo" style="margin-left:10px"></span>
+  </div>
+</div>
+
+<div id="verify" style="display:none"></div>
+
+<div class="wrap">
+  <table id="tbl" style="display:none">
+    <thead><tr>
+      <th><input type="checkbox" id="selAll" checked title="Tümünü seç/kaldır"></th>
+      <th>S/N</th><th>Barkod</th><th>PDF Açıklama</th><th>Açıklama ✏️ (C)</th>
+      <th>Adet</th><th>Fiyat1 (KDV hariç)</th><th>Fiyat2 (E)</th><th>Fiyat1 (K)</th><th>fiyat3 (L)</th>
+      <th>fiyat4 ✏️ (M)</th><th>fiyat5 (N)</th><th>EK ALAN 5 (H)</th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+/* Ayarlar sunucudan alınıp localStorage'a yazılıyor, SONRA program
+   yükleniyor. Sıra önemli: program açılır açılmaz localStorage'ı
+   okuyor. */
+(function () {
+  function baslat() {
+    var b = document.createElement('script');
+    b.src = '/edp/uygulama.js';
+    document.body.appendChild(b);
+  }
+
+  fetch('/api/edp/ayarlar', { headers: { Accept: 'application/json' } })
+    .then(function (cevap) {
+      if (!cevap.ok) throw new Error('ayarlar alınamadı: ' + cevap.status);
+      return cevap.json();
+    })
+    .then(function (ayar) {
+      localStorage.setItem('diaCfg', JSON.stringify(ayar));
+    })
+    .catch(function (e) {
+      /* Sessiz kalınmıyor: ayarsız açılırsa tedarikçi oranları ve
+         kolon eşlemesi boş gelir, kullanıcı sebebini bilmeli. */
+      console.error('[edp] ayarlar alınamadı', e);
+    })
+    .finally(baslat);
+})();
+</script>
+
+
+<script>
+(function () {
+  function uygula() {
+    var koyu;
+    try {
+      var t = window.parent.document.documentElement.getAttribute('data-tema');
+      koyu = t === 'karanlik' ||
+        (!t && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch (e) {
+      /* Üst belge okunamıyor: tek başına açılmış. */
+      koyu = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    if (document.body) document.body.classList.toggle('dark', koyu);
+  }
+
+  uygula();
+  document.addEventListener('DOMContentLoaded', uygula);
+  window.addEventListener('load', uygula);
+
+  try {
+    new MutationObserver(uygula).observe(
+      window.parent.document.documentElement,
+      { attributes: true, attributeFilter: ['data-tema'] }
+    );
+  } catch (e) {}
+
+  window.matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', uygula);
+})();
+</script>
+</body>
+</html>

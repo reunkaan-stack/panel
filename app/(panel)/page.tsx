@@ -16,6 +16,12 @@ const KATALOG: { kod: Modul; ad: string; aciklama: string; yol: string }[] = [
 	{ kod: 'otp', ad: 'Ödeme Takip', aciklama: 'Çek, kredi, ödeme planı', yol: '/otp' },
 	{ kod: 'ttp', ad: 'Tahsilat Takip', aciklama: 'Müşteri alacak takibi', yol: '/ttp' },
 	{ kod: 'mtp', ad: 'Mağaza Takip', aciklama: 'Ciro, stok, hedef, prim', yol: '/mtp' },
+	{
+		kod: 'edp',
+		ad: 'Excel Dosya Yükleme',
+		aciklama: 'Tedarikçi PDF/Excel → Dia yükleme dosyası',
+		yol: '/edp',
+	},
 ];
 
 const SEVIYE_ADLARI: Record<Seviye, string> = {
