@@ -424,8 +424,14 @@ function KisiSatir({
 								</label>
 							)}
 
-							{rol === 'kullanici' && (
+							{rol === 'kullanici' ? (
 								<YetkiSecici yetkiler={secim} setYetkiler={setSecim} />
+							) : (
+								<p className="mt-4 border-l-2 border-kenarlik pl-4 text-sm leading-relaxed text-metin-2">
+									{rol === 'superadmin'
+										? 'Süperadmin bütün firmaların bütün modüllerinde yöneticidir; modül modül yetki verilmez.'
+										: 'Firma yöneticisi, firmasında AÇIK OLAN bütün modüllerde yöneticidir — modül modül yetki verilmez. Hangi modüllerin açık olduğunu Ayarlar → Firmalar ekranından belirlersiniz. Modül modül kısıtlamak istiyorsanız rolü “Kullanıcı” yapın.'}
+								</p>
 							)}
 						</>
 					)}
