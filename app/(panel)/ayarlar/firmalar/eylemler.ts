@@ -4,7 +4,7 @@ import { hataya } from '@/lib/hata';
 import { revalidatePath } from 'next/cache';
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
 import { superadminDenetle, YetkisizHata } from '@/lib/yetki';
-import type { Modul } from '@/lib/tipler';
+import { MODULLER, type Modul } from '@/lib/tipler';
 import type { Sonuc } from '../../ptp/eylemler';
 
 /* Firma yönetimi — yalnızca süperadmin.
@@ -129,7 +129,14 @@ export async function modulleriKaydet(
 		await superadminDenetle();
 		const supabase = await sunucuIstemcisi();
 
-		const tumu: Modul[] = ['ptp', 'otp', 'ttp', 'mtp'];
+		/* ⚠️ SABİT LİSTE YAZILMAZ. Burada 'ptp','otp','ttp','mtp' diye
+		   elle yazılıydı ve edp eklenince liste güncellenmedi: kutu
+		   işaretleniyor, "kaydedildi" yazıyor, ama edp satırı hiç
+		   yazılmadığı için modül açılmıyordu. Mesaj yalan değildi —
+		   listedeki dört modül gerçekten kaydediliyordu.
+
+		   Modül listesinin tek kaynağı lib/tipler.ts. */
+		const tumu: Modul[] = MODULLER.map((m) => m.kod);
 
 		const { error } = await supabase.from('firma_modulleri').upsert(
 			tumu.map((m) => ({

@@ -167,6 +167,55 @@ for (const t of tablolar) {
 	}
 }
 
+/* SABİT MODÜL LİSTESİ AVI.
+
+   Modül listesi BEŞ ayrı yere kopyalanmıştı. Sonuncusu bir sunucu
+   eyleminin içinde "const tumu = ['ptp','otp','ttp','mtp']" diye
+   duruyordu; edp eklenince güncellenmedi ve firma modülü kaydedilmiş
+   gibi görünüp hiç yazılmadı — "kaydedildi" mesajı yalan değildi,
+   listedeki dört modül gerçekten yazılıyordu.
+
+   Tür türetmesi bunu YAKALAMAZ: eksik bir alt küme de geçerli bir
+   Modul[] dizisidir. Bu yüzden kalıbın kendisi aranıyor: aynı satırda
+   iki ya da daha çok modül kodu geçiyorsa orada elle yazılmış bir
+   liste vardır.
+
+   Tek kaynak (lib/tipler.ts) ve harita dosyası muaf. */
+const modulKodlari = [
+	...fs
+		.readFileSync(path.join(KOK, 'lib', 'tipler.ts'), 'utf8')
+		.matchAll(/kod: '([a-z]{2,4})'/g),
+].map((m) => m[1]);
+
+const muafDosyalar = ['lib/tipler.ts', 'lib/harita/veri.ts'];
+
+for (const dosya of [
+	...dosyalariBul(path.join(KOK, 'app'), '.ts'),
+	...dosyalariBul(path.join(KOK, 'app'), '.tsx'),
+	...dosyalariBul(path.join(KOK, 'lib'), '.ts'),
+]) {
+	if (muafDosyalar.includes(dosya)) continue;
+
+	const icerikSatirlari = fs
+		.readFileSync(path.join(KOK, dosya), 'utf8')
+		.split(String.fromCharCode(10));
+	icerikSatirlari.forEach((satir, i) => {
+		/* Yorum satırı kod değildir. Bu kontrolün kendi gerekçesini
+		   anlatan yorumlar da modül kodlarını örnek olarak yazıyor;
+		   onları yakalamak yanlış alarm olurdu. */
+		const kirp = satir.trim();
+		if (kirp.startsWith('//') || kirp.startsWith('*') || kirp.startsWith('/*')) return;
+
+		const gecen = modulKodlari.filter((k) => satir.includes("'" + k + "'"));
+		if (gecen.length >= 2) {
+			eksikler.push(
+				`Elle yazılmış modül listesi: ${dosya}:${i + 1} — ${gecen.join(', ')}. ` +
+					'lib/tipler.ts içindeki MODULLER kullanılmalı.'
+			);
+		}
+	});
+}
+
 /* Migration numaralarında boşluk: sıra karışıklığı erken görünsün. */
 const migrationlar = fs
 	.readdirSync(path.join(KOK, 'supabase', 'migrations'))

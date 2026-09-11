@@ -21,21 +21,19 @@
 
 export type Rol = 'superadmin' | 'firma_yoneticisi' | 'kullanici';
 export type Seviye = 'okuma' | 'yazma' | 'yonetim';
-export type Modul = 'ptp' | 'otp' | 'ttp' | 'mtp' | 'edp';
-
 /** MODÜL LİSTESİ — TEK KAYNAK.
 
-    Aynı liste dört ayrı dosyaya kopyalanmıştı: panel ana sayfası,
-    genel bakış raporu, Kişiler ekranı ve Firmalar ekranı. Beşinci
-    modül eklenince ikisi güncellendi, ikisi unutuldu ve modül
-    arayüzden AÇILAMAZ hale geldi — yetki verilecek yerde
-    görünmüyordu. Artık hepsi buradan okuyor. */
-export const MODULLER: {
-	kod: Modul;
-	ad: string;
-	aciklama: string;
-	yol: string;
-}[] = [
+    Aynı liste BEŞ ayrı yere kopyalanmıştı: panel ana sayfası, genel
+    bakış raporu, Kişiler ekranı, Firmalar ekranı ve firma modüllerini
+    kaydeden sunucu eylemi. Yeni modül eklenince bazıları güncellendi,
+    bazıları unutuldu. Sonuncusu en sinsisiydi: kutu işaretleniyor,
+    "kaydedildi" yazıyor, ama modül listede olmadığı için satır hiç
+    yazılmıyordu.
+
+    ⚠️ Modul TÜRÜ ARTIK BU LİSTEDEN TÜRÜYOR. Listeye eklemeden yeni
+    bir modül kodu yazmak DERLENMİYOR; ikisinin ayrışması artık
+    mümkün değil. Kural yazmak yetmedi, yapı zorluyor. */
+export const MODULLER = [
 	{ kod: 'ptp', ad: 'Personel Takip', aciklama: 'Günlük iş emri ve checklist', yol: '/ptp' },
 	{ kod: 'otp', ad: 'Ödeme Takip', aciklama: 'Çek, kredi, ödeme planı', yol: '/otp' },
 	{
@@ -46,7 +44,15 @@ export const MODULLER: {
 	},
 	{ kod: 'ttp', ad: 'Tahsilat Takip', aciklama: 'Müşteri alacak takibi', yol: '/ttp' },
 	{ kod: 'mtp', ad: 'Mağaza Takip', aciklama: 'Ciro, stok, hedef, prim', yol: '/mtp' },
-];
+] as const satisfies readonly {
+	kod: string;
+	ad: string;
+	aciklama: string;
+	yol: string;
+}[];
+
+/** Modül kodu — yukarıdaki listeden türer, elle yazılmaz. */
+export type Modul = (typeof MODULLER)[number]['kod'];
 
 export const MODUL_ADLARI: Record<Modul, string> = Object.fromEntries(
 	MODULLER.map((m) => [m.kod, m.ad])
