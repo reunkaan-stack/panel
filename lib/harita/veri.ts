@@ -1483,6 +1483,13 @@ export const TUZAKLAR: Tuzak[] = [
 		kural: 'Doğrulama tek yerde yaşar, oradan çağrılır.',
 	},
 	{
+		baslik: 'Beklenen durum hata sayılmaz',
+		olan:
+			'Oturum düşmesi (OturumYokHata) sistem hatası olarak raporlanıyordu: Telegram uyarısı gidiyor, denetim kaydına düşüyor ve gerçek arızaların arasında gürültü yapıyordu. Kullanıcıya dönen mesaj da yanlıştı — Tekrar deneyin diyordu ama tekrar denemek işe yaramıyor, yeniden giriş gerekiyor.',
+		kural:
+			'Hata sınıfını fırlatmadan önce sor: bu bir ARIZA mı, yoksa beklenen bir durum mu? Beklenen durumlar kullanıcıya ne yapacağını söyleyen bir mesajla döner, uyarı kanalına gitmez. Uyarı kanalı gürültüye boğulursa kimse bakmaz.',
+	},
+	{
 		baslik: 'Denetlenmeyen kategori sessizce bayatlar',
 		olan:
 			'Harita denetimi yalnızca sayfa, uç, eylem, tablo ve işleve bakıyordu. lib modülleri, bileşenler ve bildirim olayları kapsam dışıydı; üç lib dosyası ve yedi olay haritaya hiç yazılmamıştı. lib/supabase/ayar.ts haritanın ilk gününden beri eksikti ve kimse fark etmedi.',

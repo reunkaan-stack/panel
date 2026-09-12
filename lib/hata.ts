@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { sunucuIstemcisi } from '@/lib/supabase/sunucu';
-import { YetkisizHata } from '@/lib/yetki';
+import { OturumYokHata, YetkisizHata } from '@/lib/yetki';
 import { sistemBildir } from '@/lib/bildirim';
 import { kacir } from '@/lib/telegram';
 
@@ -102,6 +102,22 @@ export function hataya(
 	kaynak = 'panel'
 ): Sonuc<never> {
 	if (e instanceof YetkisizHata) return { tamam: false, mesaj: e.message };
+
+	/* OTURUM DÜŞMESİ SİSTEM HATASI DEĞİLDİR. Kullanıcı sayfayı uzun
+	   süre açık bıraktığında ya da başka cihazdan çıkış yapıldığında
+	   oluyor; beklenen bir durum.
+
+	   Buraya eklenmeden önce sistem hatası sayılıp Telegram'a
+	   düşüyordu — gerçek arızaların arasında gürültü yapıyordu.
+
+	   Kullanıcıya dönen mesaj da yanlıştı: "Tekrar deneyin" diyordu
+	   ama tekrar denemek işe yaramıyor, yeniden giriş gerekiyor. */
+	if (e instanceof OturumYokHata) {
+		return {
+			tamam: false,
+			mesaj: 'Oturumunuz sona ermiş. Sayfayı yenileyip tekrar giriş yapın.',
+		};
+	}
 
 	console.error(`[${kaynak}]`, e);
 
